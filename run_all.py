@@ -1,0 +1,390 @@
+"""
+Top-level orchestrator. Running `python run_all.py` performs the complete
+Train -> Evaluate -> Convert-to-Bayesian -> Bayesian-train -> Compute
+uncertainty -> Structured-prune -> Fine-tune -> Final-evaluate -> Save
+pipeline for LeNet-SNN, then VGG9-SNN, then Spiking ResNet-18, and finally
+writes outputs/final_results.csv plus every comparison figure.
+"""
+
+import os
+from typing import Any, Dict, List
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import torch
+
+from bayesian_layers import set_bayesian_mode
+from config import ALL_EXPERIMENTS, ExperimentConfig
+from datasets import get_cifar10_loaders
+from evaluate import full_evaluation
+from metrics import (
+    compression_ratio,
+    count_parameters,
+    count_remaining_structures,
+    gather_log_alpha_values,
+    pruning_percentage,
+    write_csv,
+)
+from models import build_model
+from pruning import compute_uncertainty_report, prune_model
+from train import evaluate_loader, run_training
+from utils import ensure_dirs, get_device, print_banner, save_config_json, set_seed, setup_logger
+
+MODEL_ORDER = ["lenet", "vgg9", "resnet18"]
+
+
+def make_experiment_plots(
+    model_name: str,
+    csv_rows: List[Dict[str, Any]],
+    log_alpha_values: Dict[str, torch.Tensor],
+    output_dir: str,
+) -> None:
+    """
+    Build the single per-experiment `plots.png` containing: training loss,
+    validation loss, accuracy curves, an uncertainty (log_alpha) histogram
+    pooled across all gated layers, and a per-layer posterior-variance
+    (log_alpha) distribution.
+    """
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    fig.suptitle(f"{model_name} -- training and pruning diagnostics")
+
+    phases: List[str] = []
+    for row in csv_rows:
+        if row["phase"] not in phases:
+            phases.append(row["phase"])
+
+    ax = axes[0, 0]
+    for phase in phases:
+        rows = [r for r in csv_rows if r["phase"] == phase]
+        ax.plot([r["epoch"] for r in rows], [r["train_task_loss"] for r in rows], label=f"{phase} train")
+    ax.set_title("Training task loss")
+    ax.set_xlabel("epoch (within phase)")
+    ax.set_ylabel("loss")
+    ax.legend()
+
+    ax = axes[0, 1]
+    for phase in phases:
+        rows = [r for r in csv_rows if r["phase"] == phase]
+        ax.plot([r["epoch"] for r in rows], [r["val_loss"] for r in rows], label=f"{phase} val")
+    ax.set_title("Validation loss")
+    ax.set_xlabel("epoch (within phase)")
+    ax.set_ylabel("loss")
+    ax.legend()
+
+    ax = axes[0, 2]
+    for phase in phases:
+        rows = [r for r in csv_rows if r["phase"] == phase]
+        ax.plot([r["epoch"] for r in rows], [r["train_accuracy"] for r in rows], label=f"{phase} train acc")
+        ax.plot([r["epoch"] for r in rows], [r["val_accuracy"] for r in rows], linestyle="--", label=f"{phase} val acc")
+    ax.set_title("Accuracy")
+    ax.set_xlabel("epoch (within phase)")
+    ax.set_ylabel("accuracy")
+    ax.legend(fontsize=7)
+
+    ax = axes[1, 0]
+    bayes_rows = [r for r in csv_rows if r["phase"] == "bayesian_train"]
+    if bayes_rows:
+        ax.plot([r["epoch"] for r in bayes_rows], [r["train_kl"] for r in bayes_rows])
+    ax.set_title("KL divergence over Bayesian training")
+    ax.set_xlabel("epoch")
+    ax.set_ylabel("total KL")
+
+    ax = axes[1, 1]
+    all_log_alpha = torch.cat([v.flatten() for v in log_alpha_values.values()]) if log_alpha_values else torch.tensor([])
+    if all_log_alpha.numel() > 0:
+        ax.hist(all_log_alpha.numpy(), bins=50)
+        ax.axvline(3.0, color="red", linestyle="--", label="prune threshold")
+    ax.set_title("Posterior uncertainty histogram (log alpha, all gates)")
+    ax.set_xlabel("log alpha")
+    ax.set_ylabel("count")
+    ax.legend()
+
+    ax = axes[1, 2]
+    layer_names = list(log_alpha_values.keys())
+    layer_medians = [float(v.median()) for v in log_alpha_values.values()]
+    if layer_names:
+        ax.barh(layer_names, layer_medians)
+        ax.axvline(3.0, color="red", linestyle="--")
+    ax.set_title("Median log alpha per layer")
+    ax.set_xlabel("median log alpha")
+    ax.tick_params(axis="y", labelsize=6)
+
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.savefig(os.path.join(output_dir, "plots.png"), dpi=150)
+    plt.close(fig)
+
+
+def build_summary_text(
+    model_name: str,
+    original_params: int,
+    remaining_params: int,
+    eval_before: Dict[str, Any],
+    eval_after: Dict[str, Any],
+    pretrain_result: Dict[str, Any],
+    bayes_result: Dict[str, Any],
+    finetune_result: Dict[str, Any],
+) -> str:
+    """Build the plain-text summary.txt content for one experiment."""
+    lines = [
+        f"Experiment summary: {model_name}",
+        "=" * 50,
+        f"Original parameters (deterministic baseline): {original_params}",
+        f"Remaining parameters (after structured pruning): {remaining_params}",
+        f"Compression ratio: {compression_ratio(original_params, remaining_params):.3f}x",
+        f"Pruning percentage: {pruning_percentage(original_params, remaining_params):.2f}%",
+        "",
+        f"Test accuracy before Bayesian pruning: {eval_before['test_accuracy']:.4f}",
+        f"Test accuracy after pruning + fine-tuning: {eval_after['test_accuracy']:.4f}",
+        f"Accuracy change: {eval_after['test_accuracy'] - eval_before['test_accuracy']:+.4f}",
+        "",
+        f"Estimated FLOPs (post-pruning): {eval_after['flops']:,}",
+        f"Inference latency (post-pruning): {eval_after['latency_ms']:.3f} ms",
+        f"Peak GPU memory (post-pruning): {eval_after['gpu_memory_mb']:.1f} MB",
+        "",
+        f"Pretraining time: {pretrain_result['total_time_sec']:.1f}s (best val acc {pretrain_result['best_val_acc']:.4f})",
+        f"Bayesian gate training time: {bayes_result['total_time_sec']:.1f}s (best val acc {bayes_result['best_val_acc']:.4f})",
+        f"Fine-tuning time: {finetune_result['total_time_sec']:.1f}s (best val acc {finetune_result['best_val_acc']:.4f})",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def run_experiment(model_name: str, experiment_index: int, total_experiments: int) -> Dict[str, Any]:
+    """Run the full pipeline for a single architecture end to end."""
+    cfg: ExperimentConfig = ALL_EXPERIMENTS[model_name]()
+    set_seed(cfg.seed)
+    device = get_device(cfg.device)
+    ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, cfg.plot_dir)
+    logger = setup_logger(model_name, cfg.log_dir, f"{model_name}.log")
+
+    print_banner(f"Running Experiment {experiment_index} / {total_experiments}\n{model_name.upper()}")
+
+    print("\nBuilding model...")
+    model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes).to(device)
+    set_bayesian_mode(model, False)
+    original_params = count_parameters(model, exclude_gates=True)
+    logger.info(f"Model built with {original_params} parameters (gates excluded from count).")
+
+    train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
+    input_shape = (cfg.latency_batch_size, 3, 32, 32)
+    csv_rows: List[Dict[str, Any]] = []
+
+    print("\nTraining...")
+    pretrain_result = run_training(
+        model,
+        train_loader,
+        val_loader,
+        epochs=cfg.train.epochs,
+        lr=cfg.train.lr,
+        weight_decay=cfg.train.weight_decay,
+        optimizer_name=cfg.train.optimizer,
+        scheduler_name=cfg.train.lr_scheduler,
+        grad_clip_norm=cfg.train.grad_clip_norm,
+        use_amp=cfg.train.use_amp,
+        device=device,
+        beta_max=0.0,
+        kl_warmup_epochs=1,
+        logger=logger,
+        checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_trained.pt"),
+        csv_log_rows=csv_rows,
+        phase_name="pretrain",
+    )
+
+    print("\nValidation...")
+    val_stats = evaluate_loader(model, val_loader, device)
+    logger.info(f"Post-pretrain validation accuracy: {val_stats['accuracy']:.4f}")
+
+    eval_before = full_evaluation(
+        model, test_loader, device, input_shape, cfg.latency_num_warmup, cfg.latency_num_runs
+    )
+    logger.info(f"Test accuracy before Bayesian conversion: {eval_before['test_accuracy']:.4f}")
+    torch.save(model.state_dict(), os.path.join(cfg.output_dir, "trained_model.pt"))
+
+    print("\nConverting to Bayesian...")
+    set_bayesian_mode(model, True)
+    logger.info("Bayesian gates activated on every structurally-prunable layer.")
+
+    print("\nTraining Bayesian gates...")
+    bayes_result = run_training(
+        model,
+        train_loader,
+        val_loader,
+        epochs=cfg.bayesian.bayesian_train_epochs,
+        lr=cfg.bayesian.bayesian_train_lr,
+        weight_decay=cfg.train.weight_decay,
+        optimizer_name=cfg.train.optimizer,
+        scheduler_name=cfg.train.lr_scheduler,
+        grad_clip_norm=cfg.train.grad_clip_norm,
+        use_amp=cfg.train.use_amp,
+        device=device,
+        beta_max=cfg.bayesian.beta_max,
+        kl_warmup_epochs=cfg.bayesian.kl_warmup_epochs,
+        logger=logger,
+        checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_bayesian.pt"),
+        csv_log_rows=csv_rows,
+        phase_name="bayesian_train",
+    )
+    torch.save(model.state_dict(), os.path.join(cfg.output_dir, "bayesian_model.pt"))
+
+    print("\nComputing posterior uncertainty...")
+    uncertainty_report = compute_uncertainty_report(model, cfg.bayesian.prune_threshold)
+    for layer_name, stats in uncertainty_report.items():
+        logger.info(
+            f"  {layer_name}: median_log_alpha={stats['median']:.2f} "
+            f"frac_prunable={stats['frac_prunable']:.3f} "
+            f"structurally_prunable={stats['structurally_prunable']}"
+        )
+    log_alpha_values = gather_log_alpha_values(model)
+    remaining_report = count_remaining_structures(model, cfg.bayesian.prune_threshold)
+
+    print("\nStructured pruning...")
+    pruned_model = prune_model(model, model_name, cfg.bayesian.prune_threshold, cfg.snn).to(device)
+    remaining_params = count_parameters(pruned_model, exclude_gates=True)
+    logger.info(
+        f"Parameters: {original_params} -> {remaining_params} "
+        f"({pruning_percentage(original_params, remaining_params):.1f}% pruned)"
+    )
+
+    print("\nFine tuning...")
+    finetune_result = run_training(
+        pruned_model,
+        train_loader,
+        val_loader,
+        epochs=cfg.finetune.epochs,
+        lr=cfg.finetune.lr,
+        weight_decay=cfg.finetune.weight_decay,
+        optimizer_name=cfg.finetune.optimizer,
+        scheduler_name=cfg.finetune.lr_scheduler,
+        grad_clip_norm=cfg.finetune.grad_clip_norm,
+        use_amp=cfg.finetune.use_amp,
+        device=device,
+        beta_max=0.0,
+        kl_warmup_epochs=1,
+        logger=logger,
+        checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_pruned_finetuned.pt"),
+        csv_log_rows=csv_rows,
+        phase_name="finetune",
+    )
+
+    print("\nTesting...")
+    eval_after = full_evaluation(
+        pruned_model, test_loader, device, input_shape, cfg.latency_num_warmup, cfg.latency_num_runs
+    )
+    logger.info(f"Final test accuracy after pruning + fine-tuning: {eval_after['test_accuracy']:.4f}")
+
+    print("\nSaving checkpoints...")
+    torch.save(pruned_model.state_dict(), os.path.join(cfg.output_dir, "pruned_model.pt"))
+    write_csv(csv_rows, os.path.join(cfg.output_dir, "training_log.csv"))
+    save_config_json(cfg, os.path.join(cfg.output_dir, "config.json"))
+
+    metrics_rows = [
+        {"stage": "before_pruning", **eval_before},
+        {"stage": "after_pruning", **eval_after},
+    ]
+    write_csv(metrics_rows, os.path.join(cfg.output_dir, "metrics.csv"))
+
+    structures_rows = [
+        {"layer": name, **stats} for name, stats in remaining_report.items()
+    ]
+    write_csv(structures_rows, os.path.join(cfg.output_dir, "remaining_structures.csv"))
+
+    make_experiment_plots(model_name, csv_rows, log_alpha_values, cfg.output_dir)
+
+    summary_text = build_summary_text(
+        model_name, original_params, remaining_params, eval_before, eval_after,
+        pretrain_result, bayes_result, finetune_result,
+    )
+    with open(os.path.join(cfg.output_dir, "summary.txt"), "w") as f:
+        f.write(summary_text)
+
+    print("\nFinished.")
+
+    return {
+        "Model": model_name,
+        "Original Parameters": original_params,
+        "Remaining Parameters": remaining_params,
+        "Compression Ratio": compression_ratio(original_params, remaining_params),
+        "Pruning Percentage": pruning_percentage(original_params, remaining_params),
+        "Accuracy Before": eval_before["test_accuracy"],
+        "Accuracy After": eval_after["test_accuracy"],
+        "Training Time": pretrain_result["total_time_sec"] + bayes_result["total_time_sec"],
+        "Fine Tune Time": finetune_result["total_time_sec"],
+        "FLOPs": eval_after["flops"],
+        "Latency": eval_after["latency_ms"],
+        "GPU Memory": eval_after["gpu_memory_mb"],
+    }
+
+
+def make_comparison_plots(results: List[Dict[str, Any]], plot_dir: str) -> None:
+    """Build the cross-model comparison figures saved under ./plots/."""
+    models = [r["Model"] for r in results]
+
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.scatter([r["Pruning Percentage"] for r in results], [r["Accuracy After"] for r in results])
+    for r in results:
+        ax.annotate(r["Model"], (r["Pruning Percentage"], r["Accuracy After"]))
+    ax.set_xlabel("Pruning percentage (%)")
+    ax.set_ylabel("Accuracy after pruning + fine-tuning")
+    ax.set_title("Compression vs. accuracy")
+    fig.tight_layout()
+    fig.savefig(os.path.join(plot_dir, "compression_vs_accuracy.png"), dpi=150)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.bar(models, [r["Pruning Percentage"] for r in results])
+    ax.set_ylabel("Pruning percentage (%)")
+    ax.set_title("Pruning percentage by model")
+    fig.tight_layout()
+    fig.savefig(os.path.join(plot_dir, "pruning_percentage.png"), dpi=150)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    x = range(len(models))
+    ax.bar([i - 0.2 for i in x], [r["Original Parameters"] for r in results], width=0.4, label="original")
+    ax.bar([i + 0.2 for i in x], [r["Remaining Parameters"] for r in results], width=0.4, label="remaining")
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(models)
+    ax.set_ylabel("Parameters")
+    ax.set_title("Remaining parameters by model")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(os.path.join(plot_dir, "remaining_parameters.png"), dpi=150)
+    plt.close(fig)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    x = range(len(models))
+    ax.bar([i - 0.2 for i in x], [r["Accuracy Before"] for r in results], width=0.4, label="before pruning")
+    ax.bar([i + 0.2 for i in x], [r["Accuracy After"] for r in results], width=0.4, label="after pruning")
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(models)
+    ax.set_ylabel("Test accuracy")
+    ax.set_title("Accuracy before vs. after pruning")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(os.path.join(plot_dir, "accuracy_comparison.png"), dpi=150)
+    plt.close(fig)
+
+
+def main() -> None:
+    """Run every experiment in MODEL_ORDER, then build the cross-model summary."""
+    ensure_dirs("./checkpoints", "./outputs", "./plots", "./logs")
+
+    results: List[Dict[str, Any]] = []
+    for i, model_name in enumerate(MODEL_ORDER, start=1):
+        result = run_experiment(model_name, i, len(MODEL_ORDER))
+        results.append(result)
+
+    write_csv(results, "./outputs/final_results.csv")
+    make_comparison_plots(results, "./plots")
+
+    print_banner("ALL EXPERIMENTS FINISHED")
+    for r in results:
+        print(
+            f"{r['Model']:>10s}: {r['Pruning Percentage']:5.1f}% pruned, "
+            f"accuracy {r['Accuracy Before']:.4f} -> {r['Accuracy After']:.4f}"
+        )
+
+
+if __name__ == "__main__":
+    main()
