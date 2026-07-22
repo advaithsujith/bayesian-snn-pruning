@@ -159,6 +159,7 @@ def run_training(
     checkpoint_path: str,
     csv_log_rows: List[Dict[str, Any]],
     phase_name: str,
+    prune_threshold: float = 3.0,
 ) -> Dict[str, Any]:
     """
     Full multi-epoch training/fine-tuning loop with validation, cosine LR
@@ -167,6 +168,13 @@ def run_training(
     Setting `beta_max=0.0` (as run_all.py does for the fine-tuning phase)
     makes this a plain SNN training loop with no Bayesian regularisation,
     since a physically-pruned model has no gates left to regularise.
+
+    During the `"bayesian_train"` phase, an extra diagnostic line reports
+    the min/median/max `log_alpha` and the fraction of gates already past
+    `prune_threshold`, pooled across every gated layer -- this is the
+    live signal for whether the KL pressure (`beta_max`) is actually
+    strong enough to drive gates to collapse, rather than only finding
+    out after the full phase completes.
     """
     model.to(device)
     optimizer = build_optimizer(model, optimizer_name, lr, weight_decay)
@@ -198,6 +206,16 @@ def run_training(
             f"val_loss={val_stats['loss']:.4f} val_acc={val_stats['accuracy']:.4f} "
             f"time={epoch_time:.1f}s"
         )
+
+        if phase_name == "bayesian_train":
+            gated_layers = collect_bayesian_layers(model)
+            if gated_layers:
+                all_log_alpha = torch.cat([layer.log_alpha.detach().flatten() for layer in gated_layers])
+                logger.info(
+                    f"    log_alpha: min={all_log_alpha.min():.2f} "
+                    f"median={all_log_alpha.median():.2f} max={all_log_alpha.max():.2f} "
+                    f"frac_prunable={(all_log_alpha > prune_threshold).float().mean():.3f}"
+                )
 
         csv_log_rows.append(
             {

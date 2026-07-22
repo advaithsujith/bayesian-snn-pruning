@@ -224,6 +224,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_bayesian.pt"),
         csv_log_rows=csv_rows,
         phase_name="bayesian_train",
+        prune_threshold=cfg.bayesian.prune_threshold,
     )
     torch.save(model.state_dict(), os.path.join(cfg.output_dir, "bayesian_model.pt"))
 
