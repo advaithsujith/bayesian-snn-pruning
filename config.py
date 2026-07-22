@@ -115,9 +115,9 @@ def get_lenet_config() -> ExperimentConfig:
     cfg.output_dir = "./outputs/lenet"
     cfg.train.epochs = 60
     cfg.finetune.epochs = 20
-    cfg.bayesian.bayesian_train_epochs = 40
-    cfg.bayesian.kl_warmup_epochs = 15
-    cfg.bayesian.beta_max = 0.25
+    cfg.bayesian.bayesian_train_epochs = 100
+    cfg.bayesian.kl_warmup_epochs = 50
+    cfg.bayesian.beta_max = 1.0
     return cfg
 
 
@@ -129,9 +129,9 @@ def get_vgg9_config() -> ExperimentConfig:
     cfg.train.batch_size = 64
     cfg.finetune.epochs = 30
     cfg.finetune.batch_size = 64
-    cfg.bayesian.bayesian_train_epochs = 60
-    cfg.bayesian.kl_warmup_epochs = 25
-    cfg.bayesian.beta_max = 0.1
+    cfg.bayesian.bayesian_train_epochs = 120
+    cfg.bayesian.kl_warmup_epochs = 60
+    cfg.bayesian.beta_max = 0.4
     cfg.data.num_workers = 8
     return cfg
 
@@ -145,9 +145,9 @@ def get_resnet18_config() -> ExperimentConfig:
     cfg.train.lr = 5e-4
     cfg.finetune.epochs = 30
     cfg.finetune.batch_size = 64
-    cfg.bayesian.bayesian_train_epochs = 60
-    cfg.bayesian.kl_warmup_epochs = 30
-    cfg.bayesian.beta_max = 0.05
+    cfg.bayesian.bayesian_train_epochs = 120
+    cfg.bayesian.kl_warmup_epochs = 60
+    cfg.bayesian.beta_max = 0.2
     cfg.data.num_workers = 8
     return cfg
 
