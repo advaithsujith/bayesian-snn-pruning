@@ -96,12 +96,39 @@ def evaluate_loader(model: nn.Module, loader: DataLoader, device: torch.device) 
     return {"loss": total_loss / n_batches, "accuracy": total_acc / n_batches}
 
 
+def _param_groups_excluding_gates(model: nn.Module, weight_decay: float) -> List[Dict[str, Any]]:
+    """
+    Split parameters into two weight-decay groups: `log_alpha` gate
+    parameters get weight_decay=0, everything else gets the requested
+    value.
+
+    L2 weight decay pulls every parameter toward zero regardless of the
+    loss gradient. Applying it to log_alpha (initialised at a negative
+    value, e.g. -3.0) would silently drag every gate toward log_alpha=0
+    every step -- during "Train" this defeats the intended frozen/inert
+    behaviour of a disabled gate, and during "Bayesian train" it fights
+    against the KL term's pruning pressure by resisting exactly the
+    positive log_alpha growth that pruning is supposed to encourage.
+    Gate parameters already have their own dedicated regulariser (the KL
+    term against the log-uniform prior); they must not also receive
+    generic L2 decay.
+    """
+    gate_params = [p for name, p in model.named_parameters() if "log_alpha" in name]
+    other_params = [p for name, p in model.named_parameters() if "log_alpha" not in name]
+    return [
+        {"params": other_params, "weight_decay": weight_decay},
+        {"params": gate_params, "weight_decay": 0.0},
+    ]
+
+
 def build_optimizer(model: nn.Module, name: str, lr: float, weight_decay: float) -> torch.optim.Optimizer:
-    """Construct an optimizer by name ('adam' or 'sgd')."""
+    """Construct an optimizer by name ('adam' or 'sgd'). Excludes log_alpha
+    gate parameters from weight decay -- see _param_groups_excluding_gates."""
+    param_groups = _param_groups_excluding_gates(model, weight_decay)
     if name == "adam":
-        return torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        return torch.optim.Adam(param_groups, lr=lr)
     if name == "sgd":
-        return torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
+        return torch.optim.SGD(param_groups, lr=lr, momentum=0.9)
     raise ValueError(f"Unknown optimizer '{name}'")
 
 
