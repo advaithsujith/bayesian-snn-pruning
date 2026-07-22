@@ -1,19 +1,34 @@
 #!/bin/bash
 #SBATCH --job-name=bayesian_snn_pruning
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:1
+#SBATCH --partition=gpuA
+#SBATCH -G 1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --time=48:00:00
+#SBATCH --time=96:00:00
 #SBATCH --output=logs/slurm_%j.out
 #SBATCH --error=logs/slurm_%j.err
 
 # ---------------------------------------------------------------------------
 # SLURM launch script for the full Bayesian SNN pruning pipeline.
 #
-# Adjust --partition, --gres, --cpus-per-task, --mem and --time to match
-# your specific university cluster's queue names and resource limits
-# before submitting (`sbatch slurm.sh`).
+# Tuned for University of Manchester CSF3
+# (https://ri.itservices.manchester.ac.uk/csf3/batch-slurm/partitions/):
+#   - gpuA: 4x Nvidia A100 80GB, 4-day (96h) max wallclock, general access.
+#   - gpuL: 4x Nvidia L40S 48GB, 4-day max, general access -- swap
+#     --partition=gpuA for --partition=gpuL below if gpuA is busy/queued.
+#   - CSF3 requests GPUs via `-G NUM`, not the generic `--gres=gpu:N`
+#     syntax some other clusters use.
+#   - gpuA40GB and gpuH/gpuH_short require separate restricted-access
+#     approval and are not used here.
+#
+# If you're on a different cluster, adjust --partition, the GPU request
+# line, --cpus-per-task, --mem and --time to match its queue names and
+# resource limits before submitting (`sbatch slurm.sh`).
+#
+# 96h may not be enough for all three architectures at full epoch counts
+# on a single job -- if a sanity-check run (see README) shows per-epoch
+# time is too slow to fit, split this into three separate sbatch
+# submissions (one per architecture) instead of one combined job.
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
