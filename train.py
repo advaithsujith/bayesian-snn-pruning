@@ -160,6 +160,7 @@ def run_training(
     csv_log_rows: List[Dict[str, Any]],
     phase_name: str,
     prune_threshold: float = 3.0,
+    restore_best_checkpoint: bool = True,
 ) -> Dict[str, Any]:
     """
     Full multi-epoch training/fine-tuning loop with validation, cosine LR
@@ -175,6 +176,14 @@ def run_training(
     live signal for whether the KL pressure (`beta_max`) is actually
     strong enough to drive gates to collapse, rather than only finding
     out after the full phase completes.
+
+    `restore_best_checkpoint` selects whether the model is reverted to
+    its best-validation-accuracy epoch at the end (the right choice for
+    ordinary training/fine-tuning, to avoid overfitting). For
+    `"bayesian_train"` this must be False: validation accuracy declines
+    monotonically as the KL term pushes gates toward collapse, so "best
+    accuracy" always lands near epoch 1, before pruning has had any
+    effect -- reverting to it would silently undo the entire phase.
     """
     model.to(device)
     optimizer = build_optimizer(model, optimizer_name, lr, weight_decay)
@@ -236,7 +245,7 @@ def run_training(
             best_val_acc = val_stats["accuracy"]
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
 
-    if best_state is not None:
+    if restore_best_checkpoint and best_state is not None:
         model.load_state_dict(best_state)
 
     total_time = time.time() - start_time
