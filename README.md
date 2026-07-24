@@ -79,28 +79,67 @@ For each architecture, in order:
 
 ```
 bayesian_snn_pruning/
-├── run_all.py            # top-level orchestrator; entry point
-├── train.py               # training / fine-tuning loops
-├── evaluate.py             # full test-set + resource evaluation
-├── pruning.py              # uncertainty-based masks + physical rebuilding
-├── bayesian_layers.py      # BayesianLinear / BayesianConv2d, KL divergence
-├── losses.py                # SNN spike-rate loss + KL combination
-├── models.py                 # LeNet-SNN, VGG9-SNN, Spiking ResNet-18
-├── datasets.py                # CIFAR-10 loaders + augmentation
-├── metrics.py                  # params, FLOPs, memory, latency, CSV I/O
-├── utils.py                     # seeding, logging, checkpoints
-├── config.py                     # every hyperparameter, per architecture
+├── run_all.py            # top-level orchestrator (Bayesian pipeline); entry point
+├── run_bio_pruning.py     # top-level orchestrator (bio-inspired baselines)
+├── train.py                # training / fine-tuning loops
+├── evaluate.py               # full test-set + resource evaluation
+├── pruning.py                 # uncertainty-based masks + physical rebuilding
+├── activity_pruning.py         # bio-inspired criteria (naive/SCA/DPAP) + physical rebuilding
+├── bayesian_layers.py            # BayesianLinear / BayesianConv2d, KL divergence
+├── losses.py                       # SNN spike-rate loss + KL combination
+├── models.py                        # LeNet-SNN, VGG9-SNN, Spiking ResNet-18
+├── datasets.py                       # CIFAR-10 loaders + augmentation
+├── metrics.py                         # params, FLOPs, memory, latency, CSV I/O
+├── utils.py                            # seeding, logging, checkpoints
+├── config.py                            # every hyperparameter, per architecture
 ├── requirements.txt
 ├── slurm.sh
 ├── checkpoints/    # raw model .pt files written during training
 ├── outputs/
 │   ├── lenet/       # trained_model.pt, bayesian_model.pt, pruned_model.pt,
+│   │                # bio/<criterion>/keep_<fraction>/, ...
 │   ├── vgg9/         # metrics.csv, training_log.csv, plots.png,
 │   ├── resnet18/      # config.json, summary.txt, remaining_structures.csv
-│   └── final_results.csv   # cross-architecture comparison table
+│   ├── final_results.csv   # cross-architecture Bayesian comparison table
+│   └── bio_results.csv       # cross-architecture bio-inspired comparison table
 ├── plots/           # cross-architecture comparison figures
 └── logs/             # per-architecture .log files + SLURM stdout/stderr
 ```
+
+## Bio-inspired pruning baselines
+
+```bash
+python run_bio_pruning.py
+```
+
+Run after (or before — it will train and cache its own baseline if needed)
+`run_all.py`. For each architecture, forks from the exact same
+deterministic pretrained checkpoint the Bayesian pipeline uses
+(`outputs/<model>/trained_model.pt`), then structurally prunes it under
+three alternative, non-Bayesian criteria, sweeping every sparsity level in
+`cfg.bio.keep_fractions` to produce accuracy-vs-sparsity curves comparable
+to the Bayesian side at matched sparsity:
+
+- **Naive static firing-rate**: one forward pass, rank by mean spike
+  rate, keep the top `keep_fraction`. No training-time dynamics — the
+  cheap, static baseline.
+- **SCA** (Li et al., 2024): cyclic dynamic pruning driven by mean
+  |membrane potential| per channel, recomputed every cycle as the target
+  sparsity ramps up.
+- **DPAP-structured** (developmental-plasticity-inspired): per-epoch EMA
+  "survival score" of spike-rate activity with a constant decay each
+  epoch ("use it or lose it").
+
+All three reuse `pruning.py`'s physical-rebuild container classes and
+`train.py`'s training loop unchanged; `pruning.py`, `bayesian_layers.py`,
+`models.py`, and `train.py` are never modified by this module. See
+`activity_pruning.py`'s module docstring for full literature citations and
+the deliberate simplifications made relative to each source paper
+(monotonic prune-only schedules rather than true prune+regrow; DPAP's
+structured/neuron branch only; explicit target-sparsity selection instead
+of DPAP's emergent score-crossing rule) — each is chosen so results stay
+directly comparable to the Bayesian side, not to overclaim fidelity to the
+original papers.
 
 ## Bayesian pruning methodology
 
@@ -148,6 +187,13 @@ literature for residual architectures, not an oversight.
   Networks.* NeurIPS. (Spiking-ResNet design pattern, direct encoding.)
 - Rathi, N. & Roy, K. et al. — LeNet-5 / VGG-style SNN configurations
   standard in the SNN-conversion and SNN-pruning literature.
+- Li, Y., Xu, Q., Shen, J., Xu, H., Chen, L., & Pan, G. (2024). *Towards
+  Efficient Deep Spiking Neural Networks Construction with Spiking
+  Activity based Pruning.* ICML. (SCA baseline in `activity_pruning.py`.)
+- Han, B., Zhao, F., Zeng, Y., & Shen, G. (2022, IEEE TPAMI 2024).
+  *Developmental Plasticity-inspired Adaptive Pruning for Deep Spiking and
+  Artificial Neural Networks.* arXiv 2211.12714. (DPAP-structured
+  baseline; only the structured/neuron branch is reproduced here.)
 
 ## A note on scope
 

@@ -74,6 +74,53 @@ class FineTuneConfig:
 
 
 @dataclass
+class BioPruningConfig:
+    """
+    Shared hyperparameters for the bio-inspired structured-pruning criteria
+    in activity_pruning.py (naive static firing-rate, SCA, DPAP-structured).
+
+    All three criteria fork from the same deterministic pretrained
+    checkpoint (`trained_model.pt`) that the Bayesian pipeline also starts
+    its "Converting to Bayesian" stage from, and share the identical
+    physical-rebuild / fine-tune / evaluation infrastructure -- only the
+    importance criterion and how it is trained differs. `keep_fractions`
+    is swept to produce the accuracy-vs-sparsity curves needed to compare
+    against the Bayesian side at matched sparsity, per the dissertation's
+    controlled-comparison framing (see HANDOFF.md).
+    """
+
+    keep_fractions: List[float] = field(default_factory=lambda: [0.1])
+
+    # -- naive static firing-rate pruning: one-shot, no training loop --
+    naive_num_passes: int = 1  # passes over train_loader to average spike-rate stats over
+
+    # -- SCA (Spiking Channel Activity-based pruning), Li et al. ICML 2024 --
+    # Criterion: mean |membrane potential| per channel/neuron. Dynamic:
+    # each cycle recomputes the full keep-set from freshly accumulated
+    # activity (natural prune+regrow), while the target keep-count ramps
+    # down linearly from "everything" to the final `keep_fraction` across
+    # `sca_num_cycles` cycles of `sca_epochs_per_cycle` epochs each.
+    sca_epochs_per_cycle: int = 5
+    sca_num_cycles: int = 6
+    sca_lr: float = 5e-4
+    sca_weight_decay: float = 5e-5
+
+    # -- DPAP-structured (Developmental Plasticity-inspired Adaptive
+    # Pruning, arXiv 2211.12714), neuron/channel branch only --
+    # Criterion: an exponential-moving-average "survival score" per
+    # channel/neuron, driven by spike-rate activity with a constant
+    # per-epoch decay ("use it or lose it, gradually decay"). Final
+    # scores are ranked to hit the target `keep_fraction` -- see
+    # activity_pruning.py's module docstring for why a fixed score<0
+    # cutoff was replaced with explicit top-k selection.
+    dpap_train_epochs: int = 30
+    dpap_ema_decay: float = 0.9
+    dpap_survival_decay: float = 0.02
+    dpap_lr: float = 5e-4
+    dpap_weight_decay: float = 5e-5
+
+
+@dataclass
 class DataConfig:
     """CIFAR-10 loading and augmentation settings."""
 
@@ -94,6 +141,7 @@ class ExperimentConfig:
     name: str
     snn: SNNConfig = field(default_factory=SNNConfig)
     bayesian: BayesianConfig = field(default_factory=BayesianConfig)
+    bio: BioPruningConfig = field(default_factory=BioPruningConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
     finetune: FineTuneConfig = field(default_factory=FineTuneConfig)
     data: DataConfig = field(default_factory=DataConfig)
@@ -115,7 +163,7 @@ def get_lenet_config() -> ExperimentConfig:
     cfg.output_dir = "./outputs/lenet"
     cfg.train.epochs = 60
     cfg.finetune.epochs = 20
-    cfg.bayesian.bayesian_train_epochs = 100
+    cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 50
     cfg.bayesian.beta_max = 1.0
     return cfg
@@ -129,8 +177,8 @@ def get_vgg9_config() -> ExperimentConfig:
     cfg.train.batch_size = 64
     cfg.finetune.epochs = 30
     cfg.finetune.batch_size = 64
-    cfg.bayesian.bayesian_train_epochs = 120
-    cfg.bayesian.kl_warmup_epochs = 60
+    cfg.bayesian.bayesian_train_epochs = 75
+    cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.4
     cfg.data.num_workers = 8
     return cfg
@@ -145,8 +193,8 @@ def get_resnet18_config() -> ExperimentConfig:
     cfg.train.lr = 5e-4
     cfg.finetune.epochs = 30
     cfg.finetune.batch_size = 64
-    cfg.bayesian.bayesian_train_epochs = 120
-    cfg.bayesian.kl_warmup_epochs = 60
+    cfg.bayesian.bayesian_train_epochs = 75
+    cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.2
     cfg.data.num_workers = 8
     return cfg
