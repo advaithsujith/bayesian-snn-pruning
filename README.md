@@ -171,6 +171,33 @@ see the docstrings in `models.py` and `pruning.py` for the full rationale.
 This is a standard, documented simplification in the structured-pruning
 literature for residual architectures, not an oversight.
 
+## Hyperparameter search
+
+```bash
+python hpo_search.py                       # all three methods
+python hpo_search.py --methods bayesian     # split across sbatch submissions if needed
+```
+
+Bayesian pruning's hyperparameters were tuned through real, iterative CSF3 runs;
+`activity_pruning.py`'s bio-inspired criteria originally shipped with untuned
+defaults, and LeNet's Bayesian `beta_max` was fixed from a collapse (`fc2` pruned to
+1 surviving neuron) with a one-off manual guess. Both are a threat to a fair
+comparison — if only one method gets real tuning effort, "method A beats method B"
+may just mean "A got more tuning." `hpo_search.py` replaces both with an actual
+search: three independent Optuna samplers (random search, TPE, CMA-ES), 15 trials
+each, against all three methods' key hyperparameters (Bayesian's `beta_max`; SCA's
+epoch budget/cycle count/learning rate; DPAP's epoch budget/EMA decay/survival
+decay/learning rate), run entirely on LeNet (cheapest architecture) at a shortened
+(~1/3) epoch budget per trial, followed by one full-length confirmation run per
+method on the held-out test set. Independent samplers converging on similar values
+is the actual fairness claim — see `outputs/hpo/convergence_summary.txt` after a run.
+
+Only LeNet's Bayesian `beta_max` gets replaced by the search result — VGG9's and
+ResNet18's Bayesian `beta_max` already produced validated, working results and are
+left untouched. SCA's and DPAP's searched hyperparameters transfer as-is into
+`BioPruningConfig` for all three architectures (matching the existing convention
+that `bayesian_train_epochs` is already shared identically across architectures).
+
 ## References
 
 - Molchanov, D., Ashukha, A., & Vetrov, D. (2017). *Variational Dropout

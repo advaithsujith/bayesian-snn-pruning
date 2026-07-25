@@ -4,3 +4,5 @@ snntorch==0.9.1
 numpy==1.26.4
 matplotlib==3.8.4
 tqdm==4.66.4
+optuna==3.6.1
+cmaes==0.10.0
