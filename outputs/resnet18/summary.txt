@@ -1,0 +1,18 @@
+Experiment summary: resnet18
+==================================================
+Original parameters (deterministic baseline): 11177866
+Remaining parameters (after structured pruning): 1050757
+Compression ratio: 10.638x
+Pruning percentage: 90.60%
+
+Test accuracy before Bayesian pruning: 0.8926
+Test accuracy after pruning + fine-tuning: 0.8893
+Accuracy change: -0.0033
+
+Estimated FLOPs (post-pruning): 7,291,520,000
+Inference latency (post-pruning): 170.503 ms
+Peak GPU memory (post-pruning): 240.8 MB
+
+Pretraining time: 34662.8s (best val acc 0.8975)
+Bayesian gate training time: 42472.9s (best val acc 0.9013)
+Fine-tuning time: 8248.9s (best val acc 0.8900)

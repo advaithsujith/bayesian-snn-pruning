@@ -1,0 +1,9 @@
+Bio-inspired pruning: lenet / dpap / target keep_fraction=0.1
+============================================================
+Original parameters: 62006
+Remaining parameters: 934
+Pruning percentage: 98.49%
+Test accuracy after pruning + fine-tuning: 0.2297
+Estimated FLOPs (post-pruning): 1,614,400
+Inference latency (post-pruning): 35.391 ms
+Fine-tuning time: 591.4s (best val acc 0.2406)

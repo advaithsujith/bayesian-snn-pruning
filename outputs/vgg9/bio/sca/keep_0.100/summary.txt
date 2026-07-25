@@ -1,0 +1,9 @@
+Bio-inspired pruning: vgg9 / sca / target keep_fraction=0.1
+============================================================
+Original parameters: 8887978
+Remaining parameters: 90080
+Pruning percentage: 98.99%
+Test accuracy after pruning + fine-tuning: 0.5178
+Estimated FLOPs (post-pruning): 62,016,800
+Inference latency (post-pruning): 66.229 ms
+Fine-tuning time: 3401.5s (best val acc 0.5158)

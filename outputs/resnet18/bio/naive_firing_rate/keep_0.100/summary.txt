@@ -1,0 +1,9 @@
+Bio-inspired pruning: resnet18 / naive_firing_rate / target keep_fraction=0.1
+============================================================
+Original parameters: 11177866
+Remaining parameters: 1285642
+Pruning percentage: 88.50%
+Test accuracy after pruning + fine-tuning: 0.8343
+Estimated FLOPs (post-pruning): 1,555,481,600
+Inference latency (post-pruning): 167.618 ms
+Fine-tuning time: 8517.2s (best val acc 0.8319)
