@@ -1,0 +1,5 @@
+layer,total,remaining,pruned
+conv1,6,6,0
+conv2,16,16,0
+fc1,120,87,33
+fc2,84,0,84
