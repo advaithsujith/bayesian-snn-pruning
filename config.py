@@ -165,7 +165,7 @@ def get_lenet_config() -> ExperimentConfig:
     cfg.finetune.epochs = 20
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 50
-    cfg.bayesian.beta_max = 1.0
+    cfg.bayesian.beta_max = 0.4
     return cfg
 
 
