@@ -13,7 +13,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from bayesian_layers import collect_bayesian_layers
-from losses import bayesian_snn_loss, kl_beta_schedule, spike_rate_cross_entropy
+from losses import bayesian_snn_loss, linear_warmup_schedule, spike_rate_cross_entropy
 from utils import save_checkpoint
 
 
@@ -33,12 +33,19 @@ def train_one_epoch(
     grad_clip_norm: float,
     use_amp: bool,
     scaler: Optional[torch.cuda.amp.GradScaler],
+    gamma: float = 0.0,
+    prune_threshold: float = 3.0,
 ) -> Dict[str, float]:
-    """Run one training epoch. Returns average task loss, KL, total loss, and accuracy."""
+    """Run one training epoch. Returns average task loss, KL, expected-cost,
+    total loss, and accuracy. `gamma`/`prune_threshold` only take effect for
+    Bayesian models (bio-inspired pruning models have no gates, so the
+    non-bayesian branch below never uses them)."""
     model.train()
     is_bayesian = len(collect_bayesian_layers(model)) > 0
 
-    total_task_loss, total_kl, total_loss, total_acc, n_batches = 0.0, 0.0, 0.0, 0.0, 0
+    total_task_loss, total_kl, total_cost, total_loss, total_acc, n_batches = (
+        0.0, 0.0, 0.0, 0.0, 0.0, 0,
+    )
 
     for images, targets in loader:
         images, targets = images.to(device), targets.to(device)
@@ -48,10 +55,13 @@ def train_one_epoch(
         with torch.cuda.amp.autocast(enabled=amp_enabled):
             spk_rec = model(images)
             if is_bayesian:
-                loss, task_loss, kl_term = bayesian_snn_loss(spk_rec, targets, model, beta)
+                loss, task_loss, kl_term, cost_term = bayesian_snn_loss(
+                    spk_rec, targets, model, beta, gamma, prune_threshold
+                )
             else:
                 task_loss = spike_rate_cross_entropy(spk_rec, targets)
                 kl_term = torch.tensor(0.0, device=device)
+                cost_term = torch.tensor(0.0, device=device)
                 loss = task_loss
 
         if amp_enabled:
@@ -67,6 +77,7 @@ def train_one_epoch(
 
         total_task_loss += task_loss.item()
         total_kl += float(kl_term)
+        total_cost += float(cost_term)
         total_loss += loss.item()
         total_acc += _spike_accuracy(spk_rec.detach(), targets)
         n_batches += 1
@@ -74,6 +85,7 @@ def train_one_epoch(
     return {
         "task_loss": total_task_loss / n_batches,
         "kl": total_kl / n_batches,
+        "cost": total_cost / n_batches,
         "total_loss": total_loss / n_batches,
         "accuracy": total_acc / n_batches,
     }
@@ -161,6 +173,8 @@ def run_training(
     phase_name: str,
     prune_threshold: float = 3.0,
     restore_best_checkpoint: bool = True,
+    gamma_max: float = 0.0,
+    cost_warmup_epochs: int = 1,
 ) -> Dict[str, Any]:
     """
     Full multi-epoch training/fine-tuning loop with validation, cosine LR
@@ -184,6 +198,11 @@ def run_training(
     monotonically as the KL term pushes gates toward collapse, so "best
     accuracy" always lands near epoch 1, before pruning has had any
     effect -- reverting to it would silently undo the entire phase.
+
+    `gamma_max`/`cost_warmup_epochs` control the optional expected-FLOPs
+    cost term (see losses.bayesian_snn_loss) the same way `beta_max`/
+    `kl_warmup_epochs` control the KL term. Default `gamma_max=0.0` makes
+    this term inert, matching pre-existing behaviour.
     """
     model.to(device)
     optimizer = build_optimizer(model, optimizer_name, lr, weight_decay)
@@ -196,10 +215,20 @@ def run_training(
 
     for epoch in range(epochs):
         epoch_start = time.time()
-        beta = kl_beta_schedule(epoch, kl_warmup_epochs, beta_max)
+        beta = linear_warmup_schedule(epoch, kl_warmup_epochs, beta_max)
+        gamma = linear_warmup_schedule(epoch, cost_warmup_epochs, gamma_max)
 
         train_stats = train_one_epoch(
-            model, train_loader, optimizer, device, beta, grad_clip_norm, use_amp, scaler
+            model,
+            train_loader,
+            optimizer,
+            device,
+            beta=beta,
+            grad_clip_norm=grad_clip_norm,
+            use_amp=use_amp,
+            scaler=scaler,
+            gamma=gamma,
+            prune_threshold=prune_threshold,
         )
         val_stats = evaluate_loader(model, val_loader, device)
 
@@ -211,6 +240,7 @@ def run_training(
             f"[{phase_name}] epoch {epoch + 1}/{epochs} "
             f"train_task_loss={train_stats['task_loss']:.4f} "
             f"train_kl={train_stats['kl']:.2f} beta={beta:.5f} "
+            f"train_cost={train_stats['cost']:.2f} gamma={gamma:.6f} "
             f"train_acc={train_stats['accuracy']:.4f} "
             f"val_loss={val_stats['loss']:.4f} val_acc={val_stats['accuracy']:.4f} "
             f"time={epoch_time:.1f}s"
@@ -232,8 +262,10 @@ def run_training(
                 "epoch": epoch + 1,
                 "train_task_loss": train_stats["task_loss"],
                 "train_kl": train_stats["kl"],
+                "train_cost": train_stats["cost"],
                 "train_total_loss": train_stats["total_loss"],
                 "beta": beta,
+                "gamma": gamma,
                 "train_accuracy": train_stats["accuracy"],
                 "val_loss": val_stats["loss"],
                 "val_accuracy": val_stats["accuracy"],

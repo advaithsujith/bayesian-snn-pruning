@@ -122,6 +122,69 @@ def estimate_flops(model: nn.Module, input_shape: "tuple[int, int, int, int]", d
     return flops
 
 
+def compute_and_set_unit_costs(
+    model: nn.Module, input_shape: "tuple[int, int, int, int]", device: torch.device
+) -> None:
+    """
+    Compute each Bayesian layer's static per-unit (per-neuron/per-channel)
+    FLOPs cost -- the same multiply-accumulate formula _FlopCounter uses,
+    disaggregated to one value per output unit instead of a single layer
+    total -- and write it into that layer's `unit_cost` buffer via
+    `set_unit_cost()`. This is the static `cost_j` term consumed by
+    BayesianLinear/BayesianConv2d.expected_cost() in the FLOPs-aware loss
+    (see losses.bayesian_snn_loss).
+
+    Cost only depends on fixed architecture (kernel size, channel counts,
+    spatial dimensions), never on learned weights, so this must be called
+    exactly once, right after the model is built -- not per-epoch or
+    per-batch. Hooks are registered on each Bayesian layer's inner
+    `conv`/`linear` submodule and accumulate with `+=` across the one dummy
+    forward pass, since that submodule is called once per simulated
+    timestep inside the model's own forward loop (matching how
+    estimate_flops already totals FLOPs "per full forward pass" the same
+    way).
+    """
+    layers = collect_bayesian_layers(model)
+    for layer in layers:
+        layer.unit_cost.zero_()
+
+    handles: List[Any] = []
+
+    def _make_conv_hook(layer: "BayesianConv2d"):
+        def _hook(module: nn.Conv2d, inputs: Any, output: torch.Tensor) -> None:
+            _, _, out_h, out_w = output.shape
+            in_channels_per_group = module.in_channels // module.groups
+            kernel_flops = (
+                in_channels_per_group * module.kernel_size[0] * module.kernel_size[1]
+            )
+            per_unit = kernel_flops * out_h * out_w
+            layer.unit_cost += per_unit
+
+        return _hook
+
+    def _make_linear_hook(layer: "BayesianLinear"):
+        def _hook(module: nn.Linear, inputs: Any, output: torch.Tensor) -> None:
+            layer.unit_cost += module.in_features
+
+        return _hook
+
+    for layer in layers:
+        if isinstance(layer, BayesianConv2d):
+            handles.append(layer.conv.register_forward_hook(_make_conv_hook(layer)))
+        else:
+            handles.append(layer.linear.register_forward_hook(_make_linear_hook(layer)))
+
+    was_training = model.training
+    model.eval()
+    with torch.no_grad():
+        dummy_input = torch.randn(*input_shape, device=device)
+        model(dummy_input)
+    model.train(was_training)
+
+    for h in handles:
+        h.remove()
+
+
 def measure_gpu_memory_mb(device: torch.device) -> float:
     """Peak CUDA memory allocated, in megabytes. Returns 0.0 on CPU."""
     if device.type != "cuda":

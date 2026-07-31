@@ -115,6 +115,13 @@ def run_bio_experiment_point(
     out_dir = os.path.join(cfg.output_dir, "bio", criterion, f"keep_{keep_fraction:.3f}")
     ensure_dirs(out_dir)
     csv_rows: List[Dict[str, Any]] = []
+    # Kept in a separate list (mirroring hpo_search.py's _run_bio_pipeline)
+    # rather than appended into csv_rows: activity_pruning.py's sca/dpap
+    # rows and train.py's run_training rows no longer share an identical
+    # column schema (run_training now also logs train_cost/gamma), and
+    # write_csv derives its header from the first row, so mixing the two
+    # schemas in one CSV raises a DictWriter error partway through.
+    finetune_csv_rows: List[Dict[str, Any]] = []
 
     if criterion == "naive_firing_rate":
         keep_masks = run_naive_firing_rate_pruning(
@@ -147,7 +154,7 @@ def run_bio_experiment_point(
         grad_clip_norm=cfg.finetune.grad_clip_norm, use_amp=cfg.finetune.use_amp, device=device,
         beta_max=0.0, kl_warmup_epochs=1, logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_{tag}_finetuned.pt"),
-        csv_log_rows=csv_rows, phase_name="finetune",
+        csv_log_rows=finetune_csv_rows, phase_name="finetune",
     )
 
     input_shape = (cfg.latency_batch_size, 3, 32, 32)
@@ -158,6 +165,7 @@ def run_bio_experiment_point(
 
     torch.save(pruned_model.state_dict(), os.path.join(out_dir, "pruned_model.pt"))
     write_csv(csv_rows, os.path.join(out_dir, "training_log.csv"))
+    write_csv(finetune_csv_rows, os.path.join(out_dir, "finetune_training_log.csv"))
 
     summary_lines = [
         f"Bio-inspired pruning: {model_name} / {criterion} / target keep_fraction={keep_fraction}",

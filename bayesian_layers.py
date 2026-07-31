@@ -101,6 +101,12 @@ class BayesianLinear(nn.Module):
         # rebuilt into a smaller architecture.
         self.register_buffer("hard_mask", torch.ones(out_features))
 
+        # Static per-neuron FLOPs cost, populated once (post-construction,
+        # pre-training) by metrics.compute_and_set_unit_costs. Zero until
+        # then, so the expected-cost loss term is inert if this is ever
+        # accidentally left unset, rather than injecting a bogus flat cost.
+        self.register_buffer("unit_cost", torch.zeros(out_features))
+
         # Whether pruning.py is permitted to physically remove this layer's
         # gated units. Set False by architectures (e.g. ResNet BasicBlock's
         # conv2) whose output dimension is tied to a residual addition and
@@ -138,6 +144,18 @@ class BayesianLinear(nn.Module):
         """Sum of the per-neuron KL divergence to the log-uniform prior."""
         return kl_divergence_from_log_alpha(self._clamped_log_alpha())
 
+    def expected_cost(self, threshold: float) -> torch.Tensor:
+        """
+        Expected FLOPs cost of this layer's surviving neurons under the
+        current posterior: sum_j(unit_cost_j * p_keep_j), where
+        p_keep_j = 1 - sigmoid(log_alpha_j - threshold) is a smooth,
+        differentiable surrogate for "will neuron j survive pruning"
+        (unlike prunable_mask's hard boolean, this must stay differentiable
+        so gradient can reach log_alpha -- same reasoning as kl()).
+        """
+        p_keep = 1.0 - torch.sigmoid(self._clamped_log_alpha() - threshold)
+        return (p_keep * self.unit_cost).sum()
+
     def prunable_mask(self, threshold: float) -> torch.Tensor:
         """Boolean tensor, True where a neuron's log_alpha exceeds `threshold`."""
         return self._clamped_log_alpha().detach() > threshold
@@ -145,6 +163,10 @@ class BayesianLinear(nn.Module):
     def set_hard_mask(self, keep_mask: torch.Tensor) -> None:
         """Freeze a keep/drop decision into `hard_mask` for eval-time use."""
         self.hard_mask.copy_(keep_mask.float())
+
+    def set_unit_cost(self, cost: torch.Tensor) -> None:
+        """Set the static per-neuron FLOPs cost used by expected_cost()."""
+        self.unit_cost.copy_(cost.float())
 
 
 class BayesianConv2d(nn.Module):
@@ -181,6 +203,9 @@ class BayesianConv2d(nn.Module):
         self.log_alpha = nn.Parameter(torch.full((out_channels,), log_alpha_init))
         self.register_buffer("hard_mask", torch.ones(out_channels))
 
+        # See BayesianLinear.unit_cost.
+        self.register_buffer("unit_cost", torch.zeros(out_channels))
+
         # See BayesianLinear.structurally_prunable.
         self.structurally_prunable = True
 
@@ -204,6 +229,11 @@ class BayesianConv2d(nn.Module):
         """Sum of the per-channel KL divergence to the log-uniform prior."""
         return kl_divergence_from_log_alpha(self._clamped_log_alpha())
 
+    def expected_cost(self, threshold: float) -> torch.Tensor:
+        """See BayesianLinear.expected_cost -- identical formula, per-channel."""
+        p_keep = 1.0 - torch.sigmoid(self._clamped_log_alpha() - threshold)
+        return (p_keep * self.unit_cost).sum()
+
     def prunable_mask(self, threshold: float) -> torch.Tensor:
         """Boolean tensor, True where a channel's log_alpha exceeds `threshold`."""
         return self._clamped_log_alpha().detach() > threshold
@@ -211,6 +241,10 @@ class BayesianConv2d(nn.Module):
     def set_hard_mask(self, keep_mask: torch.Tensor) -> None:
         """Freeze a keep/drop decision into `hard_mask` for eval-time use."""
         self.hard_mask.copy_(keep_mask.float())
+
+    def set_unit_cost(self, cost: torch.Tensor) -> None:
+        """Set the static per-channel FLOPs cost used by expected_cost()."""
+        self.unit_cost.copy_(cost.float())
 
 
 def collect_bayesian_layers(model: nn.Module) -> list:
@@ -227,6 +261,14 @@ def total_kl(model: nn.Module) -> torch.Tensor:
     if not layers:
         return torch.tensor(0.0)
     return sum(layer.kl() for layer in layers)
+
+
+def total_expected_cost(model: nn.Module, threshold: float) -> torch.Tensor:
+    """Sum of `.expected_cost(threshold)` over every Bayesian layer in `model`."""
+    layers = collect_bayesian_layers(model)
+    if not layers:
+        return torch.tensor(0.0)
+    return sum(layer.expected_cost(threshold) for layer in layers)
 
 
 def set_bayesian_mode(model: nn.Module, active: bool) -> None:

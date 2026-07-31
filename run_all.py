@@ -21,6 +21,7 @@ from datasets import get_cifar10_loaders
 from evaluate import full_evaluation
 from metrics import (
     compression_ratio,
+    compute_and_set_unit_costs,
     count_parameters,
     count_remaining_structures,
     gather_log_alpha_values,
@@ -166,8 +167,11 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     original_params = count_parameters(model, exclude_gates=True)
     logger.info(f"Model built with {original_params} parameters (gates excluded from count).")
 
-    train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
     input_shape = (cfg.latency_batch_size, 3, 32, 32)
+    compute_and_set_unit_costs(model, input_shape, device)
+    logger.info("Per-unit expected-FLOPs costs computed and set on every Bayesian layer.")
+
+    train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
     csv_rows: List[Dict[str, Any]] = []
 
     print("\nTraining...")
@@ -185,6 +189,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         device=device,
         beta_max=0.0,
         kl_warmup_epochs=1,
+        gamma_max=0.0,
+        cost_warmup_epochs=1,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_trained.pt"),
         csv_log_rows=csv_rows,
@@ -220,6 +226,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         device=device,
         beta_max=cfg.bayesian.beta_max,
         kl_warmup_epochs=cfg.bayesian.kl_warmup_epochs,
+        gamma_max=cfg.bayesian.gamma_max,
+        cost_warmup_epochs=cfg.bayesian.cost_warmup_epochs,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_bayesian.pt"),
         csv_log_rows=csv_rows,
@@ -263,6 +271,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         device=device,
         beta_max=0.0,
         kl_warmup_epochs=1,
+        gamma_max=0.0,
+        cost_warmup_epochs=1,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_pruned_finetuned.pt"),
         csv_log_rows=csv_rows,

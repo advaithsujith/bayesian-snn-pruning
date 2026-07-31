@@ -43,6 +43,8 @@ class BayesianConfig:
     kl_warmup_epochs: int = 15  # epochs over which beta is linearly annealed to beta_max
     bayesian_train_epochs: int = 40  # epochs spent training gates after "Converting to Bayesian"
     bayesian_train_lr: float = 5e-4  # typically lower than the initial-pretrain lr
+    gamma_max: float = 0.0  # final weight of the expected-FLOPs-cost term (0.0 = disabled)
+    cost_warmup_epochs: int = 15  # epochs over which gamma is linearly annealed to gamma_max
 
 
 @dataclass
@@ -166,6 +168,12 @@ def get_lenet_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 50
     cfg.bayesian.beta_max = 0.4
+    # Calibrated (not searched -- HPO search was abandoned, see HANDOFF.md)
+    # so that gamma_max * expected_cost is roughly the same order of
+    # magnitude as beta_max * KL at the start of Bayesian training:
+    # KL_init=478, expected_cost_init=16.2M, beta_max*KL_init=191.
+    cfg.bayesian.gamma_max = 1e-5
+    cfg.bayesian.cost_warmup_epochs = 50
     return cfg
 
 
@@ -180,6 +188,10 @@ def get_vgg9_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.4
+    # Calibrated the same way as LeNet's (see get_lenet_config): KL_init=4671,
+    # expected_cost_init=5.86B, beta_max*KL_init=1868.
+    cfg.bayesian.gamma_max = 3e-7
+    cfg.bayesian.cost_warmup_epochs = 45
     cfg.data.num_workers = 8
     return cfg
 
@@ -196,6 +208,10 @@ def get_resnet18_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.2
+    # Calibrated the same way as LeNet's (see get_lenet_config): KL_init=8259,
+    # expected_cost_init=13.7B, beta_max*KL_init=1652.
+    cfg.bayesian.gamma_max = 1e-7
+    cfg.bayesian.cost_warmup_epochs = 45
     cfg.data.num_workers = 8
     return cfg
 
