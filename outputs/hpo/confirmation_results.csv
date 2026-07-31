@@ -1,0 +1,4 @@
+method,test_accuracy,pruning_percentage,hyperparameters
+bayesian,0.6992681962025317,27.744089281682417,"{'sampler': 'random', 'trial': 8, 'beta_max': 0.31861045232482016, 'val_accuracy': 0.7111328125, 'pruning_percentage': 0.0, 'objective_value': 0.21113281250000004}"
+sca,0.21153085443037975,98.49369415862981,"{'sampler': 'random', 'trial': 11, 'total_epochs': 96, 'sca_num_cycles': 10, 'sca_lr': 0.0011265466963346032, 'val_accuracy': 0.2638671875, 'pruning_percentage': 98.49369415862981, 'objective_value': 0.2638671875}"
+dpap,0.24871439873417722,98.49369415862981,"{'sampler': 'tpe', 'trial': 14, 'dpap_train_epochs': 32, 'dpap_ema_decay': 0.8556482155169074, 'dpap_survival_decay': 0.0007774596577465797, 'dpap_lr': 0.0014219772799623543, 'val_accuracy': 0.2765625, 'pruning_percentage': 98.49369415862981, 'objective_value': 0.2765625}"

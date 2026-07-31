@@ -1,0 +1,67 @@
+{
+  "name": "resnet18",
+  "snn": {
+    "num_steps": 25,
+    "beta": 0.95,
+    "threshold": 1.0,
+    "spike_grad": "atan"
+  },
+  "bayesian": {
+    "log_alpha_init": -3.0,
+    "log_alpha_clamp_min": -8.0,
+    "log_alpha_clamp_max": 8.0,
+    "prune_threshold": 3.0,
+    "beta_max": 0.2,
+    "kl_warmup_epochs": 60,
+    "bayesian_train_epochs": 120,
+    "bayesian_train_lr": 0.0005
+  },
+  "train": {
+    "epochs": 120,
+    "batch_size": 64,
+    "lr": 0.0005,
+    "weight_decay": 5e-05,
+    "optimizer": "adam",
+    "lr_scheduler": "cosine",
+    "grad_clip_norm": 5.0,
+    "use_amp": true
+  },
+  "finetune": {
+    "epochs": 30,
+    "batch_size": 64,
+    "lr": 0.0002,
+    "weight_decay": 5e-05,
+    "optimizer": "adam",
+    "lr_scheduler": "cosine",
+    "grad_clip_norm": 5.0,
+    "use_amp": true
+  },
+  "data": {
+    "data_dir": "./data",
+    "val_fraction": 0.1,
+    "num_workers": 8,
+    "pin_memory": true,
+    "random_crop_padding": 4,
+    "horizontal_flip_prob": 0.5,
+    "normalize_mean": [
+      0.4914,
+      0.4822,
+      0.4465
+    ],
+    "normalize_std": [
+      0.247,
+      0.2435,
+      0.2616
+    ]
+  },
+  "seed": 42,
+  "device": "cuda",
+  "num_classes": 10,
+  "checkpoint_dir": "./checkpoints",
+  "output_dir": "./outputs/resnet18",
+  "log_dir": "./logs",
+  "plot_dir": "./plots",
+  "latency_num_warmup": 10,
+  "latency_num_runs": 100,
+  "latency_batch_size": 1
+}
