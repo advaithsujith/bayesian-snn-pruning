@@ -70,6 +70,45 @@ class ArchConfig:
     # SNNConfig.threshold for every layer.
     layer_thresholds: Optional[List[float]] = None
 
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Reject specs whose geometry this class cannot describe correctly.
+
+        These are guards against *silently wrong* flatten dimensions rather
+        than style checks: an unnoticed mismatch here produces a model that
+        trains happily on the wrong architecture, which is far worse than a
+        constructor error.
+        """
+        if not self.conv_channels():
+            raise ValueError("conv_spec must contain at least one conv layer")
+        if self.conv_spec and self.conv_spec[0] == "M":
+            raise ValueError("conv_spec cannot start with a pooling entry 'M'")
+        # Consecutive "M"s would collapse onto one pooling stage in the build
+        # loop (which sets pool_flags[-1] = True) while num_pools() counted
+        # them separately, making flatten_dim wrong by a factor of pool_size^2.
+        for prev, entry in zip(self.conv_spec, self.conv_spec[1:]):
+            if prev == "M" and entry == "M":
+                raise ValueError(
+                    "conv_spec cannot contain consecutive 'M' entries; use one "
+                    "'M' per pooling stage"
+                )
+        # spatial_after_convs assumes each conv preserves its input size, so
+        # the padding must match the kernel. Otherwise flatten_dim silently
+        # over-counts (e.g. kernel 5 / padding 1 shrinks by 2 per conv).
+        if self.padding != (self.kernel_size - 1) // 2:
+            raise ValueError(
+                f"padding={self.padding} does not preserve spatial size for "
+                f"kernel_size={self.kernel_size}; expected {(self.kernel_size - 1) // 2}. "
+                "Size-changing convolutions are not supported by flatten_dim()."
+            )
+        if self.spatial_after_convs() < 1:
+            raise ValueError(
+                f"{self.num_pools()} pooling stages reduce a {self.input_size}px "
+                "input below 1px; remove a pooling stage or use a larger input"
+            )
+
     def conv_channels(self) -> List[int]:
         """Output channel count of each conv layer, in depth order."""
         return [entry for entry in self.conv_spec if entry != "M"]
@@ -79,7 +118,10 @@ class ArchConfig:
         return sum(1 for entry in self.conv_spec if entry == "M")
 
     def spatial_after_convs(self) -> int:
-        """Feature-map side length after all pooling stages."""
+        """Feature-map side length after all pooling stages.
+
+        Floor division matches PyTorch's default `ceil_mode=False` pooling.
+        """
         size = self.input_size
         for _ in range(self.num_pools()):
             size //= self.pool_size
@@ -87,11 +129,8 @@ class ArchConfig:
 
     def flatten_dim(self) -> int:
         """Flattened feature width entering the first fully-connected layer."""
-        channels = self.conv_channels()
-        if not channels:
-            raise ValueError("conv_spec must contain at least one conv layer")
         spatial = self.spatial_after_convs()
-        return channels[-1] * spatial * spatial
+        return self.conv_channels()[-1] * spatial * spatial
 
 
 @dataclass

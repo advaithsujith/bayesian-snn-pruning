@@ -26,24 +26,28 @@ def poisson_encode(x: torch.Tensor, generator: "torch.Generator | None" = None) 
     """
     Draw one timestep of Poisson (Bernoulli-per-timestep) spikes from `x`.
 
-    Each element of the returned tensor is 1 with probability equal to the
-    corresponding element of `x` clamped to [0, 1], and 0 otherwise. Calling
-    this once per simulated timestep produces a spike train whose long-run
-    firing rate approximates the input intensity.
+    Firing *rate* is set by |x| and the spike carries x's sign, so a returned
+    element is +1 with probability min(|x|, 1) when x > 0, -1 with the same
+    probability when x < 0, and 0 otherwise. Calling this once per simulated
+    timestep produces a signed spike train whose long-run mean approximates
+    the input.
 
-    Note on normalisation: CIFAR-10 inputs are mean/std normalised before
-    reaching the network, which pushes values outside [0, 1] (and negative).
-    Rates are probabilities, so the clamp below is what makes this
-    well-defined; negative-valued pixels therefore encode as silence. This
-    matches the standard practice in rate-coded SNN pipelines, where the
-    normalisation for a Poisson-encoded network is chosen to keep inputs
-    predominantly non-negative (Chowdhury et al. use mean=std=0.5, mapping
-    [0, 1] pixels to [-1, 1]).
+    Why signed rather than clamped to [0, 1]: CIFAR-10 inputs are mean/std
+    normalised before reaching the network, and Chowdhury et al. normalise
+    with mean = std = 0.5, mapping [0, 1] pixels onto [-1, 1] (see
+    docs/replication_targets.md). Rates are probabilities, so a naive
+    `clamp(0, 1)` would encode every negative pixel -- about half the input
+    distribution -- as complete silence, discarding half the image before
+    the network ever sees it. Preserving the sign keeps the full dynamic
+    range while still emitting genuine spike events, and is the standard
+    treatment of signed inputs in rate-coded pipelines.
     """
-    rates = x.clamp(0.0, 1.0)
+    rates = x.abs().clamp(0.0, 1.0)
     if generator is None:
-        return torch.bernoulli(rates)
-    return torch.bernoulli(rates, generator=generator)
+        spikes = torch.bernoulli(rates)
+    else:
+        spikes = torch.bernoulli(rates, generator=generator)
+    return spikes * torch.sign(x)
 
 
 def encode_timestep(x: torch.Tensor, scheme: str) -> torch.Tensor:

@@ -294,28 +294,49 @@ def _apply_hard_masks(pairs: List[LayerLifPair], keep_masks: Dict[str, torch.Ten
         layer.set_hard_mask(keep_masks[name])
 
 
-def _register_resnet_bn_remask_hooks(model: nn.Module, model_name: str) -> List[Any]:
+def _register_bn_remask_hooks(model: nn.Module, model_name: str) -> List[Any]:
     """
-    ResNet18-only fix for the dynamic (SCA/DPAP) training loops.
+    Fix BatchNorm mask leakage in the dynamic (SCA/DPAP) training loops.
 
-    Each BasicBlock's forward is `out = self.bn1(self.conv1(x))`. conv1's
-    hard_mask zeroes a channel's *pre-BatchNorm* output, but BatchNorm2d
-    in training mode normalises an all-zero-input channel to exactly
-    `bn1.bias[c]` -- a nonzero constant that keeps receiving gradient and
-    keeps changing every step, since `bn1.bias` sits downstream of where
-    conv1's mask is applied. Left unfixed, a channel this file intends to
-    treat as permanently dead would instead leak a live, still-training
-    signal through lif1 into conv2's input (conv2 is never pruned, so it
-    would train against this leakage) and into later blocks' activity
-    statistics. This registers a forward hook on every block's `bn1` that
-    re-applies conv1's *current* hard_mask to bn1's output, so a masked
-    channel is genuinely zero downstream regardless of what BatchNorm does
-    to it. LeNet/VGG9 have no BatchNorm between a prunable layer and its
-    LIF neuron, so this is a no-op for those architectures.
+    Wherever the forward is `bn(conv(x))`, the conv's hard_mask zeroes a
+    channel's *pre-BatchNorm* output, but BatchNorm2d in training mode
+    normalises an all-zero-input channel to exactly `bn.bias[c]` -- a
+    nonzero constant that keeps receiving gradient and keeps changing every
+    step, since `bn.bias` sits downstream of where the mask is applied.
+    Left unfixed, a channel this file intends to treat as permanently dead
+    instead leaks a live, still-training signal into whatever consumes it
+    and into later layers' activity statistics. This registers a forward
+    hook on each such BatchNorm that re-applies its conv's *current*
+    hard_mask to the BatchNorm output, so a masked channel is genuinely
+    zero downstream regardless of what BatchNorm does to it.
+
+    Applies to two architecture families:
+      - SpikingResNet18: every BasicBlock's `bn1` (paired with `conv1`).
+      - VGGStyleSNN with `norm_type="batch"`: every `norm_layers[i]`
+        (paired with `conv_layers[i]`). Both the SCA and DPAP replications
+        use batch-norm in exactly this conv->BN->LIF position, so omitting
+        them here would reintroduce the same leakage bug this hook exists
+        to fix -- and silently, since the criterion would then be scoring
+        channels that are not actually dead.
+
+    LeNet/VGG9 place no BatchNorm between a prunable layer and its LIF
+    neuron, so this stays a genuine no-op for them.
     """
+    handles: List[Any] = []
+
+    if isinstance(model, VGGStyleSNN):
+        for conv, norm in zip(model.conv_layers, model.norm_layers):
+            if not isinstance(norm, nn.BatchNorm2d):
+                continue
+
+            def _hook(_module, _inputs, output, _conv=conv):
+                return output * _conv.hard_mask.view(1, -1, 1, 1)
+
+            handles.append(norm.register_forward_hook(_hook))
+        return handles
+
     if model_name != "resnet18":
         return []
-    handles: List[Any] = []
     for stage in model._all_stages():
         for block in stage:
             def _hook(_module, _inputs, output, _conv=block.conv1):
@@ -403,7 +424,7 @@ def run_sca_pruning(
     total_epochs = bio_cfg.sca_epochs_per_cycle * bio_cfg.sca_num_cycles
     scheduler = build_scheduler(optimizer, "cosine", total_epochs)
     scaler = torch.cuda.amp.GradScaler(enabled=(use_amp and device.type == "cuda"))
-    bn_remask_handles = _register_resnet_bn_remask_hooks(model, model_name)
+    bn_remask_handles = _register_bn_remask_hooks(model, model_name)
 
     global_epoch = 0
     for cycle in range(bio_cfg.sca_num_cycles):
@@ -496,7 +517,7 @@ def run_dpap_pruning(
     optimizer = build_optimizer(model, "adam", bio_cfg.dpap_lr, bio_cfg.dpap_weight_decay)
     scheduler = build_scheduler(optimizer, "cosine", bio_cfg.dpap_train_epochs)
     scaler = torch.cuda.amp.GradScaler(enabled=(use_amp and device.type == "cuda"))
-    bn_remask_handles = _register_resnet_bn_remask_hooks(model, model_name)
+    bn_remask_handles = _register_bn_remask_hooks(model, model_name)
 
     for epoch in range(bio_cfg.dpap_train_epochs):
         epoch_start = time.time()
@@ -720,13 +741,16 @@ def prune_model_activity(
         "vgg9": prune_vgg9_activity,
         "resnet18": prune_resnet18_activity,
     }
+    is_vgg_style = isinstance(model, VGGStyleSNN)
+    if not is_vgg_style and model_name not in dispatch:
+        # Validate before mutating anything, so a rejected call leaves the
+        # model's train/eval state exactly as the caller left it.
+        raise ValueError(
+            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
+            "any other name requires the model to be a VGGStyleSNN."
+        )
     model.eval()
     with torch.no_grad():
-        if isinstance(model, VGGStyleSNN):
+        if is_vgg_style:
             return prune_vggstyle_activity(model, keep_masks, snn_cfg)
-        if model_name not in dispatch:
-            raise ValueError(
-                f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
-                "any other name requires the model to be a VGGStyleSNN."
-            )
         return dispatch[model_name](model, keep_masks, snn_cfg)

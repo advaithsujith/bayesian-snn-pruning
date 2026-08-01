@@ -396,9 +396,16 @@ class VGGStyleSNN(nn.Module):
 
     `VGG9SNN` above is deliberately left in place and untouched: existing
     VGG9 results and checkpoints were produced by it and must stay
-    reproducible. `ArchConfig()`'s defaults describe exactly that same
-    architecture, which the smoke test asserts by comparing state_dict
-    keys and shapes between the two classes.
+    reproducible. `ArchConfig()`'s defaults describe that same architecture,
+    which `tests/test_vggstyle.py` asserts by comparing parameter count,
+    per-layer weight shapes, pooling depths and output shape.
+
+    Note that the two classes are *architecturally* equivalent but not
+    state_dict-compatible: this class names its fully-connected stack
+    `fc_layers.0` / `lif_fc_layers.0` where VGG9SNN uses `fc1` / `lif_fc1`,
+    so an existing VGG9 checkpoint needs key remapping before it will load
+    here. That is deliberate -- the names generalise to any number of
+    hidden fc layers, including none.
 
     Layer naming (`conv_layers`, `lif_layers`, `fc_layers`, `lif_fc_layers`,
     `fc_out`) is what pruning.py and activity_pruning.py key off, so both

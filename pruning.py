@@ -398,6 +398,38 @@ class PrunedVGGStyleSNN(nn.Module):
         return torch.stack(spk_out_rec, dim=0)
 
 
+def transfer_leaky_state(src: nn.Module, dst: nn.Module, keep_idx: "torch.Tensor | None" = None) -> None:
+    """
+    Copy a learned membrane decay from one Leaky neuron to another.
+
+    When `SNNConfig.learn_beta` is True, snnTorch promotes `beta` to a
+    trained `nn.Parameter`, so it carries information exactly like a weight
+    does. Every physical-rebuild routine constructs *fresh* neurons via
+    `_make_leaky`, which re-initialises beta to the config's starting value
+    -- silently discarding whatever was learned. That matters most for the
+    DPAP replication, whose parametric-LIF membrane time constant is the
+    method's central claim (see docs/replication_targets.md), and it fails
+    silently: the pruned network simply runs with the wrong dynamics.
+
+    `keep_idx` slices beta when it is per-channel; a scalar beta (snnTorch's
+    default, even when learnable) is copied through unchanged.
+    """
+    src_beta = getattr(src, "beta", None)
+    dst_beta = getattr(dst, "beta", None)
+    if src_beta is None or dst_beta is None:
+        return
+    with torch.no_grad():
+        value = src_beta.detach()
+        if keep_idx is not None and value.ndim > 0 and value.numel() > 1:
+            value = value[keep_idx]
+        if dst_beta.shape != value.shape:
+            raise ValueError(
+                f"cannot transfer learned beta: source shape {tuple(value.shape)} "
+                f"does not match destination {tuple(dst_beta.shape)}"
+            )
+        dst_beta.copy_(value)
+
+
 def _pool_flags_from_spec(conv_spec: List) -> List[bool]:
     """Recover the per-conv "is there a pool after me" flags from a conv spec.
 
@@ -479,7 +511,18 @@ def _rebuild_vgg_style(
         new_fc_out.weight.copy_(model.fc_out.weight[:, prev_in])
         new_fc_out.bias.copy_(model.fc_out.bias)
 
-    return PrunedVGGStyleSNN(new_convs, new_norms, new_fcs, new_fc_out, arch_cfg, snn_cfg)
+    pruned = PrunedVGGStyleSNN(new_convs, new_norms, new_fcs, new_fc_out, arch_cfg, snn_cfg)
+
+    # Carry over any *learned* membrane decay -- the fresh neurons built
+    # inside PrunedVGGStyleSNN would otherwise reset it to the config's
+    # initial value. See transfer_leaky_state.
+    for src, dst, keep in zip(model.lif_layers, pruned.lif_layers, conv_keeps):
+        transfer_leaky_state(src, dst, keep)
+    for src, dst, keep in zip(model.lif_fc_layers, pruned.lif_fc_layers, fc_keeps):
+        transfer_leaky_state(src, dst, keep)
+    transfer_leaky_state(model.lif_out, pruned.lif_out)
+
+    return pruned
 
 
 def prune_vgg_style(model: nn.Module, threshold: float, snn_cfg: SNNConfig) -> PrunedVGGStyleSNN:
@@ -677,13 +720,16 @@ def prune_model(model: nn.Module, model_name: str, threshold: float, snn_cfg: SN
         "vgg9": prune_vgg9,
         "resnet18": prune_resnet18,
     }
+    is_vgg_style = isinstance(model, VGGStyleSNN)
+    if not is_vgg_style and model_name not in dispatch:
+        # Validate before mutating anything, so a rejected call leaves the
+        # model's train/eval state exactly as the caller left it.
+        raise ValueError(
+            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
+            "any other name requires the model to be a VGGStyleSNN."
+        )
     model.eval()
     with torch.no_grad():
-        if isinstance(model, VGGStyleSNN):
+        if is_vgg_style:
             return prune_vgg_style(model, threshold, snn_cfg)
-        if model_name not in dispatch:
-            raise ValueError(
-                f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
-                "any other name requires the model to be a VGGStyleSNN."
-            )
         return dispatch[model_name](model, threshold, snn_cfg)
