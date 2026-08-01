@@ -6,13 +6,13 @@ Compression ratio: 1.384x
 Pruning percentage: 27.74%
 
 Test accuracy before Bayesian pruning: 0.6895
-Test accuracy after pruning + fine-tuning: 0.7009
-Accuracy change: +0.0114
+Test accuracy after pruning + fine-tuning: 0.7051
+Accuracy change: +0.0156
 
 Estimated FLOPs (post-pruning): 15,864,150
-Inference latency (post-pruning): 35.088 ms
+Inference latency (post-pruning): 35.478 ms
 Peak GPU memory (post-pruning): 18.3 MB
 
-Pretraining time: 1876.0s (best val acc 0.6992)
-Bayesian gate training time: 2884.2s (best val acc 0.6988)
-Fine-tuning time: 585.7s (best val acc 0.7115)
+Pretraining time: 1926.9s (best val acc 0.6992)
+Bayesian gate training time: 2922.8s (best val acc 0.7018)
+Fine-tuning time: 589.3s (best val acc 0.7092)

@@ -14,7 +14,9 @@
     "beta_max": 0.4,
     "kl_warmup_epochs": 50,
     "bayesian_train_epochs": 75,
-    "bayesian_train_lr": 0.0005
+    "bayesian_train_lr": 0.0005,
+    "gamma_max": 1e-05,
+    "cost_warmup_epochs": 50
   },
   "bio": {
     "keep_fractions": [
