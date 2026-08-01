@@ -168,11 +168,18 @@ def get_lenet_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 50
     cfg.bayesian.beta_max = 0.4
-    # Calibrated (not searched -- HPO search was abandoned, see HANDOFF.md)
-    # so that gamma_max * expected_cost is roughly the same order of
-    # magnitude as beta_max * KL at the start of Bayesian training:
-    # KL_init=478, expected_cost_init=16.2M, beta_max*KL_init=191.
-    cfg.bayesian.gamma_max = 1e-5
+    # gamma_max=1e-5 (magnitude-matched to beta_max*KL at init, ~191) only
+    # pruned fc1/fc2 -- identical to the gamma_max=0 baseline -- and never
+    # touched conv1/conv2, the actually FLOPs-expensive layers. Per
+    # Louizos et al. (ICLR 2018), variational-dropout-style pruning has no
+    # inherent bias toward compute-heavy layers; they needed a conv-layer
+    # weight ~20x the FC-layer weight to get proportional sparsification.
+    # This value (30x the calibrated one) is a deliberate diagnostic probe,
+    # not a re-calibration: does a stronger *global* dial ever reach
+    # conv1/conv2, or does it just prune fc1/fc2 harder while conv stays
+    # untouched (which would mean a global scalar is the wrong lever and a
+    # per-layer weight, matching Louizos's fix, is needed instead)?
+    cfg.bayesian.gamma_max = 3e-4
     cfg.bayesian.cost_warmup_epochs = 50
     return cfg
 
