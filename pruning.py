@@ -32,10 +32,12 @@ import torch
 import torch.nn as nn
 
 from bayesian_layers import BayesianConv2d, BayesianLinear, collect_bayesian_layers
-from config import SNNConfig
+from config import ArchConfig, SNNConfig
+from encoding import encode_timestep
 from models import (
     LeNetSNN,
     VGG9SNN,
+    VGGStyleSNN,
     SpikingResNet18,
     SpikingBasicBlock,
     _make_leaky,
@@ -299,6 +301,195 @@ def prune_vgg9(model: VGG9SNN, threshold: float, snn_cfg: SNNConfig) -> PrunedVG
 
 
 # ---------------------------------------------------------------------------
+# Configurable VGG-style conv stack (models.VGGStyleSNN)
+# ---------------------------------------------------------------------------
+
+
+class PrunedVGGStyleSNN(nn.Module):
+    """A physically-pruned, non-Bayesian counterpart of VGGStyleSNN.
+
+    Forward logic mirrors VGGStyleSNN.forward exactly -- same encoding,
+    pooling, normalisation and constant-across-timesteps dropout -- but
+    every gated layer is a plain deterministic nn.Conv2d / nn.Linear
+    containing only the surviving channels/neurons.
+    """
+
+    def __init__(
+        self,
+        conv_layers: List[nn.Conv2d],
+        norm_layers: List[nn.Module],
+        fc_layers: List[nn.Linear],
+        fc_out: nn.Linear,
+        arch_cfg: ArchConfig,
+        snn_cfg: SNNConfig,
+    ) -> None:
+        super().__init__()
+        self.num_steps = snn_cfg.num_steps
+        self.arch_cfg = arch_cfg
+        self.encoding = arch_cfg.encoding
+        self.dropout_p = arch_cfg.dropout_p
+        self.pool_flags = _pool_flags_from_spec(arch_cfg.conv_spec)
+
+        thresholds = arch_cfg.layer_thresholds
+
+        def threshold_for(idx: int) -> "float | None":
+            return None if thresholds is None else thresholds[idx]
+
+        self.conv_layers = nn.ModuleList(conv_layers)
+        self.norm_layers = nn.ModuleList(norm_layers)
+        self.lif_layers = nn.ModuleList(
+            [_make_leaky(snn_cfg, threshold_override=threshold_for(i)) for i in range(len(conv_layers))]
+        )
+        self.pool = (
+            nn.AvgPool2d(arch_cfg.pool_size)
+            if arch_cfg.pool_type == "avg"
+            else nn.MaxPool2d(arch_cfg.pool_size)
+        )
+
+        n_conv = len(conv_layers)
+        self.fc_layers = nn.ModuleList(fc_layers)
+        self.lif_fc_layers = nn.ModuleList(
+            [_make_leaky(snn_cfg, threshold_override=threshold_for(n_conv + i)) for i in range(len(fc_layers))]
+        )
+
+        self.fc_out = fc_out
+        self.lif_out = _make_leaky(snn_cfg, output=True)
+
+    def _dropout(self, spk: torch.Tensor, cache: List["torch.Tensor | None"], idx: int) -> torch.Tensor:
+        """See VGGStyleSNN._dropout -- mask held constant across timesteps."""
+        if self.dropout_p <= 0.0 or not self.training:
+            return spk
+        if cache[idx] is None:
+            keep_prob = 1.0 - self.dropout_p
+            cache[idx] = torch.bernoulli(torch.full_like(spk, keep_prob)) / keep_prob
+        return spk * cache[idx]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        mem_conv = [lif.init_leaky() for lif in self.lif_layers]
+        mem_fc = [lif.init_leaky() for lif in self.lif_fc_layers]
+        mem_out = self.lif_out.init_leaky()
+
+        conv_masks: List["torch.Tensor | None"] = [None] * len(self.conv_layers)
+        fc_masks: List["torch.Tensor | None"] = [None] * len(self.fc_layers)
+
+        spk_out_rec: List[torch.Tensor] = []
+        for _ in range(self.num_steps):
+            spk = encode_timestep(x, self.encoding)
+
+            for i, (conv, norm, lif) in enumerate(
+                zip(self.conv_layers, self.norm_layers, self.lif_layers)
+            ):
+                cur = norm(conv(spk))
+                spk, mem_conv[i] = lif(cur, mem_conv[i])
+                if self.pool_flags[i]:
+                    spk = self.pool(spk)
+                spk = self._dropout(spk, conv_masks, i)
+
+            spk = spk.flatten(1)
+            for i, (fc, lif) in enumerate(zip(self.fc_layers, self.lif_fc_layers)):
+                cur = fc(spk)
+                spk, mem_fc[i] = lif(cur, mem_fc[i])
+                spk = self._dropout(spk, fc_masks, i)
+
+            cur_out = self.fc_out(spk)
+            spk_out, mem_out = self.lif_out(cur_out, mem_out)
+            spk_out_rec.append(spk_out)
+
+        return torch.stack(spk_out_rec, dim=0)
+
+
+def _pool_flags_from_spec(conv_spec: List) -> List[bool]:
+    """Recover the per-conv "is there a pool after me" flags from a conv spec.
+
+    Mirrors the loop in VGGStyleSNN.__init__ so the pruned model pools at
+    exactly the same depths as the model it was built from.
+    """
+    flags: List[bool] = []
+    for entry in conv_spec:
+        if entry == "M":
+            flags[-1] = True
+        else:
+            flags.append(False)
+    return flags
+
+
+def _rebuild_vgg_style(
+    model: nn.Module,
+    arch_cfg: ArchConfig,
+    snn_cfg: SNNConfig,
+    conv_keeps: List[torch.Tensor],
+    fc_keeps: List[torch.Tensor],
+) -> PrunedVGGStyleSNN:
+    """
+    Build a PrunedVGGStyleSNN from explicit per-layer keep-index tensors.
+
+    Shared by both pruning criteria: the Bayesian path (pruning.py) derives
+    `conv_keeps`/`fc_keeps` from posterior uncertainty, and the bio-inspired
+    path (activity_pruning.py) derives them from activity masks. Keeping the
+    index arithmetic in exactly one place means the two criteria cannot
+    silently disagree about how a network is physically rebuilt.
+
+    Keep-masks propagate sequentially: layer i's surviving *input* channels
+    are layer (i-1)'s surviving *output* channels. The first conv's input is
+    the untouched image, and the classifier's output width is never pruned.
+    """
+    new_convs: List[nn.Conv2d] = []
+    new_norms: List[nn.Module] = []
+    prev_keep = torch.arange(arch_cfg.in_channels)
+
+    for conv, norm, keep_out in zip(model.conv_layers, model.norm_layers, conv_keeps):
+        new_conv = nn.Conv2d(
+            in_channels=len(prev_keep),
+            out_channels=len(keep_out),
+            kernel_size=conv.conv.kernel_size,
+            stride=conv.conv.stride,
+            padding=conv.conv.padding,
+            bias=conv.conv.bias is not None,
+        )
+        with torch.no_grad():
+            new_conv.weight.copy_(conv.conv.weight[keep_out][:, prev_keep])
+            if conv.conv.bias is not None:
+                new_conv.bias.copy_(conv.conv.bias[keep_out])
+        new_convs.append(new_conv)
+
+        new_norms.append(
+            slice_batchnorm(norm, keep_out) if isinstance(norm, nn.BatchNorm2d) else nn.Identity()
+        )
+        prev_keep = keep_out
+
+    spatial = arch_cfg.spatial_after_convs()
+    flat_idx = channel_keep_to_flat_indices(prev_keep, spatial_size=spatial * spatial)
+
+    new_fcs: List[nn.Linear] = []
+    prev_in = flat_idx
+    for fc, keep_out in zip(model.fc_layers, fc_keeps):
+        new_fc = nn.Linear(len(prev_in), len(keep_out))
+        with torch.no_grad():
+            new_fc.weight.copy_(fc.linear.weight[keep_out][:, prev_in])
+            new_fc.bias.copy_(fc.linear.bias[keep_out])
+        new_fcs.append(new_fc)
+        prev_in = keep_out
+
+    # With no hidden fc layers (e.g. Chowdhury's VGG9, whose 3 VGG fc layers
+    # collapse to a single classifier), the classifier reads the flattened
+    # conv output directly, so it is sliced by flat_idx rather than by a
+    # preceding fc's keep-set.
+    new_fc_out = nn.Linear(len(prev_in), model.fc_out.out_features)
+    with torch.no_grad():
+        new_fc_out.weight.copy_(model.fc_out.weight[:, prev_in])
+        new_fc_out.bias.copy_(model.fc_out.bias)
+
+    return PrunedVGGStyleSNN(new_convs, new_norms, new_fcs, new_fc_out, arch_cfg, snn_cfg)
+
+
+def prune_vgg_style(model: nn.Module, threshold: float, snn_cfg: SNNConfig) -> PrunedVGGStyleSNN:
+    """Physically prune a trained VGGStyleSNN using posterior uncertainty."""
+    conv_keeps = [compute_keep_indices(conv, threshold) for conv in model.conv_layers]
+    fc_keeps = [compute_keep_indices(fc, threshold) for fc in model.fc_layers]
+    return _rebuild_vgg_style(model, model.arch_cfg, snn_cfg, conv_keeps, fc_keeps)
+
+
+# ---------------------------------------------------------------------------
 # Spiking ResNet-18
 # ---------------------------------------------------------------------------
 
@@ -475,14 +666,24 @@ def prune_resnet18(model: SpikingResNet18, threshold: float, snn_cfg: SNNConfig)
 
 
 def prune_model(model: nn.Module, model_name: str, threshold: float, snn_cfg: SNNConfig) -> nn.Module:
-    """Dispatch to the correct architecture-specific physical pruning routine."""
+    """Dispatch to the correct architecture-specific physical pruning routine.
+
+    Any VGGStyleSNN (the configurable conv-stack family used for the paper
+    replications) routes to `prune_vgg_style` regardless of its config name,
+    since that one routine handles every architecture the class can express.
+    """
     dispatch = {
         "lenet": prune_lenet,
         "vgg9": prune_vgg9,
         "resnet18": prune_resnet18,
     }
-    if model_name not in dispatch:
-        raise ValueError(f"Unknown model name '{model_name}'. Options: {list(dispatch)}")
     model.eval()
     with torch.no_grad():
+        if isinstance(model, VGGStyleSNN):
+            return prune_vgg_style(model, threshold, snn_cfg)
+        if model_name not in dispatch:
+            raise ValueError(
+                f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
+                "any other name requires the model to be a VGGStyleSNN."
+            )
         return dispatch[model_name](model, threshold, snn_cfg)

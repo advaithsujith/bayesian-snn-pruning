@@ -94,12 +94,14 @@ from torch.utils.data import DataLoader
 
 from bayesian_layers import BayesianConv2d, BayesianLinear
 from config import BioPruningConfig, SNNConfig
-from models import LeNetSNN, VGG9SNN, SpikingResNet18
+from models import LeNetSNN, VGG9SNN, VGGStyleSNN, SpikingResNet18
 from pruning import (
     PrunedBasicBlock,
     PrunedLeNetSNN,
     PrunedSpikingResNet18,
     PrunedVGG9SNN,
+    PrunedVGGStyleSNN,
+    _rebuild_vgg_style,
     channel_keep_to_flat_indices,
     slice_batchnorm,
 )
@@ -142,6 +144,25 @@ def _resnet18_layer_lif_pairs(model: SpikingResNet18) -> List[LayerLifPair]:
     return pairs
 
 
+def _vggstyle_layer_lif_pairs(model: "VGGStyleSNN") -> List[LayerLifPair]:
+    """(layer, lif) pairs for the configurable conv-stack family.
+
+    Generalises _vgg9_layer_lif_pairs to any number of hidden fc layers,
+    including none at all (Chowdhury's VGG9 collapses the usual 3 VGG fc
+    layers into the single unpruned classifier). Names match the ones
+    pruning.py reports, so the two criteria's per-layer CSVs line up.
+    """
+    pairs: List[LayerLifPair] = [
+        (f"conv_layers.{i}", conv, lif)
+        for i, (conv, lif) in enumerate(zip(model.conv_layers, model.lif_layers))
+    ]
+    pairs.extend(
+        (f"fc_layers.{i}", fc, lif)
+        for i, (fc, lif) in enumerate(zip(model.fc_layers, model.lif_fc_layers))
+    )
+    return pairs
+
+
 def get_prunable_layer_lif_pairs(model: nn.Module, model_name: str) -> List[LayerLifPair]:
     """Dispatch to the correct architecture-specific (layer, lif) pairing."""
     dispatch = {
@@ -149,8 +170,13 @@ def get_prunable_layer_lif_pairs(model: nn.Module, model_name: str) -> List[Laye
         "vgg9": _vgg9_layer_lif_pairs,
         "resnet18": _resnet18_layer_lif_pairs,
     }
+    if isinstance(model, VGGStyleSNN):
+        return _vggstyle_layer_lif_pairs(model)
     if model_name not in dispatch:
-        raise ValueError(f"Unknown model name '{model_name}'. Options: {list(dispatch)}")
+        raise ValueError(
+            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
+            "any other name requires the model to be a VGGStyleSNN."
+        )
     return dispatch[model_name](model)
 
 
@@ -599,6 +625,27 @@ def prune_vgg9_activity(model: VGG9SNN, keep_masks: Dict[str, torch.Tensor], snn
     return PrunedVGG9SNN(new_convs, list(model.pool_flags), new_fc1, new_fc_out, snn_cfg)
 
 
+def prune_vggstyle_activity(
+    model: "VGGStyleSNN", keep_masks: Dict[str, torch.Tensor], snn_cfg: SNNConfig
+) -> "PrunedVGGStyleSNN":
+    """Physically prune a VGGStyleSNN from bio-inspired activity keep-masks.
+
+    Delegates the actual index arithmetic to pruning._rebuild_vgg_style --
+    the same routine the Bayesian criterion uses -- so the two pruning
+    criteria are guaranteed to rebuild an identical architecture given
+    identical keep-sets, and only the *choice* of keep-set differs. That is
+    exactly the controlled comparison the dissertation rests on.
+    """
+    conv_keeps = [
+        keep_indices_from_mask(keep_masks[f"conv_layers.{i}"])
+        for i in range(len(model.conv_layers))
+    ]
+    fc_keeps = [
+        keep_indices_from_mask(keep_masks[f"fc_layers.{i}"]) for i in range(len(model.fc_layers))
+    ]
+    return _rebuild_vgg_style(model, model.arch_cfg, snn_cfg, conv_keeps, fc_keeps)
+
+
 def _prune_basic_block_activity(block, keep_mask: torch.Tensor, snn_cfg: SNNConfig) -> PrunedBasicBlock:
     keep_mid = keep_indices_from_mask(keep_mask)
 
@@ -673,8 +720,13 @@ def prune_model_activity(
         "vgg9": prune_vgg9_activity,
         "resnet18": prune_resnet18_activity,
     }
-    if model_name not in dispatch:
-        raise ValueError(f"Unknown model name '{model_name}'. Options: {list(dispatch)}")
     model.eval()
     with torch.no_grad():
+        if isinstance(model, VGGStyleSNN):
+            return prune_vggstyle_activity(model, keep_masks, snn_cfg)
+        if model_name not in dispatch:
+            raise ValueError(
+                f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
+                "any other name requires the model to be a VGGStyleSNN."
+            )
         return dispatch[model_name](model, keep_masks, snn_cfg)

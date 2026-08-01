@@ -8,7 +8,7 @@ belongs here.
 """
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional, Sequence, Union
 
 
 @dataclass
@@ -19,6 +19,79 @@ class SNNConfig:
     beta: float = 0.95  # membrane potential decay (snntorch.Leaky 'beta')
     threshold: float = 1.0  # firing threshold
     spike_grad: str = "atan"  # snntorch surrogate-gradient function name
+    # Learn the membrane decay instead of holding it fixed. Needed to
+    # replicate DPAP, which uses a parametric LIF (PLIFNode) whose membrane
+    # time constant is a trained parameter -- see docs/replication_targets.md.
+    learn_beta: bool = False
+    # snntorch reset behaviour: "subtract" (soft reset, subtract threshold)
+    # or "zero" (hard reset to resting potential).
+    reset_mechanism: str = "subtract"
+
+
+@dataclass
+class ArchConfig:
+    """
+    Architecture specification for the configurable VGG-style SNN family
+    (models.VGGStyleSNN).
+
+    One dataclass expresses every plain feedforward conv-stack architecture
+    this project needs -- the existing VGG9, plus the three published setups
+    being replicated (see docs/replication_targets.md). Defaults reproduce
+    this project's original VGG9SNN exactly, so a bare ArchConfig() is a
+    drop-in description of the already-validated architecture.
+
+    `conv_spec` entries are either an int (a conv layer with that many
+    output channels) or the string "M" (a pooling layer after the preceding
+    conv). Pool type is chosen once via `pool_type` -- Chowdhury et al. use
+    average pooling specifically to avoid the information loss max-pooling
+    causes on binary spike trains.
+    """
+
+    conv_spec: List[Union[int, str]] = field(
+        default_factory=lambda: [64, 64, "M", 128, 128, "M", 256, 256, 512, "M"]
+    )
+    fc_hidden: List[int] = field(default_factory=lambda: [800])
+    kernel_size: int = 3
+    padding: int = 1
+    pool_type: str = "max"  # "max" | "avg"
+    pool_size: int = 2
+    norm_type: str = "none"  # "none" | "batch"
+    conv_bias: bool = True
+    # Dropout probability applied after each spiking layer. Chowdhury et al.
+    # use dropout *instead of* batch-norm; 0.0 disables it entirely.
+    dropout_p: float = 0.0
+    encoding: str = "direct"  # "direct" | "poisson"
+    in_channels: int = 3
+    input_size: int = 32
+    # Optional per-layer firing thresholds, one per conv/fc gated layer, in
+    # depth order. Used by the ANN->SNN conversion path (Chowdhury), where
+    # each layer's threshold is calibrated to a percentile of that layer's
+    # activation distribution rather than shared globally. None => use
+    # SNNConfig.threshold for every layer.
+    layer_thresholds: Optional[List[float]] = None
+
+    def conv_channels(self) -> List[int]:
+        """Output channel count of each conv layer, in depth order."""
+        return [entry for entry in self.conv_spec if entry != "M"]
+
+    def num_pools(self) -> int:
+        """How many pooling stages the spec contains."""
+        return sum(1 for entry in self.conv_spec if entry == "M")
+
+    def spatial_after_convs(self) -> int:
+        """Feature-map side length after all pooling stages."""
+        size = self.input_size
+        for _ in range(self.num_pools()):
+            size //= self.pool_size
+        return size
+
+    def flatten_dim(self) -> int:
+        """Flattened feature width entering the first fully-connected layer."""
+        channels = self.conv_channels()
+        if not channels:
+            raise ValueError("conv_spec must contain at least one conv layer")
+        spatial = self.spatial_after_convs()
+        return channels[-1] * spatial * spatial
 
 
 @dataclass
@@ -142,6 +215,11 @@ class ExperimentConfig:
 
     name: str
     snn: SNNConfig = field(default_factory=SNNConfig)
+    # Only consulted by models.VGGStyleSNN (the configurable conv-stack
+    # family used for the paper replications). The three original
+    # architectures -- LeNetSNN / VGG9SNN / SpikingResNet18 -- hard-code
+    # their own structure and ignore this field entirely.
+    arch: ArchConfig = field(default_factory=ArchConfig)
     bayesian: BayesianConfig = field(default_factory=BayesianConfig)
     bio: BioPruningConfig = field(default_factory=BioPruningConfig)
     train: TrainConfig = field(default_factory=TrainConfig)
