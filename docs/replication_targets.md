@@ -103,7 +103,7 @@ from the authors' released code at
 | Neuron | **PLIFNode** (parametric LIF -- membrane time constant is *learned*) | [code] `node_type='PLIFNode'` |
 | tau | **2.0** (=> decay factor ~0.5, vs. this project's 0.95) | [code] `tau=2.0` |
 | Threshold | **0.5** (vs. this project's 1.0) | [code] `thresh=0.5` |
-| Loss | **UnilateralMse(1.0)** -- one-sided MSE to a one-hot target, *not* cross-entropy | [code] `train_loss_fn = UnilateralMse(1.)` |
+| Loss | **UnilateralMse(1.0)** -- MSE of mean firing rate against a one-hot target scaled by 1.0, *not* cross-entropy. See the fidelity note below. | [code] `train_loss_fn = UnilateralMse(1.)` |
 | Optimizer | **AdamW** | [code] `cfg.opt='adamw'` |
 | Learning rate | 5e-3, linearly scaled: `lr * batch_size / 1024` | [code] |
 | Schedule | cosine, warmup 5 epochs, cooldown 10 epochs, min_lr 1e-5 | [code] |
@@ -116,8 +116,39 @@ from the authors' released code at
 constant -- snnTorch's nearest equivalent is `snn.Leaky(..., learn_beta=True)`.
 The tau->beta mapping is `beta = 1 - 1/tau = 0.5` for tau=2.0 under the
 standard parameterisation, but BrainCog's exact update rule should be checked
-before relying on this. The `UnilateralMse` loss is a genuine departure from
-this project's `spike_rate_cross_entropy` and would need implementing.
+before relying on this.
+
+**Fidelity note -- `UnilateralMse`'s clamp is inert.** The released source
+(`braincog/base/utils/criterions.py`) reads:
+
+```python
+def forward(self, x, target):
+    torch.clip(x, max=self.thresh)          # <- return value discarded
+    if x.shape == target.shape:
+        return self.loss(x, target)
+    return self.loss(x, torch.zeros_like(x).scatter_(1, target.view(-1, 1), self.thresh))
+```
+
+`torch.clip` is not in-place and its result is never assigned, so the
+"unilateral" one-sided clamp -- the thing the class is named after -- never
+takes effect. Effectively this is a plain MSE between the mean firing rate
+and a scaled one-hot target, and over-firing *is* penalised.
+
+`losses.unilateral_mse` deliberately reproduces the **effective** behaviour
+rather than the apparent intent, because the published 94.54% baseline was
+produced by the code as written. Implementing the intended clamp would be a
+different loss than the one that produced the number we are comparing
+against. Flagged here so it is not later "fixed" into a mismatch.
+
+**Known deviations in our replication** (record these in the dissertation):
+- snnTorch's `learn_beta` learns a single scalar decay per neuron layer;
+  BrainCog's PLIFNode parameterisation may differ in detail.
+- Their cosine schedule includes a 10-epoch *cooldown* that
+  `cosine_warmup` does not model; warmup (5 epochs) and `min_lr` (1e-5) are
+  replicated.
+- Their data augmentation comes from BrainCog's `get_cifar10_data()`, whose
+  exact transforms were not read; this project's standard CIFAR-10
+  augmentation (pad-4 random crop + horizontal flip) is used instead.
 
 ---
 

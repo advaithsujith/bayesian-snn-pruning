@@ -24,11 +24,21 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import torch
 
 from bayesian_layers import set_bayesian_mode
-from config import ArchConfig, BayesianConfig, SNNConfig
+from config import (
+    ArchConfig,
+    BayesianConfig,
+    SNNConfig,
+    get_dpap_repl_config,
+    get_lenet_config,
+    get_resnet18_config,
+    get_vgg9_config,
+)
 from encoding import poisson_encode
+from losses import get_task_loss, unilateral_mse
 from metrics import count_parameters
-from models import VGG9SNN, VGGStyleSNN
+from models import VGG9SNN, VGGStyleSNN, build_model
 from pruning import prune_vgg_style
+from train import build_optimizer, build_scheduler
 from activity_pruning import _register_bn_remask_hooks, prune_vggstyle_activity
 
 
@@ -211,7 +221,74 @@ def main():
           len(_register_bn_remask_hooks(VGGStyleSNN(ArchConfig(), SNNConfig(num_steps=1), BAY),
                                         "vggstyle_test")) == 0)
 
-    print("\nAll Phase 1 smoke tests passed.")
+    # --- 10. DPAP replication pieces ---
+    # unilateral_mse: MSE of mean firing rate against a scaled one-hot.
+    # Perfect prediction (target class always fires, others never) => 0 loss.
+    T, B, C = 4, 3, 5
+    tgt = torch.tensor([0, 2, 4])
+    perfect = torch.zeros(T, B, C)
+    for b, c in enumerate(tgt.tolist()):
+        perfect[:, b, c] = 1.0
+    check(f"unilateral_mse is 0 for a perfect rate match (got {float(unilateral_mse(perfect, tgt)):.4f})",
+          float(unilateral_mse(perfect, tgt)) < 1e-8)
+    silent = torch.zeros(T, B, C)
+    check(f"unilateral_mse penalises total silence (got {float(unilateral_mse(silent, tgt)):.4f})",
+          abs(float(unilateral_mse(silent, tgt)) - 1.0 / C) < 1e-6)
+    # Over-firing IS penalised: BrainCog's clip is a no-op (result discarded),
+    # and we replicate the effective behaviour, not the apparent intent.
+    over = perfect.clone()
+    over[:, 0, 1] = 1.0  # a wrong class also fires at full rate
+    check("unilateral_mse penalises over-firing (BrainCog's clip is inert)",
+          float(unilateral_mse(over, tgt)) > 0.0)
+    check("get_task_loss dispatches both names",
+          get_task_loss("spike_rate_ce") is not get_task_loss("unilateral_mse"))
+
+    # AdamW must be a genuinely different optimiser to Adam here: DPAP's
+    # weight_decay is 0.01, 200x this project's default, and Adam couples it
+    # into the gradient while AdamW decouples it.
+    tinym = VGGStyleSNN(ArchConfig(conv_spec=[4], fc_hidden=[3]), SNNConfig(num_steps=1), BAY)
+    check("build_optimizer supports adamw",
+          isinstance(build_optimizer(tinym, "adamw", 1e-3, 0.01), torch.optim.AdamW))
+
+    # cosine_warmup: LR must ramp up over warmup, then anneal toward min_lr.
+    opt = build_optimizer(tinym, "adamw", 1.0, 0.0)
+    sched = build_scheduler(opt, "cosine_warmup", epochs=20, warmup_epochs=5, min_lr=0.01)
+    lrs = []
+    for _ in range(20):
+        lrs.append(opt.param_groups[0]["lr"])
+        sched.step()
+    check(f"cosine_warmup starts near zero (got {lrs[0]:.4f})", lrs[0] < 0.01)
+    check("cosine_warmup ramps up over the warmup window", lrs[0] < lrs[2] < lrs[5])
+    check(f"cosine_warmup peaks at base lr (got {max(lrs):.3f})", abs(max(lrs) - 1.0) < 1e-6)
+    check("cosine_warmup anneals after warmup", lrs[-1] < lrs[5])
+
+    # --- 11. DPAP config end-to-end, and no regression for existing configs ---
+    dcfg = get_dpap_repl_config()
+    check("dpap config: 8 timesteps", dcfg.snn.num_steps == 8)
+    check("dpap config: learned beta at tau=2.0 => 0.5",
+          dcfg.snn.learn_beta and dcfg.snn.beta == 0.5)
+    check("dpap config: threshold 0.5", dcfg.snn.threshold == 0.5)
+    check("dpap config: unilateral mse + adamw",
+          dcfg.loss_type == "unilateral_mse" and dcfg.train.optimizer == "adamw")
+    check(f"dpap config: batch-scaled lr (got {dcfg.train.lr:.3e})",
+          abs(dcfg.train.lr - 5e-3 * 50 / 1024) < 1e-12)
+    dm = build_model("dpap_repl", dcfg.snn, dcfg.bayesian, arch_cfg=dcfg.arch)
+    set_bayesian_mode(dm, True)
+    dp = prune_vgg_style(dm, threshold=3.0, snn_cfg=dcfg.snn)
+    dp.eval()
+    with torch.no_grad():
+        check("dpap model prunes and forwards", dp(x).shape == (8, 2, 10))
+    check("dpap pruned model keeps learned-beta parameters",
+          isinstance(dp.lif_layers[0].beta, torch.nn.Parameter))
+
+    for nm, fn in [("lenet", get_lenet_config), ("vgg9", get_vgg9_config),
+                   ("resnet18", get_resnet18_config)]:
+        c = fn()
+        check(f"{nm} still uses spike_rate_ce", c.loss_type == "spike_rate_ce")
+        check(f"{nm} still uses fixed beta (learn_beta off)", c.snn.learn_beta is False)
+        check(f"{nm} still uses plain cosine", c.train.lr_scheduler == "cosine")
+
+    print("\nAll smoke tests passed.")
 
 
 if __name__ == "__main__":

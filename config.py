@@ -167,8 +167,10 @@ class TrainConfig:
     batch_size: int = 128
     lr: float = 1e-3
     weight_decay: float = 5e-5
-    optimizer: str = "adam"
-    lr_scheduler: str = "cosine"
+    optimizer: str = "adam"  # "adam" | "adamw" | "sgd"
+    lr_scheduler: str = "cosine"  # "cosine" | "cosine_warmup" | "none"
+    lr_warmup_epochs: int = 0  # only used by "cosine_warmup"
+    min_lr: float = 0.0  # cosine floor; only used by "cosine_warmup"
     grad_clip_norm: float = 5.0
     use_amp: bool = True  # automatic mixed precision, used only if CUDA is available
 
@@ -265,6 +267,9 @@ class ExperimentConfig:
     finetune: FineTuneConfig = field(default_factory=FineTuneConfig)
     data: DataConfig = field(default_factory=DataConfig)
     seed: int = 42
+    # Task loss for every training phase: "spike_rate_ce" (this project's
+    # default) or "unilateral_mse" (DPAP's, see docs/replication_targets.md).
+    loss_type: str = "spike_rate_ce"
     device: str = "cuda"  # falls back to cpu automatically if cuda is unavailable
     num_classes: int = 10
     checkpoint_dir: str = "./checkpoints"
@@ -347,8 +352,71 @@ def get_resnet18_config() -> ExperimentConfig:
     return cfg
 
 
+def get_dpap_repl_config() -> ExperimentConfig:
+    """
+    Replication of DPAP's CIFAR-10 setup (Han et al., IEEE TPAMI 2024).
+
+    Every value below is transcribed from docs/replication_targets.md, which
+    records its provenance. Note that the paper itself does *not* state the
+    CIFAR-10 training setup -- these come from the authors' released code
+    (`BrainCog-X/Brain-Cog`, examples/Structural_Development/DPAP), so they
+    are replication of what was actually run rather than of what was
+    written down.
+
+    Deliberately unlike this project's own experiments, and not to be
+    "corrected" toward them: 8 timesteps (not 25), a learned membrane decay
+    (their PLIFNode) initialised to tau=2.0 => beta=0.5 (not fixed 0.95), a
+    firing threshold of 0.5 (not 1.0), a one-sided MSE task loss (not
+    cross-entropy), and AdamW at weight_decay=0.01 (not Adam at 5e-5).
+
+    Target: reproduce their 94.54% unpruned baseline. The go/no-go gate is
+    ~1% -- if this lands materially below, diagnose before running any
+    pruning on top of it, since comparing our pruned result against their
+    published pruned numbers is only meaningful from a matched baseline.
+    """
+    cfg = ExperimentConfig(name="dpap_repl")
+    cfg.output_dir = "./outputs/dpap_repl"
+
+    # 128C3-BN-128C3-BN-MaxPool2-256C3-BN-256C3-BN-MaxPool2-512C3-BN-512C3-BN-512FC-10FC
+    # Only 2 pooling stages, so the flattened width is 512*8*8 = 32768.
+    cfg.arch = ArchConfig(
+        conv_spec=[128, 128, "M", 256, 256, "M", 512, 512],
+        fc_hidden=[512],
+        norm_type="batch",
+    )
+
+    cfg.snn.num_steps = 8
+    cfg.snn.beta = 0.5  # tau=2.0 under the standard 1 - 1/tau parameterisation
+    cfg.snn.threshold = 0.5
+    cfg.snn.learn_beta = True  # PLIFNode: the time constant is trained
+    cfg.loss_type = "unilateral_mse"
+
+    # lr is their 5e-3 after the linear batch-size scaling their code applies
+    # (lr * batch_size / 1024, with batch_size 50) => 2.44e-4.
+    cfg.train.epochs = 300
+    cfg.train.batch_size = 50
+    cfg.train.lr = 5e-3 * 50 / 1024
+    cfg.train.weight_decay = 0.01
+    cfg.train.optimizer = "adamw"
+    cfg.train.lr_scheduler = "cosine_warmup"
+    cfg.train.lr_warmup_epochs = 5
+    cfg.train.min_lr = 1e-5
+
+    # Pruning-side settings stay this project's own -- the replication fixes
+    # the architecture and training recipe so the *baseline* is comparable;
+    # the pruning criterion under test is deliberately ours.
+    cfg.bayesian.bayesian_train_epochs = 75
+    cfg.bayesian.kl_warmup_epochs = 45
+    cfg.bayesian.beta_max = 0.4
+    cfg.finetune.epochs = 30
+    cfg.finetune.batch_size = 50
+    cfg.data.num_workers = 8
+    return cfg
+
+
 ALL_EXPERIMENTS = {
     "lenet": get_lenet_config,
     "vgg9": get_vgg9_config,
     "resnet18": get_resnet18_config,
+    "dpap_repl": get_dpap_repl_config,
 }

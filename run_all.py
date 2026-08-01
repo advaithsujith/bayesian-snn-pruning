@@ -33,7 +33,7 @@ from pruning import compute_uncertainty_report, prune_model
 from train import evaluate_loader, run_training
 from utils import ensure_dirs, get_device, print_banner, save_config_json, set_seed, setup_logger
 
-MODEL_ORDER = ["vgg9"]
+MODEL_ORDER = ["dpap_repl"]
 
 
 def make_experiment_plots(
@@ -162,7 +162,9 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     print_banner(f"Running Experiment {experiment_index} / {total_experiments}\n{model_name.upper()}")
 
     print("\nBuilding model...")
-    model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes).to(device)
+    model = build_model(
+        model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
+    ).to(device)
     set_bayesian_mode(model, False)
     original_params = count_parameters(model, exclude_gates=True)
     logger.info(f"Model built with {original_params} parameters (gates excluded from count).")
@@ -191,6 +193,9 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         kl_warmup_epochs=1,
         gamma_max=0.0,
         cost_warmup_epochs=1,
+        loss_type=cfg.loss_type,
+        lr_warmup_epochs=cfg.train.lr_warmup_epochs,
+        min_lr=cfg.train.min_lr,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_trained.pt"),
         csv_log_rows=csv_rows,
@@ -198,7 +203,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     )
 
     print("\nValidation...")
-    val_stats = evaluate_loader(model, val_loader, device)
+    val_stats = evaluate_loader(model, val_loader, device, loss_type=cfg.loss_type)
     logger.info(f"Post-pretrain validation accuracy: {val_stats['accuracy']:.4f}")
 
     eval_before = full_evaluation(
@@ -228,6 +233,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         kl_warmup_epochs=cfg.bayesian.kl_warmup_epochs,
         gamma_max=cfg.bayesian.gamma_max,
         cost_warmup_epochs=cfg.bayesian.cost_warmup_epochs,
+        loss_type=cfg.loss_type,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_bayesian.pt"),
         csv_log_rows=csv_rows,
@@ -273,6 +279,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         kl_warmup_epochs=1,
         gamma_max=0.0,
         cost_warmup_epochs=1,
+        loss_type=cfg.loss_type,
         logger=logger,
         checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_pruned_finetuned.pt"),
         csv_log_rows=csv_rows,

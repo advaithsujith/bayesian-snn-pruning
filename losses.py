@@ -24,6 +24,54 @@ def spike_rate_cross_entropy(spk_rec: torch.Tensor, targets: torch.Tensor) -> to
     return F.cross_entropy(spike_counts, targets)
 
 
+def unilateral_mse(spk_rec: torch.Tensor, targets: torch.Tensor, thresh: float = 1.0) -> torch.Tensor:
+    """
+    DPAP's task loss: MSE between mean firing rate and a scaled one-hot
+    target. Needed to replicate Han et al. (TPAMI 2024), whose released
+    code trains with `UnilateralMse(1.)` rather than cross-entropy -- see
+    docs/replication_targets.md.
+
+    `spk_rec` is [num_steps, batch, num_classes]; the mean over time gives
+    each output neuron's firing rate in [0, 1], which is regressed onto a
+    target of `thresh` for the correct class and 0 elsewhere. So the
+    objective is "make the right neuron fire at rate `thresh` and the rest
+    stay silent", rather than "make the right neuron out-fire the others"
+    as cross-entropy does.
+
+    Faithfulness note -- the "unilateral" part is inert in the original.
+    BrainCog's implementation reads:
+
+        def forward(self, x, target):
+            torch.clip(x, max=self.thresh)      # result discarded
+            ...
+            return self.loss(x, one_hot_scaled)
+
+    `torch.clip` returns a new tensor and the return value is never
+    assigned, so the intended one-sided clamp (don't penalise a neuron for
+    over-firing) never actually takes effect. This function reproduces the
+    *effective* behaviour, because that is what produced the published
+    94.54% baseline we are comparing against -- replicating the intent
+    instead would be a different loss than the one they trained with. The
+    clamp is therefore deliberately omitted rather than overlooked.
+    """
+    rates = spk_rec.mean(dim=0)  # [batch, num_classes], each in [0, 1]
+    target_rates = torch.zeros_like(rates).scatter_(1, targets.view(-1, 1), thresh)
+    return F.mse_loss(rates, target_rates)
+
+
+TASK_LOSSES = {
+    "spike_rate_ce": spike_rate_cross_entropy,
+    "unilateral_mse": unilateral_mse,
+}
+
+
+def get_task_loss(name: str):
+    """Look up a task-loss function by config name."""
+    if name not in TASK_LOSSES:
+        raise ValueError(f"Unknown task loss '{name}'. Options: {list(TASK_LOSSES)}")
+    return TASK_LOSSES[name]
+
+
 def linear_warmup_schedule(epoch: int, warmup_epochs: int, max_value: float) -> float:
     """
     Linear warmup of a loss weight from 0 to `max_value` over the first
@@ -51,15 +99,20 @@ def bayesian_snn_loss(
     beta: float,
     gamma: float,
     prune_threshold: float,
+    loss_type: str = "spike_rate_ce",
 ) -> "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]":
     """
     Full training loss for a Bayesian SNN: task loss + beta * KL +
     gamma * expected FLOPs cost.
 
+    `loss_type` selects the task-loss term; it defaults to the spike-rate
+    cross-entropy every existing experiment uses, and only the DPAP
+    replication overrides it.
+
     Returns (total_loss, task_loss, kl_term, cost_term) so callers can log
     each component separately.
     """
-    task_loss = spike_rate_cross_entropy(spk_rec, targets)
+    task_loss = get_task_loss(loss_type)(spk_rec, targets)
     kl_term = total_kl(model)
     cost_term = total_expected_cost(model, prune_threshold)
     total_loss = task_loss + beta * kl_term + gamma * cost_term
