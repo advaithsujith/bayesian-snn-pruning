@@ -12,9 +12,26 @@
     "log_alpha_clamp_max": 8.0,
     "prune_threshold": 3.0,
     "beta_max": 0.4,
-    "kl_warmup_epochs": 60,
-    "bayesian_train_epochs": 120,
-    "bayesian_train_lr": 0.0005
+    "kl_warmup_epochs": 45,
+    "bayesian_train_epochs": 75,
+    "bayesian_train_lr": 0.0005,
+    "gamma_max": 1e-05,
+    "cost_warmup_epochs": 45
+  },
+  "bio": {
+    "keep_fractions": [
+      0.1
+    ],
+    "naive_num_passes": 1,
+    "sca_epochs_per_cycle": 5,
+    "sca_num_cycles": 6,
+    "sca_lr": 0.0005,
+    "sca_weight_decay": 5e-05,
+    "dpap_train_epochs": 30,
+    "dpap_ema_decay": 0.9,
+    "dpap_survival_decay": 0.02,
+    "dpap_lr": 0.0005,
+    "dpap_weight_decay": 5e-05
   },
   "train": {
     "epochs": 100,

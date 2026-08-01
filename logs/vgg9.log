@@ -405,3 +405,298 @@
 13:42:34 | INFO | [finetune] epoch 29/30 train_task_loss=0.2078 train_kl=0.00 beta=0.00000 train_acc=0.9288 val_loss=0.4756 val_acc=0.8594 time=108.5s
 13:44:23 | INFO | [finetune] epoch 30/30 train_task_loss=0.2098 train_kl=0.00 beta=0.00000 train_acc=0.9287 val_loss=0.4812 val_acc=0.8594 time=108.4s
 13:44:44 | INFO | Final test accuracy after pruning + fine-tuning: 0.8608
+05:02:44 | INFO | Model built with 8887978 parameters (gates excluded from count).
+05:02:52 | INFO | Per-unit expected-FLOPs costs computed and set on every Bayesian layer.
+05:05:08 | INFO | [pretrain] epoch 1/100 train_task_loss=1.9561 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.2523 val_loss=1.6565 val_acc=0.3586 time=131.1s
+05:07:04 | INFO | [pretrain] epoch 2/100 train_task_loss=1.5459 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.4088 val_loss=1.3567 val_acc=0.4678 time=116.1s
+05:09:00 | INFO | [pretrain] epoch 3/100 train_task_loss=1.3397 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.4988 val_loss=1.2619 val_acc=0.5370 time=116.4s
+05:10:57 | INFO | [pretrain] epoch 4/100 train_task_loss=1.2018 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.5576 val_loss=1.1439 val_acc=0.5906 time=116.2s
+05:12:53 | INFO | [pretrain] epoch 5/100 train_task_loss=1.1080 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.5984 val_loss=1.0813 val_acc=0.6117 time=116.3s
+05:14:50 | INFO | [pretrain] epoch 6/100 train_task_loss=1.0408 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.6249 val_loss=1.0078 val_acc=0.6349 time=116.6s
+05:16:46 | INFO | [pretrain] epoch 7/100 train_task_loss=0.9818 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.6502 val_loss=0.9568 val_acc=0.6788 time=116.4s
+05:18:43 | INFO | [pretrain] epoch 8/100 train_task_loss=0.9190 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.6719 val_loss=0.8950 val_acc=0.6831 time=117.0s
+05:20:40 | INFO | [pretrain] epoch 9/100 train_task_loss=0.8713 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.6932 val_loss=0.7883 val_acc=0.7278 time=116.7s
+05:22:36 | INFO | [pretrain] epoch 10/100 train_task_loss=0.8185 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7135 val_loss=0.8316 val_acc=0.7148 time=116.6s
+05:24:33 | INFO | [pretrain] epoch 11/100 train_task_loss=0.7872 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7255 val_loss=0.7448 val_acc=0.7413 time=116.7s
+05:26:30 | INFO | [pretrain] epoch 12/100 train_task_loss=0.7631 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7342 val_loss=0.7482 val_acc=0.7486 time=116.6s
+05:28:26 | INFO | [pretrain] epoch 13/100 train_task_loss=0.7317 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7454 val_loss=0.6819 val_acc=0.7694 time=116.4s
+05:30:23 | INFO | [pretrain] epoch 14/100 train_task_loss=0.7021 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7568 val_loss=0.7010 val_acc=0.7654 time=117.1s
+05:32:20 | INFO | [pretrain] epoch 15/100 train_task_loss=0.6882 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7619 val_loss=0.6749 val_acc=0.7609 time=116.8s
+05:34:18 | INFO | [pretrain] epoch 16/100 train_task_loss=0.6638 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7715 val_loss=0.6628 val_acc=0.7682 time=117.7s
+05:36:14 | INFO | [pretrain] epoch 17/100 train_task_loss=0.6437 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7770 val_loss=0.7163 val_acc=0.7589 time=116.4s
+05:38:10 | INFO | [pretrain] epoch 18/100 train_task_loss=0.6295 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7825 val_loss=0.6655 val_acc=0.7745 time=116.1s
+05:40:07 | INFO | [pretrain] epoch 19/100 train_task_loss=0.6254 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7852 val_loss=0.6427 val_acc=0.7852 time=117.0s
+05:42:04 | INFO | [pretrain] epoch 20/100 train_task_loss=0.6086 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7914 val_loss=0.6663 val_acc=0.7698 time=117.1s
+05:44:01 | INFO | [pretrain] epoch 21/100 train_task_loss=0.5962 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7950 val_loss=0.6457 val_acc=0.7917 time=116.3s
+05:45:58 | INFO | [pretrain] epoch 22/100 train_task_loss=0.5913 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.7947 val_loss=0.6065 val_acc=0.7967 time=117.0s
+05:47:54 | INFO | [pretrain] epoch 23/100 train_task_loss=0.5755 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8015 val_loss=0.6293 val_acc=0.7856 time=116.1s
+05:49:50 | INFO | [pretrain] epoch 24/100 train_task_loss=0.5701 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8027 val_loss=0.6743 val_acc=0.7718 time=116.2s
+05:51:48 | INFO | [pretrain] epoch 25/100 train_task_loss=0.5511 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8124 val_loss=0.6320 val_acc=0.7876 time=117.6s
+05:53:44 | INFO | [pretrain] epoch 26/100 train_task_loss=0.5432 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8137 val_loss=0.5938 val_acc=0.7991 time=116.3s
+05:55:40 | INFO | [pretrain] epoch 27/100 train_task_loss=0.5405 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8161 val_loss=0.6191 val_acc=0.7927 time=116.2s
+05:57:36 | INFO | [pretrain] epoch 28/100 train_task_loss=0.5306 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8187 val_loss=0.5812 val_acc=0.8093 time=115.9s
+05:59:33 | INFO | [pretrain] epoch 29/100 train_task_loss=0.5198 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8229 val_loss=0.5928 val_acc=0.8058 time=116.6s
+06:01:29 | INFO | [pretrain] epoch 30/100 train_task_loss=0.5128 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8246 val_loss=0.5981 val_acc=0.7969 time=116.0s
+06:03:26 | INFO | [pretrain] epoch 31/100 train_task_loss=0.5074 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8278 val_loss=0.5821 val_acc=0.8076 time=116.9s
+06:05:23 | INFO | [pretrain] epoch 32/100 train_task_loss=0.4998 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8285 val_loss=0.5740 val_acc=0.8024 time=117.5s
+06:07:20 | INFO | [pretrain] epoch 33/100 train_task_loss=0.4903 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8323 val_loss=0.5807 val_acc=0.8099 time=116.7s
+06:09:30 | INFO | [pretrain] epoch 34/100 train_task_loss=0.4872 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8339 val_loss=0.5709 val_acc=0.8078 time=130.1s
+06:11:27 | INFO | [pretrain] epoch 35/100 train_task_loss=0.4785 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8366 val_loss=0.5530 val_acc=0.8159 time=116.6s
+06:13:23 | INFO | [pretrain] epoch 36/100 train_task_loss=0.4741 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8376 val_loss=0.5865 val_acc=0.8083 time=116.7s
+06:15:20 | INFO | [pretrain] epoch 37/100 train_task_loss=0.4684 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8408 val_loss=0.5739 val_acc=0.8066 time=117.2s
+06:17:17 | INFO | [pretrain] epoch 38/100 train_task_loss=0.4609 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8431 val_loss=0.5745 val_acc=0.8163 time=116.8s
+06:19:14 | INFO | [pretrain] epoch 39/100 train_task_loss=0.4577 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8426 val_loss=0.5861 val_acc=0.8030 time=116.7s
+06:21:11 | INFO | [pretrain] epoch 40/100 train_task_loss=0.4494 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8439 val_loss=0.5788 val_acc=0.8174 time=116.6s
+06:23:08 | INFO | [pretrain] epoch 41/100 train_task_loss=0.4458 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8484 val_loss=0.5451 val_acc=0.8184 time=117.1s
+06:25:05 | INFO | [pretrain] epoch 42/100 train_task_loss=0.4384 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8498 val_loss=0.5354 val_acc=0.8301 time=116.8s
+06:27:02 | INFO | [pretrain] epoch 43/100 train_task_loss=0.4262 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8539 val_loss=0.5716 val_acc=0.8119 time=116.9s
+06:28:58 | INFO | [pretrain] epoch 44/100 train_task_loss=0.4258 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8547 val_loss=0.5124 val_acc=0.8315 time=116.3s
+06:30:54 | INFO | [pretrain] epoch 45/100 train_task_loss=0.4189 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8573 val_loss=0.5328 val_acc=0.8258 time=116.3s
+06:32:51 | INFO | [pretrain] epoch 46/100 train_task_loss=0.4114 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8590 val_loss=0.5409 val_acc=0.8165 time=116.4s
+06:34:48 | INFO | [pretrain] epoch 47/100 train_task_loss=0.4062 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8600 val_loss=0.5165 val_acc=0.8327 time=117.3s
+06:36:44 | INFO | [pretrain] epoch 48/100 train_task_loss=0.3996 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8642 val_loss=0.5397 val_acc=0.8261 time=116.2s
+06:38:40 | INFO | [pretrain] epoch 49/100 train_task_loss=0.3931 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8659 val_loss=0.5632 val_acc=0.8204 time=116.3s
+06:40:37 | INFO | [pretrain] epoch 50/100 train_task_loss=0.3900 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8679 val_loss=0.5181 val_acc=0.8428 time=116.2s
+06:42:33 | INFO | [pretrain] epoch 51/100 train_task_loss=0.3817 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8682 val_loss=0.5114 val_acc=0.8368 time=116.8s
+06:44:31 | INFO | [pretrain] epoch 52/100 train_task_loss=0.3804 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8692 val_loss=0.5367 val_acc=0.8259 time=117.1s
+06:46:28 | INFO | [pretrain] epoch 53/100 train_task_loss=0.3733 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8724 val_loss=0.5239 val_acc=0.8350 time=117.1s
+06:48:24 | INFO | [pretrain] epoch 54/100 train_task_loss=0.3680 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8739 val_loss=0.5113 val_acc=0.8319 time=116.0s
+06:50:20 | INFO | [pretrain] epoch 55/100 train_task_loss=0.3634 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8740 val_loss=0.5516 val_acc=0.8240 time=116.7s
+06:52:17 | INFO | [pretrain] epoch 56/100 train_task_loss=0.3552 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8780 val_loss=0.5670 val_acc=0.8269 time=116.7s
+06:54:14 | INFO | [pretrain] epoch 57/100 train_task_loss=0.3574 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8781 val_loss=0.5300 val_acc=0.8358 time=116.8s
+06:56:11 | INFO | [pretrain] epoch 58/100 train_task_loss=0.3467 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8789 val_loss=0.5203 val_acc=0.8412 time=116.9s
+06:58:08 | INFO | [pretrain] epoch 59/100 train_task_loss=0.3444 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8817 val_loss=0.4816 val_acc=0.8445 time=116.9s
+07:00:04 | INFO | [pretrain] epoch 60/100 train_task_loss=0.3404 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8847 val_loss=0.4934 val_acc=0.8439 time=116.2s
+07:02:00 | INFO | [pretrain] epoch 61/100 train_task_loss=0.3333 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8860 val_loss=0.5039 val_acc=0.8430 time=116.1s
+07:03:57 | INFO | [pretrain] epoch 62/100 train_task_loss=0.3274 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8888 val_loss=0.5106 val_acc=0.8412 time=116.9s
+07:05:53 | INFO | [pretrain] epoch 63/100 train_task_loss=0.3228 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8897 val_loss=0.5078 val_acc=0.8368 time=116.4s
+07:07:51 | INFO | [pretrain] epoch 64/100 train_task_loss=0.3203 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8889 val_loss=0.5380 val_acc=0.8279 time=117.7s
+07:09:47 | INFO | [pretrain] epoch 65/100 train_task_loss=0.3196 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8899 val_loss=0.5158 val_acc=0.8414 time=116.0s
+07:11:44 | INFO | [pretrain] epoch 66/100 train_task_loss=0.3136 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8915 val_loss=0.5246 val_acc=0.8345 time=117.3s
+07:13:52 | INFO | [pretrain] epoch 67/100 train_task_loss=0.3062 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8938 val_loss=0.5193 val_acc=0.8426 time=127.7s
+07:15:55 | INFO | [pretrain] epoch 68/100 train_task_loss=0.3048 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8949 val_loss=0.5283 val_acc=0.8404 time=123.0s
+07:17:52 | INFO | [pretrain] epoch 69/100 train_task_loss=0.2967 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8980 val_loss=0.5044 val_acc=0.8465 time=117.1s
+07:19:48 | INFO | [pretrain] epoch 70/100 train_task_loss=0.2956 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8977 val_loss=0.5183 val_acc=0.8416 time=116.0s
+07:21:44 | INFO | [pretrain] epoch 71/100 train_task_loss=0.2921 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8994 val_loss=0.4953 val_acc=0.8449 time=115.9s
+07:23:41 | INFO | [pretrain] epoch 72/100 train_task_loss=0.2884 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.8997 val_loss=0.5102 val_acc=0.8459 time=116.5s
+07:25:37 | INFO | [pretrain] epoch 73/100 train_task_loss=0.2796 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9043 val_loss=0.5099 val_acc=0.8443 time=115.8s
+07:27:33 | INFO | [pretrain] epoch 74/100 train_task_loss=0.2773 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9044 val_loss=0.5258 val_acc=0.8475 time=116.6s
+07:29:29 | INFO | [pretrain] epoch 75/100 train_task_loss=0.2733 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9064 val_loss=0.5047 val_acc=0.8479 time=116.2s
+07:31:26 | INFO | [pretrain] epoch 76/100 train_task_loss=0.2717 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9073 val_loss=0.5064 val_acc=0.8483 time=116.8s
+07:33:23 | INFO | [pretrain] epoch 77/100 train_task_loss=0.2654 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9096 val_loss=0.5185 val_acc=0.8438 time=116.8s
+07:35:19 | INFO | [pretrain] epoch 78/100 train_task_loss=0.2622 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9092 val_loss=0.5042 val_acc=0.8465 time=116.3s
+07:37:15 | INFO | [pretrain] epoch 79/100 train_task_loss=0.2599 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9108 val_loss=0.5107 val_acc=0.8536 time=116.1s
+07:39:11 | INFO | [pretrain] epoch 80/100 train_task_loss=0.2590 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9119 val_loss=0.5118 val_acc=0.8487 time=115.9s
+07:41:07 | INFO | [pretrain] epoch 81/100 train_task_loss=0.2534 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9133 val_loss=0.5130 val_acc=0.8449 time=116.0s
+07:43:03 | INFO | [pretrain] epoch 82/100 train_task_loss=0.2508 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9132 val_loss=0.5109 val_acc=0.8515 time=116.0s
+07:44:59 | INFO | [pretrain] epoch 83/100 train_task_loss=0.2513 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9132 val_loss=0.5076 val_acc=0.8487 time=116.0s
+07:46:56 | INFO | [pretrain] epoch 84/100 train_task_loss=0.2456 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9157 val_loss=0.5065 val_acc=0.8499 time=116.4s
+07:48:52 | INFO | [pretrain] epoch 85/100 train_task_loss=0.2452 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9158 val_loss=0.5019 val_acc=0.8523 time=115.7s
+07:50:48 | INFO | [pretrain] epoch 86/100 train_task_loss=0.2450 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9151 val_loss=0.5029 val_acc=0.8505 time=116.6s
+07:52:44 | INFO | [pretrain] epoch 87/100 train_task_loss=0.2392 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9170 val_loss=0.5147 val_acc=0.8491 time=115.8s
+07:54:41 | INFO | [pretrain] epoch 88/100 train_task_loss=0.2405 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9167 val_loss=0.5061 val_acc=0.8509 time=116.7s
+07:56:36 | INFO | [pretrain] epoch 89/100 train_task_loss=0.2381 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9177 val_loss=0.5126 val_acc=0.8455 time=115.8s
+07:58:32 | INFO | [pretrain] epoch 90/100 train_task_loss=0.2357 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9186 val_loss=0.5150 val_acc=0.8475 time=116.0s
+08:00:29 | INFO | [pretrain] epoch 91/100 train_task_loss=0.2367 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9188 val_loss=0.5090 val_acc=0.8465 time=116.6s
+08:02:26 | INFO | [pretrain] epoch 92/100 train_task_loss=0.2349 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9189 val_loss=0.5034 val_acc=0.8503 time=116.9s
+08:04:22 | INFO | [pretrain] epoch 93/100 train_task_loss=0.2291 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9219 val_loss=0.5129 val_acc=0.8499 time=116.4s
+08:06:19 | INFO | [pretrain] epoch 94/100 train_task_loss=0.2333 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9203 val_loss=0.5050 val_acc=0.8475 time=116.4s
+08:08:15 | INFO | [pretrain] epoch 95/100 train_task_loss=0.2305 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9217 val_loss=0.5020 val_acc=0.8497 time=116.0s
+08:10:11 | INFO | [pretrain] epoch 96/100 train_task_loss=0.2297 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9215 val_loss=0.5064 val_acc=0.8505 time=116.5s
+08:12:07 | INFO | [pretrain] epoch 97/100 train_task_loss=0.2272 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9217 val_loss=0.5082 val_acc=0.8509 time=116.1s
+08:14:04 | INFO | [pretrain] epoch 98/100 train_task_loss=0.2299 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9205 val_loss=0.5027 val_acc=0.8517 time=116.3s
+08:16:00 | INFO | [pretrain] epoch 99/100 train_task_loss=0.2285 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9215 val_loss=0.5023 val_acc=0.8511 time=116.7s
+08:17:57 | INFO | [pretrain] epoch 100/100 train_task_loss=0.2310 train_kl=4671.22 beta=0.00000 train_cost=5855872000.00 gamma=0.000000 train_acc=0.9209 val_loss=0.5032 val_acc=0.8499 time=116.6s
+08:18:04 | INFO | Post-pretrain validation accuracy: 0.8536
+08:18:28 | INFO | Test accuracy before Bayesian conversion: 0.8500
+08:18:28 | INFO | Bayesian gates activated on every structurally-prunable layer.
+08:21:07 | INFO | [bayesian_train] epoch 1/75 train_task_loss=0.3374 train_kl=4671.94 beta=0.00000 train_cost=5855885395.76 gamma=0.000000 train_acc=0.8835 val_loss=0.5524 val_acc=0.8317 time=158.5s
+08:21:09 | INFO |     log_alpha: min=-3.05 median=-3.00 max=-2.97 frac_prunable=0.000
+08:23:35 | INFO | [bayesian_train] epoch 2/75 train_task_loss=0.3420 train_kl=4287.01 beta=0.00889 train_cost=5850628553.38 gamma=0.000000 train_acc=0.8836 val_loss=0.5528 val_acc=0.8281 time=145.9s
+08:23:35 | INFO |     log_alpha: min=-3.06 median=-2.38 max=-2.34 frac_prunable=0.000
+08:26:01 | INFO | [bayesian_train] epoch 3/75 train_task_loss=0.3479 train_kl=3664.51 beta=0.01778 train_cost=5837921237.03 gamma=0.000000 train_acc=0.8800 val_loss=0.5028 val_acc=0.8434 time=145.9s
+08:26:01 | INFO |     log_alpha: min=-3.06 median=-1.85 max=-1.73 frac_prunable=0.000
+08:28:27 | INFO | [bayesian_train] epoch 4/75 train_task_loss=0.3448 train_kl=3019.33 beta=0.02667 train_cost=5816006694.60 gamma=0.000001 train_acc=0.8834 val_loss=0.5514 val_acc=0.8250 time=145.7s
+08:28:27 | INFO |     log_alpha: min=-3.08 median=-1.35 max=-1.13 frac_prunable=0.000
+08:30:53 | INFO | [bayesian_train] epoch 5/75 train_task_loss=0.3476 train_kl=2402.75 beta=0.03556 train_cost=5778920214.94 gamma=0.000001 train_acc=0.8811 val_loss=0.5166 val_acc=0.8432 time=145.9s
+08:30:53 | INFO |     log_alpha: min=-3.09 median=-0.89 max=-0.54 frac_prunable=0.000
+08:33:18 | INFO | [bayesian_train] epoch 6/75 train_task_loss=0.3476 train_kl=1879.51 beta=0.04444 train_cost=5716704269.84 gamma=0.000001 train_acc=0.8817 val_loss=0.5162 val_acc=0.8418 time=145.7s
+08:33:18 | INFO |     log_alpha: min=-3.10 median=-0.46 max=0.04 frac_prunable=0.000
+08:35:44 | INFO | [bayesian_train] epoch 7/75 train_task_loss=0.3480 train_kl=1473.08 beta=0.05333 train_cost=5613584760.53 gamma=0.000001 train_acc=0.8803 val_loss=0.5193 val_acc=0.8418 time=145.7s
+08:35:44 | INFO |     log_alpha: min=-3.11 median=-0.06 max=0.62 frac_prunable=0.000
+08:38:11 | INFO | [bayesian_train] epoch 8/75 train_task_loss=0.3458 train_kl=1168.89 beta=0.06222 train_cost=5444570676.44 gamma=0.000002 train_acc=0.8824 val_loss=0.5317 val_acc=0.8362 time=146.8s
+08:38:11 | INFO |     log_alpha: min=-3.11 median=0.35 max=1.17 frac_prunable=0.000
+08:40:36 | INFO | [bayesian_train] epoch 9/75 train_task_loss=0.3553 train_kl=952.05 beta=0.07111 train_cost=5191404966.42 gamma=0.000002 train_acc=0.8788 val_loss=0.5289 val_acc=0.8438 time=145.6s
+08:40:36 | INFO |     log_alpha: min=-3.10 median=0.77 max=1.70 frac_prunable=0.000
+08:43:02 | INFO | [bayesian_train] epoch 10/75 train_task_loss=0.3594 train_kl=795.47 beta=0.08000 train_cost=4840525685.62 gamma=0.000002 train_acc=0.8778 val_loss=0.5044 val_acc=0.8418 time=145.8s
+08:43:02 | INFO |     log_alpha: min=-3.11 median=1.22 max=2.21 frac_prunable=0.000
+08:45:29 | INFO | [bayesian_train] epoch 11/75 train_task_loss=0.3627 train_kl=678.22 beta=0.08889 train_cost=4391534801.39 gamma=0.000002 train_acc=0.8772 val_loss=0.5479 val_acc=0.8333 time=146.7s
+08:45:29 | INFO |     log_alpha: min=-3.10 median=1.70 max=2.70 frac_prunable=0.000
+08:47:55 | INFO | [bayesian_train] epoch 12/75 train_task_loss=0.3728 train_kl=589.69 beta=0.09778 train_cost=3886476459.52 gamma=0.000002 train_acc=0.8743 val_loss=0.5469 val_acc=0.8384 time=146.6s
+08:47:55 | INFO |     log_alpha: min=-3.12 median=2.18 max=3.15 frac_prunable=0.052
+08:50:21 | INFO | [bayesian_train] epoch 13/75 train_task_loss=0.3862 train_kl=521.21 beta=0.10667 train_cost=3393971395.55 gamma=0.000003 train_acc=0.8694 val_loss=0.5471 val_acc=0.8418 time=145.9s
+08:50:21 | INFO |     log_alpha: min=-3.12 median=2.63 max=3.55 frac_prunable=0.497
+08:52:48 | INFO | [bayesian_train] epoch 14/75 train_task_loss=0.4190 train_kl=463.56 beta=0.11556 train_cost=2952511057.21 gamma=0.000003 train_acc=0.8613 val_loss=0.6072 val_acc=0.8315 time=146.9s
+08:52:48 | INFO |     log_alpha: min=-3.11 median=3.07 max=3.94 frac_prunable=0.850
+08:55:14 | INFO | [bayesian_train] epoch 15/75 train_task_loss=0.4754 train_kl=409.61 beta=0.12444 train_cost=2568268289.09 gamma=0.000003 train_acc=0.8438 val_loss=0.6507 val_acc=0.8317 time=145.8s
+08:55:14 | INFO |     log_alpha: min=-3.10 median=3.48 max=4.30 frac_prunable=0.851
+08:57:40 | INFO | [bayesian_train] epoch 16/75 train_task_loss=0.5446 train_kl=359.76 beta=0.13333 train_cost=2258944310.62 gamma=0.000003 train_acc=0.8222 val_loss=0.6758 val_acc=0.8348 time=146.0s
+08:57:40 | INFO |     log_alpha: min=-3.05 median=3.85 max=4.63 frac_prunable=0.853
+09:00:07 | INFO | [bayesian_train] epoch 17/75 train_task_loss=0.6329 train_kl=314.49 beta=0.14222 train_cost=2014356241.30 gamma=0.000004 train_acc=0.7950 val_loss=0.7433 val_acc=0.8224 time=146.9s
+09:00:07 | INFO |     log_alpha: min=-3.03 median=4.19 max=4.94 frac_prunable=0.859
+09:02:33 | INFO | [bayesian_train] epoch 18/75 train_task_loss=0.7499 train_kl=274.52 beta=0.15111 train_cost=1823781790.59 gamma=0.000004 train_acc=0.7579 val_loss=0.9203 val_acc=0.7929 time=146.3s
+09:02:33 | INFO |     log_alpha: min=-3.03 median=4.50 max=5.23 frac_prunable=0.868
+09:05:00 | INFO | [bayesian_train] epoch 19/75 train_task_loss=0.8726 train_kl=239.05 beta=0.16000 train_cost=1669960009.19 gamma=0.000004 train_acc=0.7197 val_loss=1.0074 val_acc=0.7710 time=146.8s
+09:05:00 | INFO |     log_alpha: min=-2.99 median=4.79 max=5.50 frac_prunable=0.871
+09:07:27 | INFO | [bayesian_train] epoch 20/75 train_task_loss=1.0136 train_kl=207.18 beta=0.16889 train_cost=1540137223.65 gamma=0.000004 train_acc=0.6671 val_loss=0.9919 val_acc=0.7694 time=146.8s
+09:07:27 | INFO |     log_alpha: min=-2.94 median=5.08 max=5.77 frac_prunable=0.873
+09:09:54 | INFO | [bayesian_train] epoch 21/75 train_task_loss=1.1753 train_kl=178.67 beta=0.17778 train_cost=1424790583.90 gamma=0.000004 train_acc=0.6063 val_loss=1.2577 val_acc=0.7069 time=147.0s
+09:09:54 | INFO |     log_alpha: min=-2.90 median=5.35 max=6.04 frac_prunable=0.875
+09:12:19 | INFO | [bayesian_train] epoch 22/75 train_task_loss=1.3454 train_kl=154.33 beta=0.18667 train_cost=1321674241.46 gamma=0.000005 train_acc=0.5311 val_loss=1.2977 val_acc=0.6626 time=145.6s
+09:12:19 | INFO |     log_alpha: min=-2.85 median=5.62 max=6.29 frac_prunable=0.877
+09:14:46 | INFO | [bayesian_train] epoch 23/75 train_task_loss=1.5339 train_kl=134.29 beta=0.19556 train_cost=1229224961.82 gamma=0.000005 train_acc=0.4435 val_loss=1.6527 val_acc=0.5763 time=146.6s
+09:14:46 | INFO |     log_alpha: min=-2.81 median=5.85 max=6.52 frac_prunable=0.879
+09:17:12 | INFO | [bayesian_train] epoch 24/75 train_task_loss=1.7364 train_kl=117.29 beta=0.20444 train_cost=1141612410.72 gamma=0.000005 train_acc=0.3385 val_loss=1.8034 val_acc=0.4654 time=146.3s
+09:17:12 | INFO |     log_alpha: min=-2.74 median=6.09 max=6.75 frac_prunable=0.880
+09:19:38 | INFO | [bayesian_train] epoch 25/75 train_task_loss=1.9486 train_kl=102.02 beta=0.21333 train_cost=1051552592.57 gamma=0.000005 train_acc=0.2354 val_loss=2.5322 val_acc=0.3080 time=146.0s
+09:19:38 | INFO |     log_alpha: min=-2.65 median=6.31 max=6.97 frac_prunable=0.887
+09:22:04 | INFO | [bayesian_train] epoch 26/75 train_task_loss=2.0700 train_kl=89.31 beta=0.22222 train_cost=965574763.24 gamma=0.000006 train_acc=0.1744 val_loss=1.8651 val_acc=0.3509 time=146.1s
+09:22:04 | INFO |     log_alpha: min=-2.58 median=6.53 max=7.18 frac_prunable=0.895
+09:24:33 | INFO | [bayesian_train] epoch 27/75 train_task_loss=2.1569 train_kl=78.57 beta=0.23111 train_cost=881981434.99 gamma=0.000006 train_acc=0.1473 val_loss=2.2836 val_acc=0.1913 time=149.1s
+09:24:33 | INFO |     log_alpha: min=-2.49 median=6.73 max=7.38 frac_prunable=0.900
+09:27:07 | INFO | [bayesian_train] epoch 28/75 train_task_loss=2.1770 train_kl=70.22 beta=0.24000 train_cost=806088712.92 gamma=0.000006 train_acc=0.1439 val_loss=2.2223 val_acc=0.1802 time=154.0s
+09:27:08 | INFO |     log_alpha: min=-2.42 median=6.90 max=7.56 frac_prunable=0.905
+09:29:33 | INFO | [bayesian_train] epoch 29/75 train_task_loss=2.1793 train_kl=63.92 beta=0.24889 train_cost=738425425.93 gamma=0.000006 train_acc=0.1440 val_loss=2.3112 val_acc=0.1713 time=145.1s
+09:29:33 | INFO |     log_alpha: min=-2.37 median=7.06 max=7.71 frac_prunable=0.913
+09:31:58 | INFO | [bayesian_train] epoch 30/75 train_task_loss=2.2647 train_kl=59.10 beta=0.25778 train_cost=676598349.47 gamma=0.000006 train_acc=0.1259 val_loss=2.2056 val_acc=0.1786 time=145.4s
+09:31:58 | INFO |     log_alpha: min=-2.32 median=7.22 max=7.87 frac_prunable=0.919
+09:34:24 | INFO | [bayesian_train] epoch 31/75 train_task_loss=2.3525 train_kl=52.93 beta=0.26667 train_cost=590135254.49 gamma=0.000007 train_acc=0.1003 val_loss=2.2504 val_acc=0.1622 time=145.9s
+09:34:24 | INFO |     log_alpha: min=-2.18 median=7.54 max=8.01 frac_prunable=0.932
+09:36:49 | INFO | [bayesian_train] epoch 32/75 train_task_loss=2.3409 train_kl=44.49 beta=0.27556 train_cost=497178549.71 gamma=0.000007 train_acc=0.0996 val_loss=2.3568 val_acc=0.1450 time=144.8s
+09:36:49 | INFO |     log_alpha: min=-1.98 median=7.80 max=8.01 frac_prunable=0.944
+09:39:15 | INFO | [bayesian_train] epoch 33/75 train_task_loss=2.3359 train_kl=37.45 beta=0.28444 train_cost=433652381.59 gamma=0.000007 train_acc=0.0997 val_loss=2.3241 val_acc=0.1464 time=146.1s
+09:39:15 | INFO |     log_alpha: min=-1.78 median=8.00 max=8.01 frac_prunable=0.954
+09:41:41 | INFO | [bayesian_train] epoch 34/75 train_task_loss=2.3309 train_kl=31.70 beta=0.29333 train_cost=383727296.73 gamma=0.000007 train_acc=0.1010 val_loss=2.3319 val_acc=0.1384 time=145.9s
+09:41:41 | INFO |     log_alpha: min=-1.59 median=8.00 max=8.01 frac_prunable=0.960
+09:44:07 | INFO | [bayesian_train] epoch 35/75 train_task_loss=2.3326 train_kl=27.13 beta=0.30222 train_cost=343337167.93 gamma=0.000008 train_acc=0.0998 val_loss=2.2804 val_acc=0.1023 time=146.1s
+09:44:07 | INFO |     log_alpha: min=-1.42 median=8.00 max=8.01 frac_prunable=0.965
+09:46:33 | INFO | [bayesian_train] epoch 36/75 train_task_loss=2.3347 train_kl=23.48 beta=0.31111 train_cost=309210394.22 gamma=0.000008 train_acc=0.1019 val_loss=2.3506 val_acc=0.0769 time=146.0s
+09:46:33 | INFO |     log_alpha: min=-1.25 median=8.00 max=8.01 frac_prunable=0.968
+09:49:00 | INFO | [bayesian_train] epoch 37/75 train_task_loss=2.3327 train_kl=20.25 beta=0.32000 train_cost=277829108.64 gamma=0.000008 train_acc=0.0996 val_loss=2.3419 val_acc=0.0973 time=146.6s
+09:49:00 | INFO |     log_alpha: min=-1.10 median=8.00 max=8.01 frac_prunable=0.970
+09:51:26 | INFO | [bayesian_train] epoch 38/75 train_task_loss=2.3290 train_kl=17.69 beta=0.32889 train_cost=252078352.23 gamma=0.000008 train_acc=0.1003 val_loss=2.3581 val_acc=0.1100 time=146.1s
+09:51:26 | INFO |     log_alpha: min=-0.96 median=8.00 max=8.01 frac_prunable=0.970
+09:53:51 | INFO | [bayesian_train] epoch 39/75 train_task_loss=2.3294 train_kl=15.51 beta=0.33778 train_cost=229365105.91 gamma=0.000008 train_acc=0.1012 val_loss=2.3146 val_acc=0.0953 time=145.2s
+09:53:51 | INFO |     log_alpha: min=-0.84 median=8.00 max=8.01 frac_prunable=0.971
+09:56:19 | INFO | [bayesian_train] epoch 40/75 train_task_loss=2.3309 train_kl=13.83 beta=0.34667 train_cost=211172986.56 gamma=0.000009 train_acc=0.1008 val_loss=2.3638 val_acc=0.1145 time=147.6s
+09:56:19 | INFO |     log_alpha: min=-0.73 median=8.00 max=8.01 frac_prunable=0.971
+09:58:46 | INFO | [bayesian_train] epoch 41/75 train_task_loss=2.3305 train_kl=12.39 beta=0.35556 train_cost=194612111.20 gamma=0.000009 train_acc=0.1012 val_loss=2.3725 val_acc=0.0926 time=147.1s
+09:58:46 | INFO |     log_alpha: min=-0.63 median=8.00 max=8.01 frac_prunable=0.971
+10:01:11 | INFO | [bayesian_train] epoch 42/75 train_task_loss=2.3311 train_kl=11.17 beta=0.36444 train_cost=180330765.86 gamma=0.000009 train_acc=0.0994 val_loss=2.3241 val_acc=0.0874 time=145.5s
+10:01:11 | INFO |     log_alpha: min=-0.54 median=8.00 max=8.01 frac_prunable=0.972
+10:03:37 | INFO | [bayesian_train] epoch 43/75 train_task_loss=2.3315 train_kl=10.10 beta=0.37333 train_cost=167603371.22 gamma=0.000009 train_acc=0.0994 val_loss=2.3036 val_acc=0.0967 time=146.1s
+10:03:37 | INFO |     log_alpha: min=-0.44 median=8.00 max=8.01 frac_prunable=0.972
+10:06:04 | INFO | [bayesian_train] epoch 44/75 train_task_loss=2.3300 train_kl=9.14 beta=0.38222 train_cost=156007410.98 gamma=0.000010 train_acc=0.1010 val_loss=2.2964 val_acc=0.0973 time=146.5s
+10:06:04 | INFO |     log_alpha: min=-0.35 median=8.00 max=8.01 frac_prunable=0.972
+10:08:33 | INFO | [bayesian_train] epoch 45/75 train_task_loss=2.3273 train_kl=8.32 beta=0.39111 train_cost=146145776.20 gamma=0.000010 train_acc=0.1001 val_loss=2.3027 val_acc=0.0969 time=148.6s
+10:08:33 | INFO |     log_alpha: min=-0.28 median=8.00 max=8.01 frac_prunable=0.974
+10:10:59 | INFO | [bayesian_train] epoch 46/75 train_task_loss=2.3276 train_kl=7.69 beta=0.40000 train_cost=138257243.13 gamma=0.000010 train_acc=0.1001 val_loss=2.3594 val_acc=0.0787 time=146.7s
+10:10:59 | INFO |     log_alpha: min=-0.20 median=8.00 max=8.01 frac_prunable=0.975
+10:13:26 | INFO | [bayesian_train] epoch 47/75 train_task_loss=2.3272 train_kl=7.11 beta=0.40000 train_cost=131063607.68 gamma=0.000010 train_acc=0.0987 val_loss=2.3287 val_acc=0.1129 time=146.3s
+10:13:26 | INFO |     log_alpha: min=-0.13 median=8.00 max=8.01 frac_prunable=0.976
+10:15:52 | INFO | [bayesian_train] epoch 48/75 train_task_loss=2.3248 train_kl=6.64 beta=0.40000 train_cost=125022755.46 gamma=0.000010 train_acc=0.1001 val_loss=2.3150 val_acc=0.0854 time=146.0s
+10:15:52 | INFO |     log_alpha: min=-0.08 median=8.00 max=8.01 frac_prunable=0.976
+10:18:17 | INFO | [bayesian_train] epoch 49/75 train_task_loss=2.3246 train_kl=6.25 beta=0.40000 train_cost=119978629.43 gamma=0.000010 train_acc=0.1007 val_loss=2.3026 val_acc=0.0979 time=145.7s
+10:18:17 | INFO |     log_alpha: min=-0.03 median=8.00 max=8.01 frac_prunable=0.978
+10:20:44 | INFO | [bayesian_train] epoch 50/75 train_task_loss=2.3233 train_kl=5.92 beta=0.40000 train_cost=115307891.03 gamma=0.000010 train_acc=0.1023 val_loss=2.3025 val_acc=0.0979 time=146.5s
+10:20:44 | INFO |     log_alpha: min=0.02 median=8.00 max=8.01 frac_prunable=0.979
+10:23:10 | INFO | [bayesian_train] epoch 51/75 train_task_loss=2.3224 train_kl=5.63 beta=0.40000 train_cost=111188611.94 gamma=0.000010 train_acc=0.1001 val_loss=2.2995 val_acc=0.0902 time=146.0s
+10:23:10 | INFO |     log_alpha: min=0.06 median=8.00 max=8.01 frac_prunable=0.980
+10:25:35 | INFO | [bayesian_train] epoch 52/75 train_task_loss=2.3231 train_kl=5.36 beta=0.40000 train_cost=107265547.49 gamma=0.000010 train_acc=0.1002 val_loss=2.3035 val_acc=0.0983 time=145.6s
+10:25:35 | INFO |     log_alpha: min=0.10 median=8.00 max=8.01 frac_prunable=0.981
+10:28:00 | INFO | [bayesian_train] epoch 53/75 train_task_loss=2.3230 train_kl=5.12 beta=0.40000 train_cost=103736442.04 gamma=0.000010 train_acc=0.1002 val_loss=2.3037 val_acc=0.0973 time=145.2s
+10:28:00 | INFO |     log_alpha: min=0.14 median=8.00 max=8.01 frac_prunable=0.981
+10:30:28 | INFO | [bayesian_train] epoch 54/75 train_task_loss=2.3217 train_kl=4.93 beta=0.40000 train_cost=100910699.35 gamma=0.000010 train_acc=0.1004 val_loss=2.3027 val_acc=0.0979 time=147.9s
+10:30:28 | INFO |     log_alpha: min=0.17 median=8.00 max=8.01 frac_prunable=0.981
+10:33:06 | INFO | [bayesian_train] epoch 55/75 train_task_loss=2.3196 train_kl=4.78 beta=0.40000 train_cost=98688182.40 gamma=0.000010 train_acc=0.0998 val_loss=2.3030 val_acc=0.0975 time=157.6s
+10:33:06 | INFO |     log_alpha: min=0.20 median=8.00 max=8.01 frac_prunable=0.981
+10:35:31 | INFO | [bayesian_train] epoch 56/75 train_task_loss=2.3201 train_kl=4.65 beta=0.40000 train_cost=96628776.31 gamma=0.000010 train_acc=0.1013 val_loss=2.3046 val_acc=0.0934 time=145.1s
+10:35:31 | INFO |     log_alpha: min=0.22 median=8.00 max=8.01 frac_prunable=0.981
+10:37:57 | INFO | [bayesian_train] epoch 57/75 train_task_loss=2.3198 train_kl=4.53 beta=0.40000 train_cost=94708703.14 gamma=0.000010 train_acc=0.1008 val_loss=2.3029 val_acc=0.0975 time=145.3s
+10:37:57 | INFO |     log_alpha: min=0.24 median=8.00 max=8.01 frac_prunable=0.981
+10:40:22 | INFO | [bayesian_train] epoch 58/75 train_task_loss=2.3186 train_kl=4.44 beta=0.40000 train_cost=93069774.60 gamma=0.000010 train_acc=0.1006 val_loss=2.3118 val_acc=0.1064 time=144.9s
+10:40:22 | INFO |     log_alpha: min=0.25 median=8.00 max=8.01 frac_prunable=0.981
+10:42:47 | INFO | [bayesian_train] epoch 59/75 train_task_loss=2.3161 train_kl=4.36 beta=0.40000 train_cost=91645614.62 gamma=0.000010 train_acc=0.1003 val_loss=2.3032 val_acc=0.0967 time=145.2s
+10:42:47 | INFO |     log_alpha: min=0.26 median=8.00 max=8.01 frac_prunable=0.982
+10:45:12 | INFO | [bayesian_train] epoch 60/75 train_task_loss=2.3168 train_kl=4.29 beta=0.40000 train_cost=90404165.28 gamma=0.000010 train_acc=0.0993 val_loss=2.3030 val_acc=0.0971 time=145.0s
+10:45:12 | INFO |     log_alpha: min=0.27 median=8.00 max=8.01 frac_prunable=0.982
+10:47:37 | INFO | [bayesian_train] epoch 61/75 train_task_loss=2.3152 train_kl=4.23 beta=0.40000 train_cost=89188584.90 gamma=0.000010 train_acc=0.1006 val_loss=2.3034 val_acc=0.0969 time=144.8s
+10:47:37 | INFO |     log_alpha: min=0.28 median=8.00 max=8.01 frac_prunable=0.982
+10:50:02 | INFO | [bayesian_train] epoch 62/75 train_task_loss=2.3162 train_kl=4.17 beta=0.40000 train_cost=88040089.07 gamma=0.000010 train_acc=0.1005 val_loss=2.3037 val_acc=0.0959 time=145.4s
+10:50:02 | INFO |     log_alpha: min=0.29 median=8.00 max=8.01 frac_prunable=0.982
+10:52:28 | INFO | [bayesian_train] epoch 63/75 train_task_loss=2.3143 train_kl=4.11 beta=0.40000 train_cost=87050898.06 gamma=0.000010 train_acc=0.1000 val_loss=2.3027 val_acc=0.0979 time=145.7s
+10:52:28 | INFO |     log_alpha: min=0.30 median=8.00 max=8.01 frac_prunable=0.983
+10:54:54 | INFO | [bayesian_train] epoch 64/75 train_task_loss=2.3139 train_kl=4.07 beta=0.40000 train_cost=86280713.30 gamma=0.000010 train_acc=0.1001 val_loss=2.3041 val_acc=0.1050 time=146.3s
+10:54:54 | INFO |     log_alpha: min=0.31 median=8.00 max=8.01 frac_prunable=0.984
+10:57:18 | INFO | [bayesian_train] epoch 65/75 train_task_loss=2.3131 train_kl=4.03 beta=0.40000 train_cost=85628875.61 gamma=0.000010 train_acc=0.0998 val_loss=2.3028 val_acc=0.0973 time=143.6s
+10:57:18 | INFO |     log_alpha: min=0.32 median=8.00 max=8.01 frac_prunable=0.984
+10:59:43 | INFO | [bayesian_train] epoch 66/75 train_task_loss=2.3117 train_kl=4.00 beta=0.40000 train_cost=85138930.21 gamma=0.000010 train_acc=0.1004 val_loss=2.3018 val_acc=0.0975 time=145.3s
+10:59:43 | INFO |     log_alpha: min=0.33 median=8.00 max=8.01 frac_prunable=0.984
+11:02:08 | INFO | [bayesian_train] epoch 67/75 train_task_loss=2.3129 train_kl=3.98 beta=0.40000 train_cost=84709694.36 gamma=0.000010 train_acc=0.0993 val_loss=2.3030 val_acc=0.0973 time=145.0s
+11:02:08 | INFO |     log_alpha: min=0.33 median=8.00 max=8.01 frac_prunable=0.984
+11:04:33 | INFO | [bayesian_train] epoch 68/75 train_task_loss=2.3114 train_kl=3.96 beta=0.40000 train_cost=84340275.87 gamma=0.000010 train_acc=0.1002 val_loss=2.3013 val_acc=0.0979 time=145.2s
+11:04:33 | INFO |     log_alpha: min=0.33 median=8.00 max=8.01 frac_prunable=0.984
+11:06:59 | INFO | [bayesian_train] epoch 69/75 train_task_loss=2.3101 train_kl=3.94 beta=0.40000 train_cost=84043370.17 gamma=0.000010 train_acc=0.0994 val_loss=2.3025 val_acc=0.0975 time=145.4s
+11:06:59 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:09:24 | INFO | [bayesian_train] epoch 70/75 train_task_loss=2.3102 train_kl=3.93 beta=0.40000 train_cost=83832237.71 gamma=0.000010 train_acc=0.1002 val_loss=2.3029 val_acc=0.0969 time=145.7s
+11:09:24 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:11:49 | INFO | [bayesian_train] epoch 71/75 train_task_loss=2.3087 train_kl=3.92 beta=0.40000 train_cost=83688459.45 gamma=0.000010 train_acc=0.0997 val_loss=2.3030 val_acc=0.0971 time=144.3s
+11:11:49 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:14:15 | INFO | [bayesian_train] epoch 72/75 train_task_loss=2.3082 train_kl=3.91 beta=0.40000 train_cost=83586865.45 gamma=0.000010 train_acc=0.1006 val_loss=2.3031 val_acc=0.0967 time=146.0s
+11:14:15 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:16:40 | INFO | [bayesian_train] epoch 73/75 train_task_loss=2.3084 train_kl=3.91 beta=0.40000 train_cost=83524255.75 gamma=0.000010 train_acc=0.1002 val_loss=2.3032 val_acc=0.0967 time=145.3s
+11:16:40 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:19:06 | INFO | [bayesian_train] epoch 74/75 train_task_loss=2.3082 train_kl=3.91 beta=0.40000 train_cost=83491662.86 gamma=0.000010 train_acc=0.1008 val_loss=2.3032 val_acc=0.0969 time=145.8s
+11:19:06 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:21:31 | INFO | [bayesian_train] epoch 75/75 train_task_loss=2.3078 train_kl=3.90 beta=0.40000 train_cost=83480121.80 gamma=0.000010 train_acc=0.1004 val_loss=2.3032 val_acc=0.0963 time=145.0s
+11:21:31 | INFO |     log_alpha: min=0.34 median=8.00 max=8.01 frac_prunable=0.984
+11:21:32 | INFO |   conv_layers.0: median_log_alpha=2.91 frac_prunable=0.438 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.1: median_log_alpha=7.73 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.2: median_log_alpha=6.84 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.3: median_log_alpha=8.00 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.4: median_log_alpha=8.00 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.5: median_log_alpha=8.01 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   conv_layers.6: median_log_alpha=8.01 frac_prunable=1.000 structurally_prunable=True
+11:21:32 | INFO |   fc1: median_log_alpha=8.00 frac_prunable=1.000 structurally_prunable=True
+11:21:34 | INFO | Parameters: 8887978 -> 1420 (100.0% pruned)
+11:23:35 | INFO | [finetune] epoch 1/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=121.0s
+11:25:20 | INFO | [finetune] epoch 2/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.7s
+11:27:06 | INFO | [finetune] epoch 3/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.2s
+11:28:51 | INFO | [finetune] epoch 4/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1002 val_loss=2.3026 val_acc=0.0979 time=105.1s
+11:30:35 | INFO | [finetune] epoch 5/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=104.4s
+11:32:20 | INFO | [finetune] epoch 6/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=104.8s
+11:34:05 | INFO | [finetune] epoch 7/30 train_task_loss=2.3032 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.5s
+11:35:51 | INFO | [finetune] epoch 8/30 train_task_loss=2.3031 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.2s
+11:37:36 | INFO | [finetune] epoch 9/30 train_task_loss=2.3039 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.0999 val_loss=2.3026 val_acc=0.0979 time=105.2s
+11:39:25 | INFO | [finetune] epoch 10/30 train_task_loss=2.3035 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1002 val_loss=2.3026 val_acc=0.0979 time=109.0s
+11:41:10 | INFO | [finetune] epoch 11/30 train_task_loss=2.3040 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=105.1s
+11:42:56 | INFO | [finetune] epoch 12/30 train_task_loss=2.3029 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.7s
+11:44:41 | INFO | [finetune] epoch 13/30 train_task_loss=2.3041 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.0998 val_loss=2.3026 val_acc=0.0979 time=105.1s
+11:46:26 | INFO | [finetune] epoch 14/30 train_task_loss=2.3035 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1000 val_loss=2.3026 val_acc=0.0979 time=105.4s
+11:48:11 | INFO | [finetune] epoch 15/30 train_task_loss=2.3060 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.0997 val_loss=2.3026 val_acc=0.0979 time=104.8s
+11:49:56 | INFO | [finetune] epoch 16/30 train_task_loss=2.3030 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1002 val_loss=2.3026 val_acc=0.0979 time=104.9s
+11:51:41 | INFO | [finetune] epoch 17/30 train_task_loss=2.3044 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1002 val_loss=2.3026 val_acc=0.0979 time=105.2s
+11:53:26 | INFO | [finetune] epoch 18/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=105.0s
+11:55:11 | INFO | [finetune] epoch 19/30 train_task_loss=2.3039 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.0999 val_loss=2.3026 val_acc=0.0979 time=104.8s
+11:56:56 | INFO | [finetune] epoch 20/30 train_task_loss=2.3040 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=105.0s
+11:58:41 | INFO | [finetune] epoch 21/30 train_task_loss=2.3030 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1002 val_loss=2.3026 val_acc=0.0979 time=104.7s
+12:00:26 | INFO | [finetune] epoch 22/30 train_task_loss=2.3035 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.8s
+12:02:11 | INFO | [finetune] epoch 23/30 train_task_loss=2.3043 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=104.9s
+12:03:57 | INFO | [finetune] epoch 24/30 train_task_loss=2.3035 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1000 val_loss=2.3026 val_acc=0.0979 time=105.3s
+12:05:42 | INFO | [finetune] epoch 25/30 train_task_loss=2.3044 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=105.3s
+12:07:27 | INFO | [finetune] epoch 26/30 train_task_loss=2.3037 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1004 val_loss=2.3026 val_acc=0.0979 time=104.9s
+12:09:12 | INFO | [finetune] epoch 27/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.1s
+12:10:57 | INFO | [finetune] epoch 28/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=104.8s
+12:12:42 | INFO | [finetune] epoch 29/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=105.0s
+12:14:26 | INFO | [finetune] epoch 30/30 train_task_loss=2.3026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1003 val_loss=2.3026 val_acc=0.0979 time=104.5s
+12:14:47 | INFO | Final test accuracy after pruning + fine-tuning: 0.1001

@@ -1,9 +1,9 @@
 layer,total,remaining,pruned
-conv_layers.0,64,64,0
-conv_layers.1,64,32,32
-conv_layers.2,128,69,59
-conv_layers.3,128,46,82
-conv_layers.4,256,51,205
-conv_layers.5,256,39,217
-conv_layers.6,512,9,503
-fc1,800,21,779
+conv_layers.0,64,36,28
+conv_layers.1,64,0,64
+conv_layers.2,128,0,128
+conv_layers.3,128,0,128
+conv_layers.4,256,0,256
+conv_layers.5,256,0,256
+conv_layers.6,512,0,512
+fc1,800,0,800
