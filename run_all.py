@@ -33,7 +33,7 @@ from pruning import compute_uncertainty_report, prune_model
 from train import evaluate_loader, run_training
 from utils import ensure_dirs, get_device, print_banner, save_config_json, set_seed, setup_logger
 
-MODEL_ORDER = ["lenet"]
+MODEL_ORDER = ["vgg9"]
 
 
 def make_experiment_plots(

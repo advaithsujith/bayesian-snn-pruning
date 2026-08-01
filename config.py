@@ -195,9 +195,14 @@ def get_vgg9_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.4
-    # Calibrated the same way as LeNet's (see get_lenet_config): KL_init=4671,
-    # expected_cost_init=5.86B, beta_max*KL_init=1868.
-    cfg.bayesian.gamma_max = 3e-7
+    # gamma_max=3e-7 (magnitude-matched to beta_max*KL at init, ~1868) is the
+    # same order that turned out too weak to reach LeNet's conv layers -- see
+    # get_lenet_config. Bumped 30x (same probe factor used there) as a
+    # starting point for VGG9, which has far more redundancy overall
+    # (fc1 alone collapsed 800->~21 neurons at gamma_max=0, with accuracy
+    # *improving* -- HANDOFF.md), so there's a real chance it has conv-layer
+    # slack to give up that LeNet simply doesn't have.
+    cfg.bayesian.gamma_max = 1e-5
     cfg.bayesian.cost_warmup_epochs = 45
     cfg.data.num_workers = 8
     return cfg
