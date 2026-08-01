@@ -195,14 +195,16 @@ def get_vgg9_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
     cfg.bayesian.beta_max = 0.4
-    # gamma_max=3e-7 (magnitude-matched to beta_max*KL at init, ~1868) is the
-    # same order that turned out too weak to reach LeNet's conv layers -- see
-    # get_lenet_config. Bumped 30x (same probe factor used there) as a
-    # starting point for VGG9, which has far more redundancy overall
-    # (fc1 alone collapsed 800->~21 neurons at gamma_max=0, with accuracy
-    # *improving* -- HANDOFF.md), so there's a real chance it has conv-layer
-    # slack to give up that LeNet simply doesn't have.
-    cfg.bayesian.gamma_max = 1e-5
+    # gamma_max=1e-5 (30x the calibrated value, same probe factor that worked
+    # for LeNet) caused a total collapse: accuracy held until epoch ~16, then
+    # fell off a cliff and was fully dead (100% pruned, ~10% acc, random
+    # chance) by epoch 36 -- well before gamma even finished ramping to 1e-5
+    # at epoch 45. Unlike LeNet, we never actually tested VGG9 at its true
+    # calibrated value before jumping to the 30x probe, so we don't have a
+    # data point for what it does. Reverting to the calibrated value
+    # (magnitude-matched to beta_max*KL at init, ~1868) to get that missing
+    # baseline before trying anything in between.
+    cfg.bayesian.gamma_max = 3e-7
     cfg.bayesian.cost_warmup_epochs = 45
     cfg.data.num_workers = 8
     return cfg
