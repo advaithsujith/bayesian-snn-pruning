@@ -15,7 +15,7 @@
     "kl_warmup_epochs": 45,
     "bayesian_train_epochs": 75,
     "bayesian_train_lr": 0.0005,
-    "gamma_max": 1e-05,
+    "gamma_max": 3e-07,
     "cost_warmup_epochs": 45
   },
   "bio": {

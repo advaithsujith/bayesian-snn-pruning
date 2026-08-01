@@ -1,18 +1,18 @@
 Experiment summary: vgg9
 ==================================================
 Original parameters (deterministic baseline): 8887978
-Remaining parameters (after structured pruning): 1420
-Compression ratio: 6259.139x
-Pruning percentage: 99.98%
+Remaining parameters (after structured pruning): 103834
+Compression ratio: 85.598x
+Pruning percentage: 98.83%
 
 Test accuracy before Bayesian pruning: 0.8500
-Test accuracy after pruning + fine-tuning: 0.1001
-Accuracy change: -0.7499
+Test accuracy after pruning + fine-tuning: 0.8524
+Accuracy change: +0.0024
 
-Estimated FLOPs (post-pruning): 33,336,650
-Inference latency (post-pruning): 66.478 ms
-Peak GPU memory (post-pruning): 108.8 MB
+Estimated FLOPs (post-pruning): 878,313,950
+Inference latency (post-pruning): 67.345 ms
+Peak GPU memory (post-pruning): 125.2 MB
 
-Pretraining time: 11700.3s (best val acc 0.8536)
-Bayesian gate training time: 10982.2s (best val acc 0.8438)
-Fine-tuning time: 3172.7s (best val acc 0.0979)
+Pretraining time: 11310.2s (best val acc 0.8536)
+Bayesian gate training time: 10548.4s (best val acc 0.8509)
+Fine-tuning time: 3385.6s (best val acc 0.8552)
