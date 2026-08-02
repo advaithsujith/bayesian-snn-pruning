@@ -1,0 +1,18 @@
+Experiment summary: dpap_repl
+==================================================
+Original parameters (deterministic baseline): 21362834
+Remaining parameters (after structured pruning): 183
+Compression ratio: 116736.798x
+Pruning percentage: 100.00%
+
+Test accuracy before Bayesian pruning: 0.9196
+Test accuracy after pruning + fine-tuning: 0.1000
+Accuracy change: -0.8196
+
+Estimated FLOPs (post-pruning): 341,584
+Inference latency (post-pruning): 20.953 ms
+Peak GPU memory (post-pruning): 361.5 MB
+
+Pretraining time: 19318.2s (best val acc 0.9286)
+Bayesian gate training time: 5651.6s (best val acc 0.8984)
+Fine-tuning time: 1533.7s (best val acc 0.1064)

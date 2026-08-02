@@ -1,0 +1,115 @@
+{
+  "name": "dpap_repl",
+  "snn": {
+    "num_steps": 8,
+    "beta": 0.5,
+    "threshold": 0.5,
+    "spike_grad": "atan",
+    "learn_beta": true,
+    "reset_mechanism": "subtract"
+  },
+  "arch": {
+    "conv_spec": [
+      128,
+      128,
+      "M",
+      256,
+      256,
+      "M",
+      512,
+      512
+    ],
+    "fc_hidden": [
+      512
+    ],
+    "kernel_size": 3,
+    "padding": 1,
+    "pool_type": "max",
+    "pool_size": 2,
+    "norm_type": "batch",
+    "conv_bias": true,
+    "dropout_p": 0.0,
+    "encoding": "direct",
+    "in_channels": 3,
+    "input_size": 32,
+    "layer_thresholds": null
+  },
+  "bayesian": {
+    "log_alpha_init": -3.0,
+    "log_alpha_clamp_min": -8.0,
+    "log_alpha_clamp_max": 8.0,
+    "prune_threshold": 3.0,
+    "beta_max": 0.4,
+    "kl_warmup_epochs": 45,
+    "bayesian_train_epochs": 75,
+    "bayesian_train_lr": 0.0005,
+    "gamma_max": 0.0,
+    "cost_warmup_epochs": 15
+  },
+  "bio": {
+    "keep_fractions": [
+      0.1
+    ],
+    "naive_num_passes": 1,
+    "sca_epochs_per_cycle": 5,
+    "sca_num_cycles": 6,
+    "sca_lr": 0.0005,
+    "sca_weight_decay": 5e-05,
+    "dpap_train_epochs": 30,
+    "dpap_ema_decay": 0.9,
+    "dpap_survival_decay": 0.02,
+    "dpap_lr": 0.0005,
+    "dpap_weight_decay": 5e-05
+  },
+  "train": {
+    "epochs": 300,
+    "batch_size": 50,
+    "lr": 0.000244140625,
+    "weight_decay": 0.01,
+    "optimizer": "adamw",
+    "lr_scheduler": "cosine_warmup",
+    "lr_warmup_epochs": 5,
+    "min_lr": 1e-05,
+    "grad_clip_norm": 5.0,
+    "use_amp": true
+  },
+  "finetune": {
+    "epochs": 30,
+    "batch_size": 50,
+    "lr": 0.0002,
+    "weight_decay": 5e-05,
+    "optimizer": "adam",
+    "lr_scheduler": "cosine",
+    "grad_clip_norm": 5.0,
+    "use_amp": true
+  },
+  "data": {
+    "data_dir": "./data",
+    "val_fraction": 0.1,
+    "num_workers": 8,
+    "pin_memory": true,
+    "random_crop_padding": 4,
+    "horizontal_flip_prob": 0.5,
+    "normalize_mean": [
+      0.4914,
+      0.4822,
+      0.4465
+    ],
+    "normalize_std": [
+      0.247,
+      0.2435,
+      0.2616
+    ]
+  },
+  "seed": 42,
+  "loss_type": "unilateral_mse",
+  "device": "cuda",
+  "num_classes": 10,
+  "checkpoint_dir": "./checkpoints",
+  "output_dir": "./outputs/dpap_repl",
+  "log_dir": "./logs",
+  "plot_dir": "./plots",
+  "latency_num_warmup": 10,
+  "latency_num_runs": 100,
+  "latency_batch_size": 1
+}

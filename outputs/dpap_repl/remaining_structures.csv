@@ -1,0 +1,8 @@
+layer,total,remaining,pruned
+conv_layers.0,128,0,128
+conv_layers.1,128,0,128
+conv_layers.2,256,0,256
+conv_layers.3,256,0,256
+conv_layers.4,512,0,512
+conv_layers.5,512,0,512
+fc_layers.0,512,0,512
