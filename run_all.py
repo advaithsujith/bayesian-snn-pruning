@@ -144,7 +144,12 @@ def build_summary_text(
         f"Inference latency (post-pruning): {eval_after['latency_ms']:.3f} ms",
         f"Peak GPU memory (post-pruning): {eval_after['gpu_memory_mb']:.1f} MB",
         "",
-        f"Pretraining time: {pretrain_result['total_time_sec']:.1f}s (best val acc {pretrain_result['best_val_acc']:.4f})",
+        (
+            "Pretraining: skipped, reused an existing baseline checkpoint"
+            if pretrain_result["total_time_sec"] == 0.0
+            else f"Pretraining time: {pretrain_result['total_time_sec']:.1f}s "
+            f"(best val acc {pretrain_result['best_val_acc']:.4f})"
+        ),
         f"Bayesian gate training time: {bayes_result['total_time_sec']:.1f}s (best val acc {bayes_result['best_val_acc']:.4f})",
         f"Fine-tuning time: {finetune_result['total_time_sec']:.1f}s (best val acc {finetune_result['best_val_acc']:.4f})",
     ]
@@ -176,31 +181,55 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
     csv_rows: List[Dict[str, Any]] = []
 
-    print("\nTraining...")
-    pretrain_result = run_training(
-        model,
-        train_loader,
-        val_loader,
-        epochs=cfg.train.epochs,
-        lr=cfg.train.lr,
-        weight_decay=cfg.train.weight_decay,
-        optimizer_name=cfg.train.optimizer,
-        scheduler_name=cfg.train.lr_scheduler,
-        grad_clip_norm=cfg.train.grad_clip_norm,
-        use_amp=cfg.train.use_amp,
-        device=device,
-        beta_max=0.0,
-        kl_warmup_epochs=1,
-        gamma_max=0.0,
-        cost_warmup_epochs=1,
-        loss_type=cfg.loss_type,
-        lr_warmup_epochs=cfg.train.lr_warmup_epochs,
-        min_lr=cfg.train.min_lr,
-        logger=logger,
-        checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_trained.pt"),
-        csv_log_rows=csv_rows,
-        phase_name="pretrain",
-    )
+    pretrained_path = os.path.join(cfg.output_dir, "trained_model.pt")
+    reuse_pretrained = cfg.reuse_pretrained and os.path.isfile(pretrained_path)
+
+    if reuse_pretrained:
+        # Skip straight to the pruning stages using the saved baseline.
+        # Pretraining dominates runtime (5.4h of a ~7h DPAP run), and it is
+        # entirely independent of every pruning hyperparameter, so tuning
+        # beta_max or gamma_max does not need it repeated. The baseline is
+        # bit-identical to the one the reused checkpoint was measured on,
+        # which also makes successive pruning runs exactly comparable.
+        print(f"\nReusing pretrained baseline: {pretrained_path}")
+        logger.info(f"Reusing existing pretrained baseline, skipping pretrain: {pretrained_path}")
+        try:
+            model.load_state_dict(torch.load(pretrained_path, map_location=device))
+        except RuntimeError as exc:
+            # Loudly, rather than silently training on a mismatched baseline.
+            raise RuntimeError(
+                f"Could not load '{pretrained_path}' into the current {model_name} model. "
+                "The checkpoint was almost certainly saved from a different architecture "
+                "or config. Delete it, or set reuse_pretrained=False to retrain from "
+                f"scratch.\nUnderlying error: {exc}"
+            ) from exc
+        pretrain_result = {"best_val_acc": float("nan"), "total_time_sec": 0.0}
+    else:
+        print("\nTraining...")
+        pretrain_result = run_training(
+            model,
+            train_loader,
+            val_loader,
+            epochs=cfg.train.epochs,
+            lr=cfg.train.lr,
+            weight_decay=cfg.train.weight_decay,
+            optimizer_name=cfg.train.optimizer,
+            scheduler_name=cfg.train.lr_scheduler,
+            grad_clip_norm=cfg.train.grad_clip_norm,
+            use_amp=cfg.train.use_amp,
+            device=device,
+            beta_max=0.0,
+            kl_warmup_epochs=1,
+            gamma_max=0.0,
+            cost_warmup_epochs=1,
+            loss_type=cfg.loss_type,
+            lr_warmup_epochs=cfg.train.lr_warmup_epochs,
+            min_lr=cfg.train.min_lr,
+            logger=logger,
+            checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{model_name}_trained.pt"),
+            csv_log_rows=csv_rows,
+            phase_name="pretrain",
+        )
 
     print("\nValidation...")
     val_stats = evaluate_loader(model, val_loader, device, loss_type=cfg.loss_type)
@@ -210,7 +239,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         model, test_loader, device, input_shape, cfg.latency_num_warmup, cfg.latency_num_runs
     )
     logger.info(f"Test accuracy before Bayesian conversion: {eval_before['test_accuracy']:.4f}")
-    torch.save(model.state_dict(), os.path.join(cfg.output_dir, "trained_model.pt"))
+    if not reuse_pretrained:
+        torch.save(model.state_dict(), pretrained_path)
 
     print("\nConverting to Bayesian...")
     set_bayesian_mode(model, True)

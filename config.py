@@ -286,6 +286,15 @@ class ExperimentConfig:
     # Task loss for every training phase: "spike_rate_ce" (this project's
     # default) or "unilateral_mse" (DPAP's, see docs/replication_targets.md).
     loss_type: str = "spike_rate_ce"
+    # Skip the pretrain phase and load `<output_dir>/trained_model.pt` if it
+    # exists. Pretraining dominates runtime but is independent of every
+    # pruning hyperparameter, so tuning beta_max / gamma_max does not need it
+    # repeated -- and reusing one fixed baseline makes successive pruning
+    # runs exactly comparable. Off by default: a full run from scratch stays
+    # the default behaviour, and this must be a deliberate choice, since a
+    # stale checkpoint from a different architecture or data recipe would
+    # otherwise be picked up silently.
+    reuse_pretrained: bool = False
     device: str = "cuda"  # falls back to cpu automatically if cuda is unavailable
     num_classes: int = 10
     checkpoint_dir: str = "./checkpoints"

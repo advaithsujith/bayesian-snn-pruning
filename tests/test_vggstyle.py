@@ -319,6 +319,29 @@ def main():
         check(f"{nm} still inherits its gate-phase weight decay",
               c.bayesian.bayesian_train_weight_decay is None)
 
+    # --- 13. pretrained-checkpoint reuse ---
+    # Lets beta_max / gamma_max be tuned without repeating pretraining, which
+    # dominates runtime and is independent of every pruning hyperparameter.
+    import tempfile
+    check("reuse_pretrained is off by default for every config",
+          all(fn().reuse_pretrained is False
+              for fn in (get_lenet_config, get_vgg9_config, get_resnet18_config,
+                         get_dpap_repl_config)))
+    scfg = get_dpap_repl_config(); scfg.snn.num_steps = 2
+    a = build_model("dpap_repl", scfg.snn, scfg.bayesian, arch_cfg=scfg.arch)
+    ckpt = os.path.join(tempfile.mkdtemp(), "trained_model.pt")
+    torch.save(a.state_dict(), ckpt)
+    b = build_model("dpap_repl", scfg.snn, scfg.bayesian, arch_cfg=scfg.arch)
+    b.load_state_dict(torch.load(ckpt, map_location="cpu"))
+    check("reused checkpoint reproduces identical weights",
+          all(torch.equal(x, y) for x, y in zip(a.state_dict().values(), b.state_dict().values())))
+    wrong = build_model("vgg9", get_vgg9_config().snn, scfg.bayesian)
+    try:
+        wrong.load_state_dict(torch.load(ckpt, map_location="cpu"))
+        check("a mismatched checkpoint is rejected, not silently loaded", False)
+    except RuntimeError:
+        check("a mismatched checkpoint is rejected, not silently loaded", True)
+
     print("\nAll smoke tests passed.")
 
 
