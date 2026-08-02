@@ -18,15 +18,41 @@ def build_transforms(data_cfg: DataConfig) -> Tuple[transforms.Compose, transfor
     transform pipelines. Random crop + horizontal flip is the standard
     CIFAR-10 augmentation recipe used across the SNN pruning literature
     referenced in this project (e.g. VGG/ResNet CIFAR training recipes).
+
+    Three optional, off-by-default stages reproduce the heavier pipeline
+    DPAP trains with (timm's `create_transform` via BrainCog's
+    `get_cifar10_data`): RandAugment, colour jitter and random erasing.
+    Leaving them at their defaults keeps every pre-existing experiment
+    bit-identical to before.
     """
-    train_transform = transforms.Compose(
-        [
-            transforms.RandomCrop(32, padding=data_cfg.random_crop_padding),
-            transforms.RandomHorizontalFlip(p=data_cfg.horizontal_flip_prob),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=data_cfg.normalize_mean, std=data_cfg.normalize_std),
-        ]
+    train_stages = [
+        transforms.RandomCrop(32, padding=data_cfg.random_crop_padding),
+        transforms.RandomHorizontalFlip(p=data_cfg.horizontal_flip_prob),
+    ]
+    if data_cfg.color_jitter > 0:
+        j = data_cfg.color_jitter
+        train_stages.append(transforms.ColorJitter(brightness=j, contrast=j, saturation=j))
+    if data_cfg.rand_augment:
+        # timm spells this "rand-m9-mstd0.5-inc1"; torchvision exposes only
+        # magnitude, so the magnitude is parsed out and the rest (magnitude
+        # std, increasing severity) is not reproduced. Recorded as a
+        # deviation in docs/replication_targets.md.
+        magnitude = 9
+        for part in data_cfg.rand_augment.split("-"):
+            if part.startswith("m") and part[1:].isdigit():
+                magnitude = int(part[1:])
+                break
+        train_stages.append(transforms.RandAugment(num_ops=2, magnitude=magnitude))
+    train_stages.append(transforms.ToTensor())
+    train_stages.append(
+        transforms.Normalize(mean=data_cfg.normalize_mean, std=data_cfg.normalize_std)
     )
+    if data_cfg.random_erasing_prob > 0:
+        # Must follow ToTensor: RandomErasing operates on tensors.
+        train_stages.append(
+            transforms.RandomErasing(p=data_cfg.random_erasing_prob, value="random")
+        )
+    train_transform = transforms.Compose(train_stages)
     eval_transform = transforms.Compose(
         [
             transforms.ToTensor(),
@@ -50,6 +76,23 @@ def get_cifar10_loaders(
     stage. The official 10,000-image test set is used only for final
     reporting. Data is downloaded automatically into `data_cfg.data_dir`
     if not already present.
+
+    Replication mode (`val_fraction = 0.0`)
+    ---------------------------------------
+    Training then uses all 50,000 images and the *test* set is returned as
+    the validation loader. This is what the papers being replicated
+    actually do -- BrainCog's `get_cifar10_data`, which DPAP trains with,
+    splits off no validation set at all -- and the extra 5,000 training
+    images are worth roughly half a point on CIFAR-10, so matching it
+    matters when the goal is to reproduce a published baseline.
+
+    The caveat is real and must be reported, not buried: with no held-out
+    validation set, "best validation accuracy" checkpoint selection is
+    selecting on the test set, and any hyperparameter chosen by watching
+    that number is fitted to the test set. This makes the resulting figure
+    a faithful reproduction of the published protocol rather than a clean
+    generalisation estimate. Use it for baseline comparison against those
+    papers; keep `val_fraction > 0` for this project's own experiments.
     """
     train_transform, eval_transform = build_transforms(data_cfg)
 
@@ -65,15 +108,19 @@ def get_cifar10_loaders(
 
     num_train = len(full_train_for_train_tf)
     num_val = int(num_train * data_cfg.val_fraction)
-    num_train_split = num_train - num_val
 
-    generator = torch.Generator().manual_seed(seed)
-    train_indices, val_indices = random_split(
-        range(num_train), [num_train_split, num_val], generator=generator
-    )
-
-    train_set = Subset(full_train_for_train_tf, list(train_indices))
-    val_set = Subset(full_train_for_eval_tf, list(val_indices))
+    if num_val == 0:
+        # Replication mode -- train on all 50k, validate on test. See the
+        # docstring's caveat about what this does to checkpoint selection.
+        train_set = full_train_for_train_tf
+        val_set = test_set
+    else:
+        generator = torch.Generator().manual_seed(seed)
+        train_indices, val_indices = random_split(
+            range(num_train), [num_train - num_val, num_val], generator=generator
+        )
+        train_set = Subset(full_train_for_train_tf, list(train_indices))
+        val_set = Subset(full_train_for_eval_tf, list(val_indices))
 
     train_loader = DataLoader(
         train_set,

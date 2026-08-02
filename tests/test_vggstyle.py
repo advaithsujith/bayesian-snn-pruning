@@ -288,6 +288,37 @@ def main():
         check(f"{nm} still uses fixed beta (learn_beta off)", c.snn.learn_beta is False)
         check(f"{nm} still uses plain cosine", c.train.lr_scheduler == "cosine")
 
+    # --- 12. data pipeline matches DPAP's, without disturbing the others ---
+    from PIL import Image
+    from datasets import build_transforms
+
+    dtr, _ = build_transforms(dcfg.data)
+    stages = [type(t).__name__ for t in dtr.transforms]
+    check(f"dpap augmentation adds RandAugment (stages: {stages})", "RandAugment" in stages)
+    check("dpap augmentation adds ColorJitter", "ColorJitter" in stages)
+    check("dpap augmentation adds RandomErasing", "RandomErasing" in stages)
+    check("RandomErasing runs after ToTensor (it needs a tensor)",
+          stages.index("RandomErasing") > stages.index("ToTensor"))
+    img = Image.fromarray((torch.rand(32, 32, 3) * 255).byte().numpy())
+    check("dpap transform still yields a [3,32,32] tensor", tuple(dtr(img).shape) == (3, 32, 32))
+    check("dpap uses BrainCog's normalisation std",
+          dcfg.data.normalize_std == [0.2023, 0.1994, 0.2010])
+    check("dpap trains on the full 50k (no val split)", dcfg.data.val_fraction == 0.0)
+    check("dpap overrides the gate-phase weight decay away from AdamW's 0.01",
+          dcfg.bayesian.bayesian_train_weight_decay == 5e-5)
+    check("dpap beta_max scaled down from VGG9's 0.4 for the MSE loss",
+          dcfg.bayesian.beta_max < 0.4)
+
+    for nm, fn in [("lenet", get_lenet_config), ("vgg9", get_vgg9_config),
+                   ("resnet18", get_resnet18_config)]:
+        c = fn()
+        s = [type(t).__name__ for t in build_transforms(c.data)[0].transforms]
+        check(f"{nm} augmentation unchanged (crop+flip+tensor+norm only)",
+              s == ["RandomCrop", "RandomHorizontalFlip", "ToTensor", "Normalize"])
+        check(f"{nm} still holds out a validation split", c.data.val_fraction == 0.1)
+        check(f"{nm} still inherits its gate-phase weight decay",
+              c.bayesian.bayesian_train_weight_decay is None)
+
     print("\nAll smoke tests passed.")
 
 

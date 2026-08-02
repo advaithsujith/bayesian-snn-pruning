@@ -223,7 +223,11 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         val_loader,
         epochs=cfg.bayesian.bayesian_train_epochs,
         lr=cfg.bayesian.bayesian_train_lr,
-        weight_decay=cfg.train.weight_decay,
+        weight_decay=(
+            cfg.train.weight_decay
+            if cfg.bayesian.bayesian_train_weight_decay is None
+            else cfg.bayesian.bayesian_train_weight_decay
+        ),
         optimizer_name=cfg.train.optimizer,
         scheduler_name=cfg.train.lr_scheduler,
         grad_clip_norm=cfg.train.grad_clip_norm,

@@ -110,7 +110,9 @@ from the authors' released code at
 | Epochs | **300** | [code] `epochs=300` |
 | Batch size | **50** | [code] `batch_size=50` |
 | Weight decay | **0.01** | [code] `cfg.weight_decay=0.01` |
-| Augmentation | via BrainCog's `get_cifar10_data()`; **[UNKNOWN]** in detail | [code] |
+| Augmentation | RandomCrop(32, pad=4) + hflip + **RandAugment `rand-m9-mstd0.5-inc1`** + **ColorJitter 0.4** + **RandomErasing p=0.25** (timm `create_transform`) | [code] `braincog/datasets/datasets.py` |
+| Normalisation | mean (0.4914, 0.4822, 0.4465), std **(0.2023, 0.1994, 0.2010)** | [code] `CIFAR10_DEFAULT_STD` |
+| Validation split | **none** -- trains on all 50k, evaluates on the 10k test set | [code] |
 
 **Notes on porting to snnTorch**: `PLIFNode` has a *learnable* membrane time
 constant -- snnTorch's nearest equivalent is `snn.Leaky(..., learn_beta=True)`.
@@ -140,15 +142,32 @@ produced by the code as written. Implementing the intended clamp would be a
 different loss than the one that produced the number we are comparing
 against. Flagged here so it is not later "fixed" into a mismatch.
 
-**Known deviations in our replication** (record these in the dissertation):
+**First replication attempt: 91.96% vs. their 94.54%** (2.58pp short, outside
+the ~1% go/no-go gate). Diagnosis from the training curve: validation accuracy
+was 0.9124 / 0.9184 / 0.9224 / 0.9230 at epochs 150 / 200 / 250 / 300 -- gaining
+~0.005 per 50 epochs and essentially flat, so **not** undertrained. That pointed
+at recipe differences, and reading BrainCog's data loader found three, all now
+fixed in `get_dpap_repl_config`:
+
+1. **No validation split.** Their pipeline trains on all 50,000 images; ours
+   held out 10% and trained on 45,000. Worth roughly half a point.
+2. **Much heavier augmentation.** RandAugment + colour jitter + random erasing,
+   versus our crop + flip alone. Typically worth 1-2pp on CIFAR-10.
+3. **A different normalisation std** (0.2023, 0.1994, 0.2010 vs. ours).
+
+**Known deviations that remain** (record these in the dissertation):
 - snnTorch's `learn_beta` learns a single scalar decay per neuron layer;
   BrainCog's PLIFNode parameterisation may differ in detail.
 - Their cosine schedule includes a 10-epoch *cooldown* that
   `cosine_warmup` does not model; warmup (5 epochs) and `min_lr` (1e-5) are
   replicated.
-- Their data augmentation comes from BrainCog's `get_cifar10_data()`, whose
-  exact transforms were not read; this project's standard CIFAR-10
-  augmentation (pad-4 random crop + horizontal flip) is used instead.
+- timm's RandAugment spec `rand-m9-mstd0.5-inc1` carries a magnitude-std and
+  an "increasing severity" flag that torchvision's `RandAugment` does not
+  expose; only the magnitude (9) is reproduced.
+- Running with `val_fraction = 0.0` means best-checkpoint selection happens
+  on the test set, matching their protocol but making the figure a
+  reproduction of that protocol rather than a clean generalisation estimate.
+  See `datasets.get_cifar10_loaders`.
 
 ---
 

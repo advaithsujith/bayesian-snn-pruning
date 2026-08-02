@@ -155,6 +155,12 @@ class BayesianConfig:
     kl_warmup_epochs: int = 15  # epochs over which beta is linearly annealed to beta_max
     bayesian_train_epochs: int = 40  # epochs spent training gates after "Converting to Bayesian"
     bayesian_train_lr: float = 5e-4  # typically lower than the initial-pretrain lr
+    # Weight decay for the gate-training phase. None => inherit
+    # TrainConfig.weight_decay (previous behaviour, unchanged for every
+    # existing experiment). Set explicitly where the pretrain recipe's decay
+    # is unsuitable for gate training -- e.g. the DPAP replication inherits
+    # AdamW's 0.01, 200x this project's usual value.
+    bayesian_train_weight_decay: Optional[float] = None
     gamma_max: float = 0.0  # final weight of the expected-FLOPs-cost term (0.0 = disabled)
     cost_warmup_epochs: int = 15  # epochs over which gamma is linearly annealed to gamma_max
 
@@ -241,13 +247,23 @@ class DataConfig:
     """CIFAR-10 loading and augmentation settings."""
 
     data_dir: str = "./data"
-    val_fraction: float = 0.1  # fraction of the official training set held out for validation
+    # Fraction of the official 50k training set held out for validation.
+    # Set to 0.0 to train on all 50k and use the test set for validation --
+    # what the papers being replicated do (see the leakage caveat in
+    # datasets.get_cifar10_loaders).
+    val_fraction: float = 0.1
     num_workers: int = 4
     pin_memory: bool = True
     random_crop_padding: int = 4
     horizontal_flip_prob: float = 0.5
     normalize_mean: List[float] = field(default_factory=lambda: [0.4914, 0.4822, 0.4465])
     normalize_std: List[float] = field(default_factory=lambda: [0.2470, 0.2435, 0.2616])
+    # Heavier augmentation, off by default so existing experiments are
+    # unchanged. DPAP's pipeline (timm `create_transform` via BrainCog's
+    # get_cifar10_data) enables all three; see docs/replication_targets.md.
+    rand_augment: str = ""  # e.g. "rand-m9-mstd0.5-inc1"; "" disables
+    color_jitter: float = 0.0  # timm passes 0.4 alongside RandAugment
+    random_erasing_prob: float = 0.0  # timm's re_prob; 0.25 in DPAP's recipe
 
 
 @dataclass
@@ -405,12 +421,38 @@ def get_dpap_repl_config() -> ExperimentConfig:
     # Pruning-side settings stay this project's own -- the replication fixes
     # the architecture and training recipe so the *baseline* is comparable;
     # the pruning criterion under test is deliberately ours.
+    # Data pipeline, transcribed from BrainCog's get_cifar10_data (which
+    # DPAP calls) rather than assumed. Three differences from this
+    # project's default recipe, together worth most of an initial 2.6pp
+    # baseline shortfall:
+    #   1. no validation split at all -- trains on all 50k, evaluates on
+    #      test (see datasets.get_cifar10_loaders for the leakage caveat);
+    #   2. much heavier augmentation via timm's create_transform;
+    #   3. a different normalisation std to this project's.
+    cfg.data.val_fraction = 0.0
+    cfg.data.rand_augment = "rand-m9-mstd0.5-inc1"
+    cfg.data.color_jitter = 0.4
+    cfg.data.random_erasing_prob = 0.25
+    cfg.data.normalize_std = [0.2023, 0.1994, 0.2010]
+    cfg.data.num_workers = 8
+
+    # Pruning-side settings stay this project's own. beta_max is NOT
+    # inherited from VGG9's 0.4: that value was tuned against a
+    # cross-entropy task loss ~78x larger than this config's MSE, so the
+    # same KL pressure overwhelmed the task term and collapsed every layer
+    # to zero survivors. Scaled down accordingly, to be refined against a
+    # real run (same empirical process the original beta_max values needed).
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
-    cfg.bayesian.beta_max = 0.4
+    cfg.bayesian.beta_max = 0.005
+    # DPAP's weight_decay of 0.01 belongs to its pretraining recipe; letting
+    # it carry into gate training decays the weights 200x harder than this
+    # project's phases expect, further weakening the task term's ability to
+    # resist the KL pressure.
+    cfg.bayesian.bayesian_train_weight_decay = 5e-5
     cfg.finetune.epochs = 30
     cfg.finetune.batch_size = 50
-    cfg.data.num_workers = 8
+    cfg.finetune.weight_decay = 5e-5
     return cfg
 
 
