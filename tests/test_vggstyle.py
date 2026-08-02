@@ -306,8 +306,8 @@ def main():
     check("dpap trains on the full 50k (no val split)", dcfg.data.val_fraction == 0.0)
     check("dpap overrides the gate-phase weight decay away from AdamW's 0.01",
           dcfg.bayesian.bayesian_train_weight_decay == 5e-5)
-    check("dpap beta_max scaled down from VGG9's 0.4 for the MSE loss",
-          dcfg.bayesian.beta_max < 0.4)
+    # beta_max is asserted alongside the pruning loss in section 14: scaling
+    # it for MSE was the wrong fix, so it is back at the cross-entropy value.
 
     for nm, fn in [("lenet", get_lenet_config), ("vgg9", get_vgg9_config),
                    ("resnet18", get_resnet18_config)]:
@@ -323,10 +323,26 @@ def main():
     # Lets beta_max / gamma_max be tuned without repeating pretraining, which
     # dominates runtime and is independent of every pruning hyperparameter.
     import tempfile
-    check("reuse_pretrained is off by default for every config",
+    check("reuse_pretrained stays off for this project's own experiments",
           all(fn().reuse_pretrained is False
-              for fn in (get_lenet_config, get_vgg9_config, get_resnet18_config,
-                         get_dpap_repl_config)))
+              for fn in (get_lenet_config, get_vgg9_config, get_resnet18_config)))
+    check("dpap reuses its saved baseline (pruning hyperparams don't affect it)",
+          get_dpap_repl_config().reuse_pretrained is True)
+
+    # --- 14. pretrain and pruning phases can use different task losses ---
+    # DPAP's MSE reproduces their baseline but cannot drive the gates: its
+    # gradient on log_alpha is orders of magnitude weaker than cross-entropy's
+    # (averaged over classes too, bounded [0,1] rather than 0..num_steps, and
+    # only 9 distinct values at 8 timesteps), so the KL term runs away.
+    check("dpap pretrains with DPAP's loss", dcfg.loss_type == "unilateral_mse")
+    check("dpap prunes with cross-entropy", dcfg.pruning_loss() == "spike_rate_ce")
+    check("dpap beta_max back to the value calibrated for cross-entropy",
+          dcfg.bayesian.beta_max == 0.4)
+    for nm, fn in [("lenet", get_lenet_config), ("vgg9", get_vgg9_config),
+                   ("resnet18", get_resnet18_config)]:
+        c = fn()
+        check(f"{nm} pruning loss still falls back to loss_type",
+              c.pruning_loss_type is None and c.pruning_loss() == c.loss_type)
     scfg = get_dpap_repl_config(); scfg.snn.num_steps = 2
     a = build_model("dpap_repl", scfg.snn, scfg.bayesian, arch_cfg=scfg.arch)
     ckpt = os.path.join(tempfile.mkdtemp(), "trained_model.pt")

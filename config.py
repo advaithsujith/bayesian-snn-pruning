@@ -283,9 +283,25 @@ class ExperimentConfig:
     finetune: FineTuneConfig = field(default_factory=FineTuneConfig)
     data: DataConfig = field(default_factory=DataConfig)
     seed: int = 42
-    # Task loss for every training phase: "spike_rate_ce" (this project's
+    # Task loss for the pretrain phase: "spike_rate_ce" (this project's
     # default) or "unilateral_mse" (DPAP's, see docs/replication_targets.md).
     loss_type: str = "spike_rate_ce"
+    # Task loss for the gate-training and fine-tuning phases. None => use
+    # `loss_type` for those too (previous behaviour, unchanged for every
+    # existing experiment).
+    #
+    # Split from `loss_type` for the replications: a replication's job is to
+    # reproduce the paper's *baseline*, so the pretrain phase must match
+    # their recipe exactly. The pruning criterion under test is this
+    # project's own, and it was developed and calibrated against
+    # cross-entropy. Those are separate concerns and forcing them to share a
+    # loss conflates them -- see the note in get_dpap_repl_config on why
+    # DPAP's MSE cannot drive the gates.
+    pruning_loss_type: Optional[str] = None
+
+    def pruning_loss(self) -> str:
+        """Task loss used by the gate-training and fine-tuning phases."""
+        return self.loss_type if self.pruning_loss_type is None else self.pruning_loss_type
     # Skip the pretrain phase and load `<output_dir>/trained_model.pt` if it
     # exists. Pretraining dominates runtime but is independent of every
     # pruning hyperparameter, so tuning beta_max / gamma_max does not need it
@@ -445,15 +461,40 @@ def get_dpap_repl_config() -> ExperimentConfig:
     cfg.data.normalize_std = [0.2023, 0.1994, 0.2010]
     cfg.data.num_workers = 8
 
-    # Pruning-side settings stay this project's own. beta_max is NOT
-    # inherited from VGG9's 0.4: that value was tuned against a
-    # cross-entropy task loss ~78x larger than this config's MSE, so the
-    # same KL pressure overwhelmed the task term and collapsed every layer
-    # to zero survivors. Scaled down accordingly, to be refined against a
-    # real run (same empirical process the original beta_max values needed).
+    # Pruning phases use cross-entropy, not DPAP's MSE. Two runs established
+    # that MSE cannot drive the Bayesian gates at all:
+    #   beta_max=0.4   -> every layer collapsed to zero survivors by epoch 11
+    #   beta_max=0.005 -> frac_prunable 0.998, val_acc at chance
+    # Scaling beta_max by the ratio of loss *values* (78x) was the wrong
+    # correction, because what balances the KL term is the task loss's
+    # *gradient* on log_alpha, and MSE's is far weaker for three compounding
+    # reasons: it averages over classes as well as examples (~10x), it reads
+    # a firing rate bounded in [0,1] rather than a spike count spanning
+    # 0..num_steps (~25x), and at DPAP's 8 timesteps that rate takes only 9
+    # distinct values. The KL gradient is unchanged throughout, so the
+    # balance is one-sided by orders of magnitude.
+    #
+    # Splitting the losses keeps the two concerns separate: pretrain
+    # replicates DPAP exactly (that is what the 94.35% baseline must match),
+    # while the pruning criterion under test runs under the loss it was
+    # calibrated for. Accuracy is loss-independent -- it ranks by summed
+    # spike count -- so comparison against their published pruned numbers
+    # remains valid.
+    cfg.pruning_loss_type = "spike_rate_ce"
+
+    # The 94.35% baseline is already saved (outputs/dpap_repl/trained_model.pt),
+    # and none of the pruning hyperparameters affect it, so successive pruning
+    # attempts reuse it instead of repeating 5.4h of pretraining -- and all
+    # fork from one identical baseline, making them directly comparable.
+    # Set back to False to retrain, e.g. after any change to the architecture
+    # or the data pipeline.
+    cfg.reuse_pretrained = True
+
+    # Back to VGG9's value, which is well-grounded here: the KL at the start
+    # of gate training is nearly identical (4874 vs VGG9's 4671).
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 45
-    cfg.bayesian.beta_max = 0.005
+    cfg.bayesian.beta_max = 0.4
     # DPAP's weight_decay of 0.01 belongs to its pretraining recipe; letting
     # it carry into gate training decays the weights 200x harder than this
     # project's phases expect, further weakening the task term's ability to
