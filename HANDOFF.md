@@ -7,17 +7,126 @@ search, and scoping a new efficiency-aware loss extension. Read this fully
 before doing anything — it captures hard-won debugging context that took
 many hours of real HPC time to discover.
 
+---
+
+# READ FIRST: state as of 2026-08-03, and the open decision
+
+**Everything from "The research goal" down to "Session 3" is historical and
+parts of it are stale**, including several quoted results and the entire
+"QUESTION FOR THE FRESH-CONTEXT READER" section, which has already been
+answered twice. This block supersedes the stale framing. Technical detail
+for the current state is in **Session 3** at the end of the file, plus
+`docs/review_response_2026-08-03.md` and
+`docs/fresh_review_2026-08-03.md`.
+
+Reading order if short on time: this block, then Session 3, then Session 2's
+"THE BIG BUG" and "The pivot" sections. The rest is background.
+
+## What the user is asking
+
+The user is deciding whether to **reframe the project around
+computation-aware (SynOps) Bayesian pruning** instead of the
+Bayesian-vs-bio-inspired comparison, and wants a fresh, independent
+judgement. They are 13 days in (first commit 2026-07-22), frustrated by
+repeated failed runs, and one thing is genuinely blocking everything else.
+**The submission deadline is unknown; ask, because it is the deciding
+variable and the previous assistant asked three times without an answer.**
+
+## Status of every result in this repo
+
+| | status |
+|---|---|
+| DPAP baseline replication, **94.35%** vs their published 94.54% | **Solid.** Pretraining runs with gates inert, so no gate bug touches it. `outputs/dpap_repl/trained_model.pt`. This is the strongest asset in the project. |
+| Infrastructure: `VGGStyleSNN`, shared physical rebuild, 132 CPU tests | **Solid.** |
+| Random-pruning control curve (see Session 3) | **Solid**, obtained accidentally. A control the project needed. |
+| Three bio-inspired criteria in `activity_pruning.py` | **Code is correct.** Every run is at `keep_fraction=0.1` (~98.5% pruned), so no run is at a sparsity comparable to the Bayesian side. |
+| VGG9 Bayesian, the +19pp headline result | **Needs redoing.** Produced under a bug that flattered it, n=1, and the exact run was overwritten (`outputs/vgg9/summary.txt` now reads 98.83%/85.24%, not the 98.71%/86.08% quoted below). |
+| LeNet and ResNet18 Bayesian | **Invalid.** ResNet18 doubly so: gate misplaced *and* half its KL wasted. |
+| FLOPs-aware loss | **Never worked.** Four runs. See Session 2. |
+| Optuna HPO search | **Abandoned by the user.** `hpo_search.py` is dead weight. |
+| Bayesian pruning of `dpap_repl` | **Never once produced a usable ranking.** This is the blocker. |
+
+**Do not trust any number in this file without checking the CSV.** Several
+quoted figures no longer match `outputs/`.
+
+## The blocker
+
+Gate training on `dpap_repl` has failed three times by collapse and once by
+producing a ranking that was entirely ties. Until it yields gates that
+**differentiate from each other while the network stays intact**, neither
+the comparison study nor the SynOps idea can produce a result, because both
+read the same `log_alpha` values.
+
+A run at `beta_max=0.01` (down from 0.4, set from measurement, see Session
+3) was the next action. Its outcome decides a lot:
+
+- **Stops early at the gate check**: the mechanism does not work in *DPAP's*
+  setup specifically (T=8, threshold 0.5, learned decay). It gave 98.7%
+  pruning on VGG9. Read this as "change platform to VGG9", not "the method
+  is broken".
+- **Ranking real, beats the random control**: this is the result. Continue.
+- **Ranking real, does not beat random**: the criterion does not work. This
+  is the only outcome that genuinely justifies changing topic.
+
+## The open decision
+
+The user proposed dropping the comparison study and starting a new project
+on SynOps-aware Bayesian pruning, comparing only against published numbers.
+
+The previous assistant recommended **reframe, do not restart**, on these
+grounds. Challenge them rather than inheriting them:
+
+1. It is not a new project. Gates, rebuild, replication, ranked pruning,
+   metrics, tests are all shared. New work is a spike counter plus a budget
+   constraint, most of it zero GPU. `ActivityAccumulator` already hooks
+   every LIF neuron in all four architectures.
+2. It does not escape the blocker. The cost term multiplies `p_keep_j`,
+   a function of the same `log_alpha` that is currently failing.
+3. Comparing only against published numbers is weaker than it sounds. The
+   contribution is that the SynOps term *adds* something, which needs an
+   ablation against `gamma=0` at matched sparsity. That is the user's own
+   baseline, and it is load-bearing.
+4. The bio-inspired code is already written and passing. Removing it from
+   the narrative saves no implementation time and only removes evidence.
+   Demote it to a baseline family rather than deleting it.
+5. A reframe is reversible; a restart bets everything on the component that
+   has already failed four times.
+
+**Honest risk of the reframe:** it promotes the part of the project with the
+worst track record. The failures are diagnosed (wrong cost metric, wrong
+control lever, suppressed surrogate gradient) but none of the fixes has been
+verified to work.
+
+The working title discussed already covers both framings: *"Bayesian
+Structured Pruning for Spiking Neural Networks: A Computationally-Aware
+Approach."*
+
+## Proposed plan at the time of writing
+
+1. The `beta_max=0.01` run. Needed under either framing.
+2. SynOps counting in `metrics.py`. Zero GPU.
+3. Budget-constrained cost term replacing the `gamma` multiplier. Zero GPU.
+4. One run: `gamma=0` versus SynOps-budget at matched sparsity. **This
+   single comparison is the contribution** under the reframe.
+5. Bio criteria at matching keep-fractions (~30 min on LeNet).
+6. Three LeNet seeds; n=1 is the easiest thing for an examiner to attack.
+7. Demote ResNet18 to a documented negative result unless time appears.
+8. Cut SCA and Chowdhury replications entirely. One replication is enough.
+
+---
+
 ## The research goal
 
 MSc dissertation comparing **Bayesian uncertainty-based structured pruning**
 against **biologically-inspired / activity-based pruning** in Spiking Neural
 Networks (SNNs), on CIFAR-10, across three architectures of increasing
 scale. **Both sides are now built and have produced results** (see below).
-Current focus: (1) finishing a multi-sampler hyperparameter search to make
-the comparison methodologically fair, then (2) a new, not-yet-implemented
-idea — adding a differentiable efficiency-aware (FLOPs or latency) term
-directly into the Bayesian pruning loss, so pruning optimizes for speed as
-well as accuracy, not just sparsity for its own sake.
+
+> **STALE.** The original "current focus" named here was (1) a multi-sampler
+> hyperparameter search and (2) a FLOPs-aware loss term. The search was
+> abandoned by the user and the FLOPs term was built and did not work. See
+> the READ FIRST block at the top of this file for the actual current state.
+> The research goal itself, below, is unchanged and still correct.
 
 **Critical framing for the dissertation** (worked out at length with the
 user): absolute compression percentages are not the interesting claim by
@@ -690,35 +799,244 @@ You have no stake in those choices. Please answer, bluntly:
 Read `docs/replication_targets.md`, the code, and the actual CSVs under
 `outputs/` — do not take this document's numbers on trust.
 
-## Fresh-context review: already run once (2026-08-03)
+## Fresh-context review: already run TWICE (2026-08-03)
 
-A no-context reviewer was given exactly the questions above. Its findings are
-summarised in `docs/fresh_review_2026-08-03.md`. **Its headline was: do not
-submit the beta sweep, and fix four zero-GPU-cost issues first, because they
-change results that already exist.** If you are a later fresh reader, treat
-that document as prior art rather than repeating it — but do challenge it.
+**The four questions above have been answered and largely acted on. Do not
+re-answer them from scratch.**
 
-## Second pass: all seven zero-GPU items implemented (2026-08-03)
+Round 1: a no-context reviewer, findings in
+`docs/fresh_review_2026-08-03.md`. Headline: do not submit the beta sweep,
+fix the zero-GPU issues first, because they change results that already
+exist.
 
-A second fresh reader worked through the reviewer's zero-GPU list. See
-`docs/review_response_2026-08-03.md` for what was built, which of the
-reviewer's claims were confirmed by direct measurement, and the three it
-got factually wrong. Short version:
+Round 2: a second fresh reader implemented all seven of its zero-GPU items,
+confirmed most of its claims by direct measurement, and corrected three of
+them. See `docs/review_response_2026-08-03.md` and Session 3 below.
 
-- **All seven items are done**, plus `run_sparsity_curve.py`, the consumer
-  that makes ranked pruning actually usable. Defaults are unchanged, so
-  every pre-existing experiment still reproduces.
-- **`tests/test_ranked_pruning.py`** (34 CPU checks) now guards them. Run it
-  and `tests/test_vggstyle.py` before every CSF3 submission.
-- **The reviewer's `keep_fraction ≈ 0.72` was wrong**, it gives 46.4% on
-  LeNet, not 27.7%. The right value is ≈0.844, and it is now computed by
-  `pruning.keep_fraction_for_param_target` rather than estimated.
-- **Ranked pruning has a silent failure mode:** saturated gates are tied,
-  ties break by index order, and the run still hits its sparsity target and
-  reports a plausible accuracy. `frac_saturated` is now logged everywhere.
-  Check it before believing any curve point, `dpap_repl`'s last gate
-  training saturated, and ranked pruning hides that rather than fixing it.
-- **Per-channel gate noise and the KL scoping invalidate every existing
-  Bayesian conv result** (LeNet, VGG9, ResNet18, dpap_repl). The code
-  changes were free; the re-runs are not.
-- `slurm_sweep.sh` now refuses to run. Submit `slurm_curve.sh` instead.
+Treat both as prior art, and challenge them rather than inheriting them, but
+the useful question now is the one in the READ FIRST block at the top of
+this file, not the four below.
+
+---
+
+# Session 3 (2026-08-03)
+
+A fresh reader worked through the review's zero-GPU list, then two curve
+runs happened. `docs/review_response_2026-08-03.md` records which of the
+reviewer's claims were confirmed by direct measurement and the three it got
+factually wrong. Commits: `1a703e9`, `db2ccf8`.
+
+## Three gate bugs, all present since the first commit
+
+Verified by `git show 93d5ac0`. **Nothing introduced them.** They were
+latent from 2026-07-22 and only surfaced now because of which architecture
+they were pointed at.
+
+1. **The conv gate was never structured.** `eps = torch.randn_like(h)` on
+   `[B,C,H,W]` drew independent noise per spatial position with only alpha
+   shared per channel. The perturbation largely cancels when the next layer
+   sums over space, so the task loss barely felt `log_alpha`. Measured
+   within-channel std 2.876 where a structured gate must give 0. Fixed to
+   one draw per (example, channel).
+
+2. **Half of ResNet18's KL was spent on gates that can never be removed:**
+   the stem plus every residual-tied `conv2`, **1984 of 3904 gate units**.
+   They ran to the clamp and injected noise into layers that survive at full
+   width. Non-prunable layers are now excluded from the KL, from
+   `total_expected_cost`, and from gate sampling entirely.
+
+3. **ResNet18 still gated before `bn1`.** Isolating the mechanism gives a
+   downstream gradient on `log_alpha` of **2.4e-7 before the norm versus 2.4
+   after**, a factor of ten million. `models.assert_gate_after_norm` now runs
+   from `build_model` and rejects unrecognised normalised architectures
+   rather than waving them through.
+
+**Why they hid for two weeks.** Bugs 2 and 3 cannot fire on LeNet or VGG9
+(no BatchNorm, no non-prunable layers). Bug 1 produced no symptom at all
+because it made results look *better*: a weaker task gradient means less
+resistance to the KL, which is part of why VGG9 pruned 98.7% with accuracy
+*rising*. Nobody audits a bug that inflates their headline number. The DPAP
+replication was the first architecture combining BatchNorm with a plain conv
+stack, so everything surfaced at once and looked new.
+
+Worth stating in the write-up: bug 3 was *suppressing* ResNet18 while bug 1
+was *inflating* VGG9. Those pull in opposite directions across the three
+architectures the cross-architecture comparison rests on.
+
+## Sparsity is now an input, not an outcome
+
+The largest design change. Under the threshold rule (`log_alpha > 3.0`) the
+only way to reach a given sparsity was to re-run gate training at a new
+`beta_max` and hope, which is why one value gave 27.7% on LeNet and 98.8% on
+VGG9. `pruning.KeepPlan` ranks gates by `log_alpha` and cuts at an explicit
+target instead. The criterion itself is unchanged.
+
+This buys: one gate-training run yields a whole accuracy-vs-sparsity curve
+(`run_sparsity_curve.py`); matched sparsity against the bio criteria holds
+by construction, using the same rounding as
+`activity_pruning.select_keep_mask`; and published operating points are
+directly reachable (DPAP's 33.46% and 50.80% land at 33.35% and 50.80%).
+`BayesianConfig.prune_mode` defaults to `"threshold"`, so prior experiments
+still reproduce.
+
+**Units are not parameters.** A uniform keep_fraction of 0.72 on LeNet
+removes 46.4% of parameters, not 28%. Use
+`pruning.keep_fraction_for_param_target`. On small networks an arbitrary
+parameter target is unreachable: LeNet's closest point to 27.74% is 26.53%,
+because `conv2` going 13 to 14 channels moves `fc1`'s input by 350 columns.
+State matched sparsity at a shared **keep_fraction** and report the
+parameter percentage alongside.
+
+## The silent failure mode ranked pruning introduces
+
+Because widths are an input, **an unusable ranking still produces a clean,
+monotone accuracy-vs-sparsity curve.** It just measures random structured
+pruning. Two ways a ranking dies, needing separate checks:
+
+- **Saturation.** Gates pinned at the clamp are tied; ties break by index
+  order.
+- **Dispersion.** Gates can be undifferentiated *without* saturating, if the
+  KL drags them upward in lockstep. Observed: `std(log_alpha) = 0.12` across
+  2304 gates for twenty epochs at `frac_saturated = 0.000`.
+
+`KeepPlan.ranking_is_usable` checks both. `run_sparsity_curve.py` calls it
+straight after gate training and **stops before the fine-tunes** unless
+`--force`, so a dead gate phase costs ~1.5h rather than ~4h.
+
+## Run 1: the random-pruning control (`beta_max=0.4`)
+
+Finished cleanly and is **not evidence about the criterion**:
+
+| pruned % | accuracy | saturation |
+|---|---|---|
+| 19.98 | 0.9174 | 0.889 |
+| 33.35 | 0.9113 | 0.889 |
+| 50.80 | 0.9062 | 0.889 |
+| 70.08 | 0.8876 | 0.889 |
+| 89.98 | 0.8414 | 0.889 |
+
+88.9% of gates sat at the clamp, so keep-sets were index order among ties.
+**Keep this as the random-pruning control** (`mv` it to
+`outputs/dpap_repl/sparsity_curve_RANDOM_CONTROL`). It is a baseline the
+project needed and the bar any real ranking must clear: **90.62% at 50.80%
+pruned, 84.14% at 90%.**
+
+Note the 91.74% at only 20% pruned, against a 94.35% baseline. That gap is
+not the pruning. The gate phase drove the network to 10% accuracy, so every
+rebuild started from wrecked weights.
+
+## Why `beta_max` went 0.4 to 0.01
+
+0.4 was borrowed from VGG9 because the KL's *value* at the start of gate
+training matched (4874 vs 4671). Wrong comparison: what opposes the KL is
+the task loss's **gradient** on `log_alpha`.
+`train.gate_pressure_diagnostic` read that ratio at **1.4e-4 to 3.2e-3** on
+this baseline at `beta_max=0.4`, and printed it before epoch 1. It was
+ignored.
+
+The gates then marched at a near-constant **0.27/epoch**, which is Adam
+sign-following at `lr=5e-4` over ~900 steps, straight through `log_alpha=0`
+(where every channel is scaled by `1+N(0,1)`) and on into the clamp.
+Accuracy hit chance by epoch 15, which killed the task gradient, which
+removed the last thing opposing the KL. A feedback loop, not a threshold
+event.
+
+**Lowering `beta_max` does not slow that march.** Under Adam the step is
+about `lr * sign(grad)` while one term dominates, so `beta_max` moves where
+the sign flips, not how fast `log_alpha` travels. Hence the gate LR also
+dropped, 5e-4 to 2e-4; sign-following at 5e-4 covers 0.45/epoch and steps
+over any equilibrium narrower than that. Warmup went 45 to 10 epochs so the
+outcome is visible early.
+
+**Success now looks different.** Gates no longer need to cross a threshold,
+they need to separate. Target signature: `log_alpha` **stops rising** around
+-1 to 0, `std` climbs past ~0.25, `val_acc` stays near 0.98. A run that
+prunes nothing by the old threshold is still a good ranking. If `log_alpha`
+is still climbing linearly at epoch 25, try 0.002.
+
+## The SynOps proposal, in enough detail to evaluate
+
+Rationale: **FLOPs is the wrong cost metric for an SNN.** `_FlopCounter`
+counts dense MACs on `Conv2d`/`Linear` and never counts a spike, so it is
+blind to the one thing that makes SNNs efficient. That is a candidate
+explanation for why the cost term never once reached a conv layer across
+four runs.
+
+Per unit `j` in layer `l`:
+
+```
+cost_j  =  r_{l-1} * unit_cost_j     # computing j: only input spikes trigger MACs
+         + r_j     * fanout_j        # j's own spikes driving layer l+1
+```
+
+The second term is the point: a channel that rarely fires is nearly free to
+keep regardless of its parameter count.
+
+Implementation is close to drop-in. `bayesian_snn_loss` and `expected_cost`
+are unchanged; `unit_cost` is already a buffer. Only
+`metrics.compute_and_set_unit_costs` changes, from once-at-build to
+once-per-epoch with firing rates measured by hooks.
+`activity_pruning.ActivityAccumulator(pairs, signal="spike_rate")` already
+does exactly that accumulation for every architecture.
+
+**Three things the metric swap does not fix:**
+
+1. **Surrogate gradient suppression.** `p_keep = 1 - sigmoid(log_alpha -
+   threshold)`; at `log_alpha=-3`, `threshold=3` the derivative is 0.0025,
+   so the term is ~400x weaker by gradient than by value during exactly the
+   period the KL decides everything. A property of the surrogate, inherited
+   unchanged. Fix by widening the temperature or via the budget formulation.
+2. **`gamma` is a disproven lever.** Four runs. FALCON and HALP use budgets;
+   Lemaire fixes lambda at 1e-5 and moves the target; Louizos needed a 20x
+   larger weight for conv than FC on LeNet-5 and predicted this exact
+   failure.
+3. **Gate training still has to work.**
+
+**Claim discipline.** SynOps is a *count*, fully measurable on an A100, and
+is the accepted neuromorphic energy proxy (DPAP, SCA and the rest all ran on
+GPUs and report it). It is **not** a GPU speedup: a GPU multiplies zeros at
+full price. Structured pruning *does* give real GPU latency gains because
+the tensors genuinely shrink, and `measure_latency_ms` already captures
+that. Report two separate claims, never one fudged one.
+
+## Also changed this session
+
+- **Validation protocol split.** `dpap_repl` keeps `val_fraction=0.0` for
+  pretraining because that is the protocol whose baseline it reproduces, but
+  gate training, fine-tuning and any validation-selected checkpoint now use a
+  held-out 10% (`DataConfig.pruning_val_fraction`). Previously `val_loader`
+  *was* the test set, so checkpoints and `beta_max` were both selected on it.
+  Caveat to state rather than bury: those held-out images were seen during
+  pretraining, so this is clean with respect to the test set but is not a
+  pure generalisation estimate. `val_acc` near 0.98 during gate training is
+  inflated for this reason; read it as a relative signal.
+- **`slurm_sweep.sh` now exits 1.** Submit `slurm_curve.sh`. Under Adam a
+  `beta_max` sweep shows a cliff, not a curve, at ~2h per point.
+- **Reports cannot disagree with rebuilds.** `remaining_structures_report`
+  reads the same plan the rebuild uses. It previously showed ResNet18's
+  `conv2` as 0/512 when it is never pruned, and 0 remaining where the
+  rebuild keeps 1.
+- **`final_results.csv` merges instead of overwriting.** Narrowing
+  `MODEL_ORDER` was deleting other architectures' rows. That is how the
+  quoted VGG9 figures stopped existing anywhere in the repo.
+- **`run_sparsity_curve.py --tag`** keeps successive runs from deleting each
+  other.
+- **Tests.** `tests/test_ranked_pruning.py` (34 CPU checks) plus
+  `tests/test_vggstyle.py` (98). **Run both before every CSF3 submission**,
+  and activate the venv first, or they fail with `ModuleNotFoundError` while
+  `sbatch` proceeds regardless. That happened once already.
+
+## Additions to the working-style notes
+
+- Wants to know *why* a problem appeared now rather than earlier, and the
+  answer ("it was always there, the architecture changed") landed better than
+  a fix would have. Run `git show` on the first commit before claiming
+  anything was introduced recently.
+- Asks for reassurance ("so it won't collapse yeah") at exactly the points
+  where the honest answer is qualified. Give the qualified answer.
+  Confident predictions here have been wrong twice.
+- Gets lost across long multi-session work and asks for a full rundown.
+  Worth volunteering periodically rather than waiting to be asked.
+- Reaches for changing the research topic when a run fails. Check first
+  whether the proposed new direction actually escapes the current blocker;
+  twice now it would have inherited it.
