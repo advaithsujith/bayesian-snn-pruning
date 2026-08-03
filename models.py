@@ -468,9 +468,14 @@ class VGGStyleSNN(nn.Module):
                     **gate_kwargs,
                 )
             )
-            norm_layers.append(
-                nn.BatchNorm2d(entry) if arch_cfg.norm_type == "batch" else nn.Identity()
-            )
+            use_norm = arch_cfg.norm_type == "batch"
+            norm_layers.append(nn.BatchNorm2d(entry) if use_norm else nn.Identity())
+            # With a BatchNorm between the conv and its neuron, the gate must
+            # act *after* the normalisation -- see BayesianConv2d.defer_gate
+            # for why placing it before makes the gate invisible to the task
+            # loss. Without a norm layer the two orderings are identical, so
+            # the existing in-forward path is left untouched.
+            conv_layers[-1].defer_gate = use_norm
             lif_layers.append(_make_leaky(snn_cfg, threshold_override=threshold_for(gated_idx)))
             pool_flags.append(False)
             in_channels = entry
@@ -544,7 +549,13 @@ class VGGStyleSNN(nn.Module):
             for i, (conv, norm, lif) in enumerate(
                 zip(self.conv_layers, self.norm_layers, self.lif_layers)
             ):
+                # conv -> norm -> gate when a BatchNorm is present, so the
+                # normalisation cannot divide the gate's noise back out; the
+                # plain conv -> gate path is used otherwise. `conv(spk)`
+                # returns ungated output exactly when defer_gate is set.
                 cur = norm(conv(spk))
+                if conv.defer_gate:
+                    cur = conv.apply_gate(cur)
                 spk, mem_conv[i] = lif(cur, mem_conv[i])
                 if self.pool_flags[i]:
                     spk = self.pool(spk)

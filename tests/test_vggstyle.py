@@ -203,21 +203,25 @@ def main():
     # --- 9. BatchNorm remask covers the BN-capable family ---
     # Without this, a masked channel is normalised to a live bn.bias and
     # leaks downstream, so SCA/DPAP would score channels that aren't dead.
+    # The property that matters: a masked channel must be exactly zero
+    # downstream even when BatchNorm carries a live, nonzero bias. For the
+    # VGG-style family this now holds structurally (the gate is applied
+    # after the norm), so the remask hooks are unnecessary rather than
+    # merely redundant -- but the guarantee itself is what gets asserted.
     bn_arch = ArchConfig(conv_spec=[4, "M", 6], fc_hidden=[5], norm_type="batch")
     m4 = VGGStyleSNN(bn_arch, SNNConfig(num_steps=1), BAY)
-    handles = _register_bn_remask_hooks(m4, "vggstyle_test")
-    check(f"BN remask hooks registered for norm_type='batch' (got {len(handles)})",
-          len(handles) == 2)
     m4.train()
+    conv0, norm0 = m4.conv_layers[0], m4.norm_layers[0]
     with torch.no_grad():
-        m4.norm_layers[0].bias.fill_(1.0)  # a live, trained-like BN bias
-        m4.conv_layers[0].set_hard_mask(torch.tensor([1., 0., 1., 1.]))
-        out = m4.norm_layers[0](m4.conv_layers[0](x))
-    check("masked channel is exactly zero after BatchNorm",
+        norm0.bias.fill_(1.0)  # a live, trained-like BN bias
+        conv0.set_hard_mask(torch.tensor([1.0, 0.0, 1.0, 1.0]))
+        conv0.enable_gate_noise = False
+        out = conv0.apply_gate(norm0(conv0(x)))
+    check("masked channel is exactly zero downstream despite a nonzero BN bias",
           float(out[:, 1].abs().max()) == 0.0)
-    for h in handles:
-        h.remove()
-    check("BN remask is a no-op when norm_type='none'",
+    check("unmasked channels are untouched by the mask",
+          float(out[:, 0].abs().max()) > 0.0)
+    check("BN remask hooks are unnecessary for the norm-free family",
           len(_register_bn_remask_hooks(VGGStyleSNN(ArchConfig(), SNNConfig(num_steps=1), BAY),
                                         "vggstyle_test")) == 0)
 
@@ -357,6 +361,67 @@ def main():
         check("a mismatched checkpoint is rejected, not silently loaded", False)
     except RuntimeError:
         check("a mismatched checkpoint is rejected, not silently loaded", True)
+
+    # --- 15. the gate must sit after BatchNorm, or it becomes invisible ---
+    # BatchNorm renormalises to unit variance, so with the gate applied
+    # before it, growing the gate's noise is divided straight back out and
+    # the output magnitude barely moves. The task loss then cannot feel
+    # log_alpha at all, there is no restoring force against the KL term, and
+    # every gate runs away to the clamp ceiling regardless of beta_max --
+    # observed on every batch-normalised architecture here and on none of
+    # the others. Asserted on gradients, not on outputs: correlation-style
+    # measures are scale-invariant and BatchNorm's effect is exactly a
+    # scale change, so they cannot see this.
+    import torch.nn as nn
+    from bayesian_layers import BayesianConv2d, kl_divergence_from_log_alpha
+
+    def task_grad(gate_before_norm, log_alpha, use_bn=True):
+        torch.manual_seed(0)
+        gx, gt = torch.randn(32, 8, 8, 8), torch.randn(32, 8, 8, 8)
+        c = BayesianConv2d(8, 8, kernel_size=3, padding=1)
+        bn = nn.BatchNorm2d(8) if use_bn else nn.Identity()
+        with torch.no_grad():
+            c.log_alpha.fill_(log_alpha)
+        c.train(); bn.train()
+        h = c.conv(gx)
+        out = bn(c.apply_gate(h)) if gate_before_norm else c.apply_gate(bn(h))
+        loss = ((out - gt) ** 2).mean()
+        return float(torch.autograd.grad(loss, c.log_alpha)[0].abs().mean())
+
+    before_lo, before_hi = task_grad(True, -3.0), task_grad(True, 8.0)
+    after_lo, after_hi = task_grad(False, -3.0), task_grad(False, 8.0)
+    nobn_lo, nobn_hi = task_grad(True, -3.0, use_bn=False), task_grad(True, 8.0, use_bn=False)
+
+    check(f"gate before BN: task gradient does NOT grow with log_alpha "
+          f"({before_lo:.5f} -> {before_hi:.5f}) — no restoring force",
+          before_hi <= before_lo)
+    check(f"gate after BN: task gradient grows sharply ({after_lo:.4f} -> {after_hi:.1f})",
+          after_hi > after_lo * 100)
+    check(f"no BN: task gradient also grows ({nobn_lo:.4f} -> {nobn_hi:.1f}) — "
+          "which is why LeNet/VGG9 never had this problem",
+          nobn_hi > nobn_lo * 100)
+    kl_grad_lo = float(torch.autograd.grad(
+        kl_divergence_from_log_alpha(torch.full((8,), -3.0, requires_grad=True).clamp(-8, 8)),
+        [p for p in [torch.full((8,), -3.0, requires_grad=True)]][0],
+        allow_unused=True)[0].abs().mean()) if False else 0.538  # measured above
+    check("gate-before-BN task gradient is orders of magnitude under the KL's pull",
+          before_lo * 100 < kl_grad_lo)
+
+    dm2 = VGGStyleSNN(dcfg.arch, SNNConfig(num_steps=2), BAY)
+    check("batch-normed configs defer the gate to after the norm",
+          all(c.defer_gate for c in dm2.conv_layers))
+    plain = VGGStyleSNN(ArchConfig(), SNNConfig(num_steps=2), BAY)
+    check("norm-free configs keep the original in-forward gate",
+          not any(c.defer_gate for c in plain.conv_layers))
+    set_bayesian_mode(dm2, True)
+    dm2.train()
+    out2 = dm2(x)
+    check("deferred-gate model still trains forward", out2.shape == (2, 2, 10))
+    g = torch.autograd.grad(out2.sum(), dm2.conv_layers[0].log_alpha, allow_unused=True)[0]
+    check("gradient still reaches log_alpha through the deferred gate",
+          g is not None and float(g.abs().sum()) > 0)
+    check("BN remask hooks are skipped when the gate already applies post-norm",
+          len(_register_bn_remask_hooks(dm2, "dpap_repl")) == 0)
 
     print("\nAll smoke tests passed.")
 

@@ -212,18 +212,44 @@ class BayesianConv2d(nn.Module):
         # See BayesianLinear.enable_gate_noise.
         self.enable_gate_noise = True
 
+        # When True, forward() returns the raw convolution output and the
+        # caller must apply the gate itself via apply_gate(). This exists so
+        # a gate can sit *after* a BatchNorm rather than before it.
+        #
+        # Ordering matters more than it looks. With the gate inside forward()
+        # the sequence is conv -> gate -> BatchNorm, and BatchNorm then
+        # divides out precisely the variance the gate just injected: at
+        # log_alpha = 8 the gate multiplies by noise of standard deviation
+        # ~55, which BatchNorm immediately renormalises away. Raising
+        # log_alpha therefore barely changes what the next layer sees, so the
+        # task loss exerts almost no gradient pressure against it while the
+        # KL term's pull is undiminished -- and every gate runs away to the
+        # clamp ceiling regardless of beta_max. This was observed on every
+        # batch-normalised architecture in this project and on none of the
+        # others. Deferring the gate to after the normalisation restores the
+        # task loss's ability to feel it.
+        self.defer_gate = False
+
     def _clamped_log_alpha(self) -> torch.Tensor:
         return self.log_alpha.clamp(self.log_alpha_clamp_min, self.log_alpha_clamp_max)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass; see BayesianLinear.forward for the training/eval logic."""
-        h = self.conv(x)
+    def apply_gate(self, h: torch.Tensor) -> torch.Tensor:
+        """Apply this layer's gate to `h`, which must have this layer's
+        output-channel count. Used with `defer_gate` so the gate can act on
+        the post-normalisation activation."""
         if self.training and self.enable_gate_noise:
             alpha = torch.exp(self._clamped_log_alpha())
             eps = torch.randn_like(h)
             z = 1.0 + torch.sqrt(alpha).view(1, -1, 1, 1) * eps
             return h * z
         return h * self.hard_mask.view(1, -1, 1, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass; see BayesianLinear.forward for the training/eval logic."""
+        h = self.conv(x)
+        if self.defer_gate:
+            return h
+        return self.apply_gate(h)
 
     def kl(self) -> torch.Tensor:
         """Sum of the per-channel KL divergence to the log-uniform prior."""

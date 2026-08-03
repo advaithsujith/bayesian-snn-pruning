@@ -328,6 +328,12 @@ def _register_bn_remask_hooks(model: nn.Module, model_name: str) -> List[Any]:
         for conv, norm in zip(model.conv_layers, model.norm_layers):
             if not isinstance(norm, nn.BatchNorm2d):
                 continue
+            if conv.defer_gate:
+                # The gate -- and therefore hard_mask -- is already applied
+                # after this BatchNorm (see BayesianConv2d.defer_gate), so a
+                # masked channel is zero downstream by construction and this
+                # hook would only re-apply the same mask a second time.
+                continue
 
             def _hook(_module, _inputs, output, _conv=conv):
                 return output * _conv.hard_mask.view(1, -1, 1, 1)
