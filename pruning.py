@@ -124,27 +124,71 @@ class KeepPlan:
         """
         How much of the ranking this plan used was decided by ties.
 
-        A gate clamped at `log_alpha_clamp_max` receives no gradient, so
-        once several units pin there they are indistinguishable and the
-        sort falls back to index order. Ranked pruning cannot tell that
-        apart from a confident decision, so it is reported explicitly:
-        `frac_saturated_high` near 1.0 means the "ranking" is arbitrary
-        and the resulting sparsity figure is meaningless even though the
-        run completed cleanly.
+        Two ways a ranking can be vacuous, and they need separate checks:
+
+        * **Saturation.** A gate clamped at `log_alpha_clamp_max` receives
+          no gradient, so once several pin there they are indistinguishable
+          and the sort falls back to index order. `frac_saturated_high`
+          near 1.0 means the keep-set is arbitrary.
+
+        * **Dispersion.** Gates can also be undifferentiated *without*
+          being saturated, if the KL drags them all upward in lockstep and
+          the task loss never separates them. That is not hypothetical: a
+          `dpap_repl` run sat at `std(log_alpha) = 0.12` across 2304 gates
+          for twenty-odd epochs with `frac_saturated = 0.000` the whole
+          time, so the saturation check alone would have passed it. Only
+          later did it march into the clamp. `log_alpha_std` catches the
+          earlier state.
+
+        Neither shows up in accuracy or in the sparsity figure. A run that
+        fails both still produces a clean, monotone accuracy-vs-sparsity
+        curve, because the widths are an input. What it measures then is
+        random structured pruning, which is a useful control but not
+        evidence about the criterion.
         """
         high = low = total = 0
+        values = []
         for layer in collect_prunable_bayesian_layers(model):
             la = layer.log_alpha.detach()
             high += int((la >= layer.log_alpha_clamp_max - tol).sum())
             low += int((la <= layer.log_alpha_clamp_min + tol).sum())
             total += int(la.numel())
+            values.append(la.flatten())
         if total == 0:
-            return {"frac_saturated_high": 0.0, "frac_saturated_low": 0.0, "total_gates": 0}
+            return {
+                "frac_saturated_high": 0.0,
+                "frac_saturated_low": 0.0,
+                "log_alpha_std": 0.0,
+                "total_gates": 0,
+            }
+        pooled = torch.cat(values)
         return {
             "frac_saturated_high": high / total,
             "frac_saturated_low": low / total,
+            "log_alpha_std": float(pooled.std()) if pooled.numel() > 1 else 0.0,
             "total_gates": total,
         }
+
+    def ranking_is_usable(
+        self, model: nn.Module, max_saturated: float = 0.5, min_std: float = 0.25
+    ) -> Tuple[bool, str]:
+        """(usable, reason). See saturation_report for what each bound means."""
+        r = self.saturation_report(model)
+        if r["frac_saturated_high"] > max_saturated:
+            return False, (
+                f"{r['frac_saturated_high']:.1%} of gates are pinned at the clamp "
+                "ceiling, so the keep-set is largely index order among ties"
+            )
+        if r["log_alpha_std"] < min_std:
+            return False, (
+                f"log_alpha std is {r['log_alpha_std']:.3f} across {r['total_gates']} "
+                "gates, so they never differentiated from each other and the "
+                "ranking is close to arbitrary"
+            )
+        return True, (
+            f"log_alpha std {r['log_alpha_std']:.3f}, "
+            f"{r['frac_saturated_high']:.1%} saturated"
+        )
 
 
 def _ranked_keep_indices(layer: GatedLayer, keep_count: int) -> torch.Tensor:

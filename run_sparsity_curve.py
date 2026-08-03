@@ -66,6 +66,7 @@ from metrics import (
 )
 from models import build_model
 from pruning import (
+    KeepPlan,
     compute_uncertainty_report,
     param_target_plan,
     prune_model,
@@ -191,7 +192,11 @@ def run_curve(args: argparse.Namespace) -> None:
 
     set_seed(cfg.seed)
     device = get_device(cfg.device)
-    out_dir = os.path.join(cfg.output_dir, "sparsity_curve")
+    # Tagged output directories, because successive runs of this script differ
+    # by exactly the hyperparameters under investigation and a shared path
+    # means each one silently deletes the last. That has already cost this
+    # project one set of quoted VGG9 figures.
+    out_dir = os.path.join(cfg.output_dir, f"sparsity_curve_{args.tag}" if args.tag else "sparsity_curve")
     ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, out_dir)
     logger = setup_logger(f"{args.model}_curve", cfg.log_dir, f"{args.model}_curve.log")
 
@@ -252,6 +257,27 @@ def run_curve(args: argparse.Namespace) -> None:
 
     write_csv(csv_rows, os.path.join(out_dir, "gate_training_log.csv"))
 
+    # Judge the gates before spending a fine-tune on every target. The curve
+    # is built from widths, which are an input, so an unusable ranking still
+    # produces a clean monotone curve -- it just measures random structured
+    # pruning instead of the criterion. Better to be told here than to read
+    # it off five finished points.
+    usable_now, reason_now = KeepPlan({}, "probe").ranking_is_usable(model)
+    banner = "USABLE" if usable_now else "NOT USABLE"
+    print(f"\nGate ranking: {banner} ({reason_now})")
+    logger.info(f"Gate ranking after training: {banner} -- {reason_now}")
+    if not usable_now and not args.force:
+        raise SystemExit(
+            f"\nStopping before the fine-tunes: {reason_now}.\n\n"
+            "The curve would still come out clean and monotone, because the layer\n"
+            "widths are an input rather than something the gates decide. It would\n"
+            "just be measuring random structured pruning, which is a legitimate\n"
+            "control but is not evidence about the criterion.\n\n"
+            "Lower beta_max so the gates settle at an equilibrium instead of\n"
+            "marching into the clamp, or pass --force to build the curve anyway\n"
+            "and keep it explicitly as a random-pruning baseline."
+        )
+
     report = compute_uncertainty_report(model, cfg.bayesian.prune_threshold)
     for name, stats in report.items():
         logger.info(
@@ -272,15 +298,12 @@ def run_curve(args: argparse.Namespace) -> None:
             min_keep=cfg.bayesian.min_keep_per_layer,
         )
         saturation = plan.saturation_report(model)
+        usable, reason = plan.ranking_is_usable(model)
         logger.info(f"[{tag}] {plan.describe()}")
-        if saturation["frac_saturated_high"] > 0.5:
+        if not usable:
             # Not fatal, but the resulting point is not evidence about the
             # criterion -- the ranking that produced it was mostly ties.
-            logger.warning(
-                f"[{tag}] {saturation['frac_saturated_high']:.1%} of gates are pinned at "
-                "the clamp ceiling; this keep-set is largely index order, not a "
-                "learned ranking. Fix gate training before reporting this point."
-            )
+            logger.warning(f"[{tag}] RANKING NOT USABLE: {reason}.")
 
         structures = remaining_structures_report(model, plan)
         dead_layers = sum(
@@ -333,6 +356,8 @@ def run_curve(args: argparse.Namespace) -> None:
             "Accuracy After": eval_after["test_accuracy"],
             "Fine Tune Best Val": finetune["best_val_acc"],
             "Gate Saturation": saturation["frac_saturated_high"],
+            "Log Alpha Std": saturation["log_alpha_std"],
+            "Ranking Usable": usable,
             "Layers At Min Width": dead_layers,
             "FLOPs": eval_after["flops"],
             "Latency": eval_after["latency_ms"],
@@ -342,11 +367,19 @@ def run_curve(args: argparse.Namespace) -> None:
         write_csv(results, os.path.join(out_dir, "summary.csv"))
 
     print_banner("SPARSITY CURVE FINISHED")
-    print(f"{'pruned %':>10} {'accuracy':>10} {'saturation':>12} {'min-width layers':>18}")
+    print(f"{'pruned %':>10} {'accuracy':>10} {'saturation':>12} {'la std':>9} {'usable':>8}")
     for r in sorted(results, key=lambda r: r["Achieved Pruned %"]):
         print(
             f"{r['Achieved Pruned %']:>10.2f} {r['Accuracy After']:>10.4f} "
-            f"{r['Gate Saturation']:>12.3f} {r['Layers At Min Width']:>18d}"
+            f"{r['Gate Saturation']:>12.3f} {r['Log Alpha Std']:>9.3f} "
+            f"{('yes' if r['Ranking Usable'] else 'NO'):>8}"
+        )
+    if results and not results[0]["Ranking Usable"]:
+        print(
+            "\nThe gates did not produce a usable ranking, so the curve above is\n"
+            "what random structured pruning of this architecture looks like. That\n"
+            "is a legitimate control and worth keeping under that name, but it is\n"
+            "not evidence about the pruning criterion. Fix gate training first."
         )
     print(f"\nWrote {os.path.join(out_dir, 'summary.csv')}")
 
@@ -377,6 +410,16 @@ def main() -> None:
         "--diagnose-only", action="store_true",
         help="print the per-layer task-vs-KL gradient balance on the pretrained "
              "baseline, then exit. One batch. Run this before submitting a curve.",
+    )
+    parser.add_argument(
+        "--tag", default="",
+        help="suffix for the output directory, e.g. --tag beta0.01. Keeps "
+             "successive runs from overwriting each other.",
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="build the curve even if the gates produced no usable ranking. Only "
+             "meaningful for deliberately generating a random-pruning control.",
     )
     args = parser.parse_args()
     if not args.targets and not args.diagnose_only:

@@ -55,9 +55,18 @@ mkdir -p checkpoints outputs plots logs
 # would be ties broken by index order. Cheaper to find out here.
 python run_sparsity_curve.py --model dpap_repl --diagnose-only
 
+# Tagged so this does not overwrite the previous run. The 2026-08-03 run at
+# beta_max=0.4 finished with 89% of gates pinned at the clamp, so its curve
+# measures random structured pruning rather than the criterion; keep it as
+# outputs/dpap_repl/sparsity_curve_RANDOM_CONTROL, it is the bar this run
+# has to beat (84.14% at 90% pruned, 90.62% at 50.80%).
+#
+# Stops before the five fine-tunes if the gates did not differentiate, so a
+# bad gate phase costs ~1.5h rather than ~4h.
 python run_sparsity_curve.py \
     --model dpap_repl \
     --mode uniform \
+    --tag beta0.01 \
     --targets 20 33.46 50.80 70 90
 
 echo "===================================================="

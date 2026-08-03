@@ -340,8 +340,17 @@ def main():
     # only 9 distinct values at 8 timesteps), so the KL term runs away.
     check("dpap pretrains with DPAP's loss", dcfg.loss_type == "unilateral_mse")
     check("dpap prunes with cross-entropy", dcfg.pruning_loss() == "spike_rate_ce")
-    check("dpap beta_max back to the value calibrated for cross-entropy",
-          dcfg.bayesian.beta_max == 0.4)
+    # beta_max is set from a measurement, not from VGG9's value. Borrowing 0.4
+    # on the grounds that the KL's *value* matched VGG9's was the wrong
+    # comparison: what opposes the KL is the task loss's *gradient* on
+    # log_alpha, and gate_pressure_diagnostic read that ratio at 1.4e-4 to
+    # 3.2e-3 on this baseline at 0.4. The run that followed lost all accuracy
+    # by epoch 15 and ended with 89% of gates pinned at the clamp. Anything
+    # back near 0.4 here means that reasoning has crept back in.
+    check("dpap beta_max is the measured value, not VGG9's",
+          dcfg.bayesian.beta_max == 0.01)
+    check("dpap gate LR lowered so it approaches equilibrium rather than overshooting",
+          dcfg.bayesian.bayesian_train_lr == 2e-4)
     for nm, fn in [("lenet", get_lenet_config), ("vgg9", get_vgg9_config),
                    ("resnet18", get_resnet18_config)]:
         c = fn()

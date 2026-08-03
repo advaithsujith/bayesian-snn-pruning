@@ -531,11 +531,38 @@ def get_dpap_repl_config() -> ExperimentConfig:
     # or the data pipeline.
     cfg.reuse_pretrained = True
 
-    # Back to VGG9's value, which is well-grounded here: the KL at the start
-    # of gate training is nearly identical (4874 vs VGG9's 4671).
+    # beta_max: 0.4 -> 0.01, measured rather than guessed.
+    #
+    # 0.4 was inherited from VGG9 on the grounds that the KL at the start of
+    # gate training is nearly identical (4874 vs 4671). That reasoning was
+    # wrong: what balances the KL is the task loss's *gradient* on log_alpha,
+    # not the KL's value. train.gate_pressure_diagnostic on this exact
+    # baseline reads |d task/d log_alpha| / (beta * |d KL/d log_alpha|)
+    # between 1.4e-4 and 3.2e-3 at beta_max=0.4 -- the task loss has under a
+    # third of a percent of the KL's pull. The run that produced those
+    # numbers went on to lose all accuracy by epoch 15 and finished with 89%
+    # of gates pinned at the clamp ceiling.
+    #
+    # A ratio of ~1 (the two terms in contest, so gates settle rather than
+    # march) needs beta about 300x smaller. 0.01 is deliberately on the low
+    # side of that: under ranked pruning nothing has to cross a threshold, so
+    # gates that settle around log_alpha = -1 with real spread are a perfectly
+    # good ranking, whereas gates that march past the clamp are no ranking at
+    # all.
+    #
+    # Note that lowering beta_max does NOT slow the march. Adam normalises
+    # each update by that parameter's own running gradient, so while the KL
+    # dominates the step is about lr * sign(grad) regardless of beta -- the
+    # observed 0.27/epoch is exactly lr=5e-4 over ~900 steps at ~60%
+    # sign-following. beta_max moves where the sign flips; the gate LR below
+    # is what governs how fast it gets there and whether it overshoots.
     cfg.bayesian.bayesian_train_epochs = 75
-    cfg.bayesian.kl_warmup_epochs = 45
-    cfg.bayesian.beta_max = 0.4
+    cfg.bayesian.kl_warmup_epochs = 10
+    cfg.bayesian.beta_max = 0.01
+    # Halved so the approach to equilibrium is an approach rather than an
+    # overshoot. Sign-following at 5e-4 moves log_alpha 0.45/epoch at most,
+    # which steps straight over any balance point narrower than that.
+    cfg.bayesian.bayesian_train_lr = 2e-4
     # DPAP's weight_decay of 0.01 belongs to its pretraining recipe; letting
     # it carry into gate training decays the weights 200x harder than this
     # project's phases expect, further weakening the task term's ability to
