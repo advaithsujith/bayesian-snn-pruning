@@ -14,6 +14,7 @@ Bayesian side's output) is present, overlays the Bayesian point on the
 same accuracy-vs-sparsity axes for a direct comparison plot.
 """
 
+import argparse
 import csv
 import os
 from typing import Any, Dict, List
@@ -206,9 +207,26 @@ def run_bio_experiment_point(
     }
 
 
-def run_bio_experiments_for_model(model_name: str, experiment_index: int, total_experiments: int) -> List[Dict[str, Any]]:
-    """Run every (criterion, keep_fraction) combination for one architecture."""
+def run_bio_experiments_for_model(
+    model_name: str,
+    experiment_index: int,
+    total_experiments: int,
+    criteria: "List[str] | None" = None,
+    keep_fractions: "List[float] | None" = None,
+) -> List[Dict[str, Any]]:
+    """Run every (criterion, keep_fraction) combination for one architecture.
+
+    `criteria`/`keep_fractions` override CRITERIA and
+    `cfg.bio.keep_fractions` for this invocation. The keep-fraction
+    override is what makes a matched-sparsity comparison runnable without
+    editing config.py: the Bayesian side reaches a target by parameter
+    percentage, and the fraction that corresponds to it comes from
+    `run_sparsity_curve.py --plan-only`, which differs per architecture.
+    """
     cfg: ExperimentConfig = ALL_EXPERIMENTS[model_name]()
+    criteria = list(CRITERIA if criteria is None else criteria)
+    if keep_fractions is not None:
+        cfg.bio.keep_fractions = list(keep_fractions)
     set_seed(cfg.seed)
     device = get_device(cfg.device)
     ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, cfg.plot_dir)
@@ -225,7 +243,7 @@ def run_bio_experiments_for_model(model_name: str, experiment_index: int, total_
     del probe_model
 
     results: List[Dict[str, Any]] = []
-    for criterion in CRITERIA:
+    for criterion in criteria:
         for keep_fraction in cfg.bio.keep_fractions:
             set_seed(cfg.seed)  # identical data order / stochastic state for every sweep point
             print(f"\nRunning {model_name} / {criterion} / keep_fraction={keep_fraction} ...")
@@ -297,15 +315,48 @@ def make_bio_comparison_plots(results: List[Dict[str, Any]], plot_dir: str) -> N
 def main() -> None:
     """Run every (architecture, criterion, keep_fraction) combination, then
     build the cross-architecture comparison figure."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--models", nargs="+", default=MODEL_ORDER, choices=list(ALL_EXPERIMENTS),
+        help="architectures to run. Defaults to the three original ones; pass "
+             "dpap_repl to run the bio criteria on the replicated platform, "
+             "which is the only one with a baseline validated against a "
+             "published number.",
+    )
+    parser.add_argument(
+        "--criteria", nargs="+", default=CRITERIA, choices=CRITERIA,
+        help="which bio-inspired criteria to run.",
+    )
+    parser.add_argument(
+        "--keep-fractions", type=float, nargs="+", default=None,
+        help="override each config's bio.keep_fractions. For a matched-sparsity "
+             "comparison, take these from `run_sparsity_curve.py --plan-only` at "
+             "the Bayesian side's parameter targets -- reading them off by eye is "
+             "what previously compared a 27.7%%-pruned network against a 98.5%% one.",
+    )
+    parser.add_argument(
+        "--output", default="./outputs/bio_results.csv",
+        help="results CSV. Use a distinct path per platform (e.g. "
+             "outputs/bio_results_dpap_repl.csv) so a new run does not overwrite "
+             "an earlier one's numbers.",
+    )
+    args = parser.parse_args()
+
     ensure_dirs("./checkpoints", "./outputs", "./plots", "./logs")
 
     all_results: List[Dict[str, Any]] = []
-    for i, model_name in enumerate(MODEL_ORDER, start=1):
-        all_results.extend(run_bio_experiments_for_model(model_name, i, len(MODEL_ORDER)))
+    for i, model_name in enumerate(args.models, start=1):
+        all_results.extend(
+            run_bio_experiments_for_model(
+                model_name, i, len(args.models),
+                criteria=args.criteria, keep_fractions=args.keep_fractions,
+            )
+        )
 
-    write_csv(all_results, "./outputs/bio_results.csv")
+    write_csv(all_results, args.output)
     make_bio_comparison_plots(all_results, "./plots")
 
+    print(f"\nWrote {args.output}")
     print_banner("ALL BIO-INSPIRED EXPERIMENTS FINISHED")
     for r in all_results:
         print(

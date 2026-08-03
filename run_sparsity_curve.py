@@ -218,7 +218,18 @@ def run_curve(args: argparse.Namespace) -> None:
     logger = setup_logger(f"{args.model}_curve", cfg.log_dir, f"{args.model}_curve.log")
 
     pretrained_path = os.path.join(cfg.output_dir, "trained_model.pt")
+    # Gates are always *saved* into this run's own directory; they may be
+    # *loaded* from another run's, so a follow-up analysis (e.g. the SynOps
+    # budget pair) can reuse an expensive gate phase without sharing an
+    # output directory with it -- sharing one would overwrite that run's
+    # summary.csv, which is how this project previously lost a set of
+    # quoted figures.
     gate_path = os.path.join(out_dir, GATE_CHECKPOINT)
+    reuse_gate_path = (
+        os.path.join(cfg.output_dir, f"sparsity_curve_{args.gates_from}", GATE_CHECKPOINT)
+        if args.gates_from
+        else gate_path
+    )
 
     # Test-set evaluation only; every training-time decision uses the
     # pruning-phase split (see datasets.get_pruning_phase_loaders).
@@ -256,11 +267,19 @@ def run_curve(args: argparse.Namespace) -> None:
                 ),
             )
 
-    if args.reuse_gates and os.path.isfile(gate_path):
-        print(f"\nReusing trained gates: {gate_path}")
-        logger.info(f"Reusing trained gates from {gate_path}")
-        model = build_and_load(args.model, cfg, device, gate_path)
+    if args.reuse_gates and os.path.isfile(reuse_gate_path):
+        print(f"\nReusing trained gates: {reuse_gate_path}")
+        logger.info(f"Reusing trained gates from {reuse_gate_path}")
+        model = build_and_load(args.model, cfg, device, reuse_gate_path)
         set_bayesian_mode(model, True)
+    elif args.gates_from:
+        # Explicitly named a source and it is not there: training fresh gates
+        # instead would silently produce a different experiment.
+        raise SystemExit(
+            f"No gate checkpoint at '{reuse_gate_path}' (from --gates-from "
+            f"{args.gates_from}). Check the tag; refusing to retrain gates "
+            "when reuse was explicitly requested."
+        )
     else:
         if not os.path.isfile(pretrained_path):
             raise SystemExit(
@@ -501,7 +520,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--reuse-gates", action="store_true",
-        help="skip gate training and load outputs/<model>/sparsity_curve/bayesian_model.pt",
+        help="skip gate training and load this run's own "
+             "outputs/<model>/sparsity_curve_<tag>/bayesian_model.pt",
+    )
+    parser.add_argument(
+        "--gates-from", default="",
+        help="reuse gates trained by a DIFFERENT tagged run (give that run's "
+             "--tag). Results still go to this run's own --tag directory, so "
+             "the source run's summary.csv is not overwritten. Implies "
+             "--reuse-gates.",
     )
     parser.add_argument(
         "--plan-only", action="store_true",
@@ -559,6 +586,14 @@ def main() -> None:
         parser.error(
             "--targets and/or --synops-budgets is required unless --diagnose-only is given"
         )
+    if args.gates_from:
+        args.reuse_gates = True
+        if args.gates_from == args.tag:
+            parser.error(
+                "--gates-from names the same tag as --tag, which would write this "
+                "run's results over the source run's. Use plain --reuse-gates if "
+                "that is intended."
+            )
     run_curve(args)
 
 
