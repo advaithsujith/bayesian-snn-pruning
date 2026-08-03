@@ -36,6 +36,47 @@ attack; seeds at the two DPAP points are the next GPU priority after the
 SynOps pair. Results in `outputs/dpap_repl/sparsity_curve_beta0.01/`
 (push from CSF3 before they get lost).
 
+## Negative result, same evening: cost-aware *selection* fails, and why
+
+The first SynOps budget run (`sparsity_curve_synops`, reusing the usable
+gates) shows the density heuristic -- keep units by importance-per-SynOps
+-- performing far worse than cost-blind selection at the same budget. At
+budget 0.5: cost-blind kept 610/2304 units and reached **87.97%** test
+accuracy; cost-aware kept **1836/2304** units and still began fine-tuning
+at 19% train accuracy (vs 50%), recovering far more slowly.
+
+**Mechanism, and it is the interesting part: per-unit cost and posterior
+importance are positively correlated across layers here.** Ranking the
+layers by cost and by median `log_alpha` gives the same top three
+(conv1, conv3, conv2). conv1 is both the most expensive (~9.4M per unit,
+128 input channels at 32x32) and the most important (median log_alpha
+0.73, and cost-blind selection keeps 127/128 of it); `fc_layers.0` is
+both the cheapest (~0.26M) and the least important (1.49). Dividing
+importance by cost therefore does not rebalance the ranking, it roughly
+**inverts** it -- buying cheap units in the layers that matter least
+while starving the wide mid-network convs. `min_keep=1` is no protection.
+
+This is a property of the heuristic, not a bug: summed importance is not
+a proxy for network function, and a greedy knapsack exploits that
+whenever cost correlates with importance. A fractional per-layer floor
+was considered and **deliberately not run** -- given the correlation it
+would likely lose too, and the GPU hours are better spent on the
+loss-side formulation.
+
+**It motivates the Lagrangian.** Post-hoc selection imposes a cost
+trade-off on a ranking learned without any knowledge of cost; the
+budget-in-the-loss version lets gradient descent negotiate accuracy
+against compute during gate training, so the network can *make* units
+cheap instead of having cheapness forced on it afterwards. That run
+(`--tag lagrangian0.5 --synops-loss-budget 0.5 --synops-budgets 0.5 0.3
+--synops-rank-by importance`) is queued and is now the primary novelty
+vehicle. It is directly paired with this run's cost-blind arms: same
+budgets, same selection rule, the only difference being whether the loss
+knew about SynOps.
+
+`--synops-rank-by importance` skips the density arm in future jobs, since
+the result is established.
+
 Also this session (2026-08-03, local commits `990b0e5`, `397344a`,
 independent-reviewed): the SynOps-aware machinery. SynOps measurement
 (`metrics.measure_synops`, `measure_synops_unit_costs`), budgeted
