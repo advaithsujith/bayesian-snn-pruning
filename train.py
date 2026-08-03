@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from bayesian_layers import collect_bayesian_layers
+from bayesian_layers import collect_bayesian_layers, collect_prunable_bayesian_layers, total_kl
 from losses import bayesian_snn_loss, get_task_loss, linear_warmup_schedule, spike_rate_cross_entropy
 from utils import save_checkpoint
 
@@ -119,6 +119,83 @@ def evaluate_loader(
         n_batches += 1
 
     return {"loss": total_loss / n_batches, "accuracy": total_acc / n_batches}
+
+
+_NORM_TYPES = (nn.BatchNorm1d, nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d)
+
+
+def gate_pressure_diagnostic(
+    model: nn.Module,
+    images: torch.Tensor,
+    targets: torch.Tensor,
+    beta: float,
+    loss_type: str = "spike_rate_ce",
+) -> Dict[str, Dict[str, float]]:
+    """
+    Per-layer tug-of-war on `log_alpha`, measured on a single batch.
+
+    For each gated layer this reports the mean magnitude of
+    `d(task_loss)/d(log_alpha)` against `beta * d(KL)/d(log_alpha)`, and
+    their ratio. A ratio far below 1 means the KL faces essentially no
+    opposition in that layer, so its gates will run to the clamp ceiling
+    whatever `beta_max` is -- which is exactly what a gate misplaced before
+    a BatchNorm looks like, and what three collapsed DPAP runs and a
+    four-point beta sweep were spent discovering the expensive way.
+
+    This exists because `beta_max` is *not* a speed control under Adam.
+    Adam divides each update by that parameter's own running gradient
+    magnitude, so wherever one term dominates the update on log_alpha is
+    roughly `lr * sign(grad)` -- independent of how large the gradient, and
+    therefore of beta_max. Scaling beta_max up or down does not make gates
+    move faster or slower; it moves the point where the two gradients
+    cancel. (The observed DPAP trajectory bears this out: log_alpha went
+    -3.05 -> 3.54 in 17 epochs, and 1000 steps/epoch at lr=5e-4 gives 0.5
+    per epoch of pure sign-following.) So the informative measurement is
+    the *balance* between the two terms, which this reads directly in
+    seconds, rather than the outcome of a sweep costing GPU-hours.
+
+    Costs two extra backward passes on one batch. `torch.autograd.grad` is
+    used rather than `.backward()`, so no `.grad` buffer and no optimizer
+    state is touched. Normalisation layers are held in eval mode for the
+    duration so this measurement cannot perturb their running statistics.
+    """
+    gated = [layer for layer in collect_bayesian_layers(model) if layer.enable_gate_noise]
+    if not gated:
+        return {}
+
+    name_of = {module: name for name, module in model.named_modules()}
+    was_training = model.training
+    model.train()
+    norms = [m for m in model.modules() if isinstance(m, _NORM_TYPES)]
+    norm_modes = [m.training for m in norms]
+    for m in norms:
+        m.eval()
+
+    try:
+        log_alphas = [layer.log_alpha for layer in gated]
+        # Full precision deliberately: this is a gradient-magnitude
+        # comparison, and fp16 underflow is exactly the sort of artefact
+        # that would make a real imbalance look like a measurement error.
+        spk_rec = model(images)
+        task_loss = get_task_loss(loss_type)(spk_rec, targets)
+        task_grads = torch.autograd.grad(task_loss, log_alphas, allow_unused=True)
+        kl_grads = torch.autograd.grad(total_kl(model), log_alphas, allow_unused=True)
+    finally:
+        for m, mode in zip(norms, norm_modes):
+            m.train(mode)
+        model.train(was_training)
+
+    report: Dict[str, Dict[str, float]] = {}
+    for layer, t_grad, k_grad in zip(gated, task_grads, kl_grads):
+        task_mag = 0.0 if t_grad is None else float(t_grad.abs().mean())
+        kl_mag = 0.0 if k_grad is None else float(k_grad.abs().mean())
+        pressure = beta * kl_mag
+        report[name_of.get(layer, repr(layer))] = {
+            "task_grad": task_mag,
+            "kl_grad_scaled": pressure,
+            "ratio": task_mag / pressure if pressure > 0 else float("inf"),
+        }
+    return report
 
 
 def _param_groups_excluding_gates(model: nn.Module, weight_decay: float) -> List[Dict[str, Any]]:
@@ -229,6 +306,7 @@ def run_training(
     loss_type: str = "spike_rate_ce",
     lr_warmup_epochs: int = 0,
     min_lr: float = 0.0,
+    gate_diagnostic_every: int = 0,
 ) -> Dict[str, Any]:
     """
     Full multi-epoch training/fine-tuning loop with validation, cosine LR
@@ -257,11 +335,23 @@ def run_training(
     cost term (see losses.bayesian_snn_loss) the same way `beta_max`/
     `kl_warmup_epochs` control the KL term. Default `gamma_max=0.0` makes
     this term inert, matching pre-existing behaviour.
+
+    `gate_diagnostic_every` (0 = off) logs the per-layer task-vs-KL
+    gradient balance on a fixed batch every N epochs -- see
+    gate_pressure_diagnostic for why that measurement, and not a beta_max
+    sweep, is what diagnoses a collapse.
     """
     model.to(device)
     optimizer = build_optimizer(model, optimizer_name, lr, weight_decay)
     scheduler = build_scheduler(optimizer, scheduler_name, epochs, lr_warmup_epochs, min_lr)
     scaler = torch.cuda.amp.GradScaler(enabled=(use_amp and device.type == "cuda"))
+
+    # One fixed batch, held for the whole phase, so successive diagnostics
+    # differ because the model changed rather than because the data did.
+    diag_batch = None
+    if gate_diagnostic_every > 0:
+        diag_images, diag_targets = next(iter(train_loader))
+        diag_batch = (diag_images.to(device), diag_targets.to(device))
 
     best_val_acc = -1.0
     best_state = None
@@ -302,13 +392,38 @@ def run_training(
         )
 
         if phase_name == "bayesian_train":
-            gated_layers = collect_bayesian_layers(model)
+            gated_layers = collect_prunable_bayesian_layers(model)
             if gated_layers:
                 all_log_alpha = torch.cat([layer.log_alpha.detach().flatten() for layer in gated_layers])
+                ceiling = max(layer.log_alpha_clamp_max for layer in gated_layers)
+                # frac_saturated is the number that matters under ranked
+                # pruning: gates pinned at the clamp are tied, and ties are
+                # broken by index order, so a run with frac_saturated near 1
+                # produces a keep-set that is arbitrary rather than learned
+                # -- and still hits its sparsity target, so nothing else in
+                # the output looks wrong.
                 logger.info(
                     f"    log_alpha: min={all_log_alpha.min():.2f} "
                     f"median={all_log_alpha.median():.2f} max={all_log_alpha.max():.2f} "
-                    f"frac_prunable={(all_log_alpha > prune_threshold).float().mean():.3f}"
+                    f"std={all_log_alpha.std():.2f} "
+                    f"frac_prunable={(all_log_alpha > prune_threshold).float().mean():.3f} "
+                    f"frac_saturated={(all_log_alpha >= ceiling - 1e-3).float().mean():.3f}"
+                )
+
+        if (
+            diag_batch is not None
+            and gate_diagnostic_every > 0
+            and epoch % gate_diagnostic_every == 0
+        ):
+            pressure = gate_pressure_diagnostic(
+                model, diag_batch[0], diag_batch[1], beta, loss_type
+            )
+            for layer_name, stats in pressure.items():
+                logger.info(
+                    f"    gate pressure {layer_name}: "
+                    f"|d task/d log_alpha|={stats['task_grad']:.3e} "
+                    f"beta*|d KL/d log_alpha|={stats['kl_grad_scaled']:.3e} "
+                    f"ratio={stats['ratio']:.3f}"
                 )
 
         csv_log_rows.append(

@@ -176,7 +176,8 @@ class BayesianConv2d(nn.Module):
     Mechanically identical to BayesianLinear except the gate is broadcast
     over the spatial (H, W) dimensions of the conv output, since an output
     "structure" here is a whole output feature map (channel), not a single
-    scalar.
+    scalar. One `eps` is drawn per (example, channel) and reused at every
+    spatial position -- see apply_gate for why that is not a detail.
     """
 
     def __init__(
@@ -236,10 +237,24 @@ class BayesianConv2d(nn.Module):
     def apply_gate(self, h: torch.Tensor) -> torch.Tensor:
         """Apply this layer's gate to `h`, which must have this layer's
         output-channel count. Used with `defer_gate` so the gate can act on
-        the post-normalisation activation."""
+        the post-normalisation activation.
+
+        The noise is drawn once per (example, channel) and broadcast across
+        the feature map, which is what makes this a *structured* gate: the
+        whole channel is scaled by one common random factor, exactly as in
+        Neklyudov et al. (2017). Drawing an independent eps per spatial
+        position instead (`torch.randn_like(h)`) would still share alpha
+        per channel, but the resulting perturbation largely cancels when
+        the next layer sums over space -- so the task loss barely feels
+        alpha, the KL faces almost no opposition, and conv gates rise for
+        reasons that have nothing to do with the channel being redundant.
+        It is also H*W times more random numbers to generate per timestep.
+        """
         if self.training and self.enable_gate_noise:
             alpha = torch.exp(self._clamped_log_alpha())
-            eps = torch.randn_like(h)
+            eps = torch.randn(
+                h.shape[0], h.shape[1], 1, 1, device=h.device, dtype=h.dtype
+            )
             z = 1.0 + torch.sqrt(alpha).view(1, -1, 1, 1) * eps
             return h * z
         return h * self.hard_mask.view(1, -1, 1, 1)
@@ -281,19 +296,52 @@ def collect_bayesian_layers(model: nn.Module) -> list:
     return [m for m in model.modules() if isinstance(m, (BayesianLinear, BayesianConv2d))]
 
 
+def collect_prunable_bayesian_layers(model: nn.Module) -> list:
+    """Return only those Bayesian layers pruning.py is allowed to physically
+    shrink, i.e. those with `structurally_prunable=True`.
+
+    Every loss term and every gate-noise decision is scoped to this subset
+    rather than to `collect_bayesian_layers`. A gate on a layer that can
+    never be removed buys no compression, so any pressure applied to it is
+    pure cost: the KL drives its log_alpha to the clamp ceiling, and the
+    resulting multiplicative noise (std ~55 at log_alpha=8) is injected
+    into a layer that will still be there, at full width, after pruning.
+    On SpikingResNet18 that describes 1984 of 3904 gates -- the stem and
+    every block's residual-tied conv2 -- so slightly over half the KL
+    pressure was being spent damaging the network for zero compression.
+    """
+    return [m for m in collect_bayesian_layers(model) if m.structurally_prunable]
+
+
+def _zero_like_model(model: nn.Module) -> torch.Tensor:
+    """A scalar zero on the same device as `model`, so an empty sum can be
+    added to a device-resident loss without a cross-device error."""
+    try:
+        device = next(model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+    return torch.zeros((), device=device)
+
+
 def total_kl(model: nn.Module) -> torch.Tensor:
-    """Sum of `.kl()` over every Bayesian layer in `model`."""
-    layers = collect_bayesian_layers(model)
+    """Sum of `.kl()` over every *structurally prunable* Bayesian layer.
+
+    See collect_prunable_bayesian_layers for why non-prunable layers are
+    excluded rather than merely tolerated.
+    """
+    layers = collect_prunable_bayesian_layers(model)
     if not layers:
-        return torch.tensor(0.0)
+        return _zero_like_model(model)
     return sum(layer.kl() for layer in layers)
 
 
 def total_expected_cost(model: nn.Module, threshold: float) -> torch.Tensor:
-    """Sum of `.expected_cost(threshold)` over every Bayesian layer in `model`."""
-    layers = collect_bayesian_layers(model)
+    """Sum of `.expected_cost(threshold)` over every structurally prunable
+    Bayesian layer -- scoped identically to total_kl, and for the same
+    reason: a layer that cannot shrink cannot save any FLOPs either."""
+    layers = collect_prunable_bayesian_layers(model)
     if not layers:
-        return torch.tensor(0.0)
+        return _zero_like_model(model)
     return sum(layer.expected_cost(threshold) for layer in layers)
 
 
@@ -307,6 +355,11 @@ def set_bayesian_mode(model: nn.Module, active: bool) -> None:
     therefore receives no gradient. `active=True` ("Converting to
     Bayesian...") switches on gate sampling so the subsequent Bayesian
     training stage can actually learn meaningful posterior uncertainty.
+
+    Structurally non-prunable layers stay noise-free either way. Their
+    gates receive no KL pressure (see total_kl), so sampling them would
+    only add variance to a layer whose width is fixed -- and the pruned
+    network they are rebuilt into is deterministic regardless.
     """
     for layer in collect_bayesian_layers(model):
-        layer.enable_gate_noise = active
+        layer.enable_gate_noise = active and layer.structurally_prunable

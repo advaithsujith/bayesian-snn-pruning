@@ -66,6 +66,7 @@ def get_cifar10_loaders(
     data_cfg: DataConfig,
     batch_size: int,
     seed: int,
+    val_fraction: "float | None" = None,
 ) -> Tuple[DataLoader, DataLoader, DataLoader]:
     """
     Return (train_loader, val_loader, test_loader) for CIFAR-10.
@@ -76,6 +77,9 @@ def get_cifar10_loaders(
     stage. The official 10,000-image test set is used only for final
     reporting. Data is downloaded automatically into `data_cfg.data_dir`
     if not already present.
+
+    `val_fraction` overrides `data_cfg.val_fraction` for one call; see
+    get_pruning_phase_loaders for the one place that uses it.
 
     Replication mode (`val_fraction = 0.0`)
     ---------------------------------------
@@ -92,8 +96,11 @@ def get_cifar10_loaders(
     that number is fitted to the test set. This makes the resulting figure
     a faithful reproduction of the published protocol rather than a clean
     generalisation estimate. Use it for baseline comparison against those
-    papers; keep `val_fraction > 0` for this project's own experiments.
+    papers; keep `val_fraction > 0` for this project's own experiments,
+    and see get_pruning_phase_loaders for how the pruning stages opt out.
     """
+    if val_fraction is None:
+        val_fraction = data_cfg.val_fraction
     train_transform, eval_transform = build_transforms(data_cfg)
 
     full_train_for_train_tf = datasets.CIFAR10(
@@ -107,7 +114,7 @@ def get_cifar10_loaders(
     )
 
     num_train = len(full_train_for_train_tf)
-    num_val = int(num_train * data_cfg.val_fraction)
+    num_val = int(num_train * val_fraction)
 
     if num_val == 0:
         # Replication mode -- train on all 50k, validate on test. See the
@@ -146,3 +153,39 @@ def get_cifar10_loaders(
     )
 
     return train_loader, val_loader, test_loader
+
+
+def get_pruning_phase_loaders(
+    data_cfg: DataConfig,
+    batch_size: int,
+    seed: int,
+) -> Tuple[DataLoader, DataLoader, DataLoader]:
+    """
+    Loaders for the gate-training, fine-tuning and hyperparameter-selection
+    stages, which must never see the test set.
+
+    Replicating a paper's *baseline* is a good reason to adopt its data
+    protocol, including `val_fraction=0.0` (train on all 50k, "validate" on
+    test). It is not a reason to select this project's own pruning
+    decisions that way, and that is what was happening: with val == test,
+    `restore_best_checkpoint` picked the fine-tuned checkpoint by test
+    accuracy, the reported number was that same test accuracy, and
+    sweep_beta.py then ranked candidate `beta_max` values by it. A
+    hyperparameter chosen on the test set, on a checkpoint also chosen on
+    the test set, is not a result an examiner will accept.
+
+    So when `pruning_val_fraction` is set, the pruning phases get their own
+    held-out split carved out of the 50k training images and the test set
+    is not touched until final evaluation. When it is None (this project's
+    own experiments, which already hold out 10%) the loaders are exactly
+    the ones every other stage uses and nothing changes.
+
+    One honest limitation to state in the write-up rather than let an
+    examiner state: those held-out images were still seen during the
+    replicated *pretraining*, so this validation split measures the pruned
+    model's generalisation only relative to a baseline that had seen them.
+    What it does guarantee is that no pruning decision, checkpoint or
+    hyperparameter is informed by the test set.
+    """
+    override = data_cfg.pruning_val_fraction
+    return get_cifar10_loaders(data_cfg, batch_size, seed, val_fraction=override)

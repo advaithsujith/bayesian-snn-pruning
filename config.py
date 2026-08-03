@@ -151,6 +151,33 @@ class BayesianConfig:
     log_alpha_clamp_min: float = -8.0
     log_alpha_clamp_max: float = 8.0
     prune_threshold: float = 3.0  # log_alpha > threshold => prune (Molchanov et al., 2017)
+
+    # How the learned gates become a keep/drop decision. The criterion
+    # (posterior uncertainty, i.e. log_alpha) is the same in every mode --
+    # only the cut point differs. See pruning.py's module docstring.
+    #   "threshold"           -- log_alpha > prune_threshold. Faithful to
+    #                            Molchanov et al.; sparsity is emergent and
+    #                            can only be steered indirectly via beta_max.
+    #   "uniform_ratio"       -- keep `keep_fraction` of the units in every
+    #                            prunable layer. Identical layer widths to a
+    #                            bio-inspired run at the same keep_fraction,
+    #                            so the two differ only in *which* units.
+    #   "global_ratio"        -- keep the best `keep_fraction` ranked across
+    #                            the whole network, letting the criterion
+    #                            allocate sparsity between layers.
+    #   "param_target"        -- bisect a uniform keep_fraction until
+    #                            `target_pruned_pct` of parameters are gone.
+    #   "param_target_global" -- same, ranked globally.
+    # Default stays "threshold" so every pre-existing experiment is
+    # reproduced unchanged.
+    prune_mode: str = "threshold"
+    keep_fraction: float = 0.5  # used by uniform_ratio / global_ratio
+    target_pruned_pct: float = 50.0  # used by the param_target modes
+    # Floor on units kept per layer. A ranked cut is free to empty a whole
+    # layer, which severs the network rather than sparsifying it -- LeNet's
+    # fc2 collapsing to one unit cost ~43 accuracy points that fine-tuning
+    # never recovered (HANDOFF.md bug #6).
+    min_keep_per_layer: int = 1
     beta_max: float = 0.05  # final weight of the KL term in the loss
     kl_warmup_epochs: int = 15  # epochs over which beta is linearly annealed to beta_max
     bayesian_train_epochs: int = 40  # epochs spent training gates after "Converting to Bayesian"
@@ -252,6 +279,14 @@ class DataConfig:
     # what the papers being replicated do (see the leakage caveat in
     # datasets.get_cifar10_loaders).
     val_fraction: float = 0.1
+    # Validation fraction used by the *pruning* stages only (gate training,
+    # fine-tuning, and any hyperparameter chosen from validation accuracy).
+    # None => use `val_fraction` for those too, which is right whenever
+    # `val_fraction > 0`. Set it when replicating a paper that trains
+    # without a validation split: the baseline then follows their protocol
+    # while no pruning decision is ever made on the test set. See
+    # datasets.get_pruning_phase_loaders.
+    pruning_val_fraction: Optional[float] = None
     num_workers: int = 4
     pin_memory: bool = True
     random_crop_padding: int = 4
@@ -455,6 +490,12 @@ def get_dpap_repl_config() -> ExperimentConfig:
     #   2. much heavier augmentation via timm's create_transform;
     #   3. a different normalisation std to this project's.
     cfg.data.val_fraction = 0.0
+    # ...but the pruning stages get a genuine held-out split. Their protocol
+    # governs the baseline we are trying to reproduce; it must not also
+    # govern how our own pruning hyperparameters and checkpoints are
+    # selected, which with val == test would mean selecting on the test set.
+    # See datasets.get_pruning_phase_loaders.
+    cfg.data.pruning_val_fraction = 0.1
     cfg.data.rand_augment = "rand-m9-mstd0.5-inc1"
     cfg.data.color_jitter = 0.4
     cfg.data.random_erasing_prob = 0.25

@@ -6,6 +6,7 @@ pipeline for LeNet-SNN, then VGG9-SNN, then Spiking ResNet-18, and finally
 writes outputs/final_results.csv plus every comparison figure.
 """
 
+import csv
 import os
 from typing import Any, Dict, List
 
@@ -17,19 +18,23 @@ import torch
 
 from bayesian_layers import set_bayesian_mode
 from config import ALL_EXPERIMENTS, ExperimentConfig
-from datasets import get_cifar10_loaders
+from datasets import get_cifar10_loaders, get_pruning_phase_loaders
 from evaluate import full_evaluation
 from metrics import (
     compression_ratio,
     compute_and_set_unit_costs,
     count_parameters,
-    count_remaining_structures,
     gather_log_alpha_values,
     pruning_percentage,
     write_csv,
 )
 from models import build_model
-from pruning import compute_uncertainty_report, prune_model
+from pruning import (
+    build_keep_plan,
+    compute_uncertainty_report,
+    prune_model,
+    remaining_structures_report,
+)
 from train import evaluate_loader, run_training
 from utils import ensure_dirs, get_device, print_banner, save_config_json, set_seed, setup_logger
 
@@ -126,6 +131,8 @@ def build_summary_text(
     pretrain_result: Dict[str, Any],
     bayes_result: Dict[str, Any],
     finetune_result: Dict[str, Any],
+    keep_plan_description: str,
+    saturation: Dict[str, float],
 ) -> str:
     """Build the plain-text summary.txt content for one experiment."""
     lines = [
@@ -135,6 +142,11 @@ def build_summary_text(
         f"Remaining parameters (after structured pruning): {remaining_params}",
         f"Compression ratio: {compression_ratio(original_params, remaining_params):.3f}x",
         f"Pruning percentage: {pruning_percentage(original_params, remaining_params):.2f}%",
+        f"Keep-set decided by: {keep_plan_description}",
+        (
+            f"Gate saturation at clamp ceiling: {saturation['frac_saturated_high']:.3f} "
+            f"of {saturation['total_gates']} prunable gates"
+        ),
         "",
         f"Test accuracy before Bayesian pruning: {eval_before['test_accuracy']:.4f}",
         f"Test accuracy after pruning + fine-tuning: {eval_after['test_accuracy']:.4f}",
@@ -179,6 +191,20 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     logger.info("Per-unit expected-FLOPs costs computed and set on every Bayesian layer.")
 
     train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
+    # The pruning stages use their own loaders whenever the pretrain recipe
+    # validates on the test set (replication mode) -- otherwise every gate
+    # decision, checkpoint and hyperparameter would be selected on the test
+    # set. Identical to the loaders above for every non-replication config.
+    # See datasets.get_pruning_phase_loaders.
+    prune_train_loader, prune_val_loader, _ = get_pruning_phase_loaders(
+        cfg.data, cfg.train.batch_size, cfg.seed
+    )
+    if cfg.data.pruning_val_fraction is not None:
+        logger.info(
+            "Pruning stages use a held-out validation split "
+            f"(val_fraction={cfg.data.pruning_val_fraction}) rather than the "
+            "pretrain recipe's test-set validation."
+        )
     csv_rows: List[Dict[str, Any]] = []
 
     pretrained_path = os.path.join(cfg.output_dir, "trained_model.pt")
@@ -249,8 +275,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     print("\nTraining Bayesian gates...")
     bayes_result = run_training(
         model,
-        train_loader,
-        val_loader,
+        prune_train_loader,
+        prune_val_loader,
         epochs=cfg.bayesian.bayesian_train_epochs,
         lr=cfg.bayesian.bayesian_train_lr,
         weight_decay=(
@@ -274,6 +300,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         phase_name="bayesian_train",
         prune_threshold=cfg.bayesian.prune_threshold,
         restore_best_checkpoint=False,
+        gate_diagnostic_every=5,
     )
     torch.save(model.state_dict(), os.path.join(cfg.output_dir, "bayesian_model.pt"))
 
@@ -282,14 +309,31 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     for layer_name, stats in uncertainty_report.items():
         logger.info(
             f"  {layer_name}: median_log_alpha={stats['median']:.2f} "
-            f"frac_prunable={stats['frac_prunable']:.3f} "
+            f"std={stats['std']:.2f} frac_prunable={stats['frac_prunable']:.3f} "
+            f"frac_saturated={stats['frac_saturated']:.3f} "
             f"structurally_prunable={stats['structurally_prunable']}"
         )
     log_alpha_values = gather_log_alpha_values(model)
-    remaining_report = count_remaining_structures(model, cfg.bayesian.prune_threshold)
 
     print("\nStructured pruning...")
-    pruned_model = prune_model(model, model_name, cfg.bayesian.prune_threshold, cfg.snn).to(device)
+    keep_plan = build_keep_plan(model, model_name, cfg.snn, cfg.bayesian)
+    saturation = keep_plan.saturation_report(model)
+    logger.info(f"Keep-set decided by: {keep_plan.describe()}")
+    logger.info(
+        f"Gate saturation: {saturation['frac_saturated_high']:.3f} at the ceiling, "
+        f"{saturation['frac_saturated_low']:.3f} at the floor, of "
+        f"{saturation['total_gates']} prunable gates."
+    )
+    if keep_plan.mode != "threshold" and saturation["frac_saturated_high"] > 0.5:
+        logger.warning(
+            "Over half this model's gates are pinned at the clamp ceiling, so the "
+            "ranking that chose the keep-set is mostly ties broken by index order. "
+            "Treat this run's sparsity/accuracy point as uninterpretable."
+        )
+    # Derived from the same plan the rebuild uses, so the per-layer report
+    # cannot disagree with what was actually built.
+    remaining_report = remaining_structures_report(model, keep_plan)
+    pruned_model = prune_model(model, model_name, keep_plan, cfg.snn).to(device)
     remaining_params = count_parameters(pruned_model, exclude_gates=True)
     logger.info(
         f"Parameters: {original_params} -> {remaining_params} "
@@ -299,8 +343,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     print("\nFine tuning...")
     finetune_result = run_training(
         pruned_model,
-        train_loader,
-        val_loader,
+        prune_train_loader,
+        prune_val_loader,
         epochs=cfg.finetune.epochs,
         lr=cfg.finetune.lr,
         weight_decay=cfg.finetune.weight_decay,
@@ -347,6 +391,7 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     summary_text = build_summary_text(
         model_name, original_params, remaining_params, eval_before, eval_after,
         pretrain_result, bayes_result, finetune_result,
+        keep_plan.describe(), saturation,
     )
     with open(os.path.join(cfg.output_dir, "summary.txt"), "w") as f:
         f.write(summary_text)
@@ -355,6 +400,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
 
     return {
         "Model": model_name,
+        "Keep Plan": keep_plan.describe(),
+        "Gate Saturation": saturation["frac_saturated_high"],
         "Original Parameters": original_params,
         "Remaining Parameters": remaining_params,
         "Compression Ratio": compression_ratio(original_params, remaining_params),
@@ -419,6 +466,28 @@ def make_comparison_plots(results: List[Dict[str, Any]], plot_dir: str) -> None:
     plt.close(fig)
 
 
+def merge_final_results(new_rows: List[Dict[str, Any]], path: str) -> List[Dict[str, Any]]:
+    """Merge this run's rows into `path`, replacing rows for the models that
+    were re-run and keeping every other model's row untouched.
+
+    `MODEL_ORDER` is routinely narrowed to a single architecture while
+    iterating on it, and a plain overwrite then deletes the other
+    architectures' results from the cross-model table. That is how the
+    quoted VGG9 figures (98.71% / 86.08%) stopped existing anywhere in the
+    repo, leaving HANDOFF.md citing numbers no file could confirm. Rows are
+    cheap; recovering a deleted 3-hour run is not.
+    """
+    existing: List[Dict[str, Any]] = []
+    if os.path.isfile(path):
+        with open(path, newline="") as f:
+            existing = [dict(row) for row in csv.DictReader(f)]
+
+    replaced = {row["Model"] for row in new_rows}
+    merged = [row for row in existing if row.get("Model") not in replaced]
+    merged.extend(new_rows)
+    return merged
+
+
 def main() -> None:
     """Run every experiment in MODEL_ORDER, then build the cross-model summary."""
     ensure_dirs("./checkpoints", "./outputs", "./plots", "./logs")
@@ -428,7 +497,8 @@ def main() -> None:
         result = run_experiment(model_name, i, len(MODEL_ORDER))
         results.append(result)
 
-    write_csv(results, "./outputs/final_results.csv")
+    final_path = "./outputs/final_results.csv"
+    write_csv(merge_final_results(results, final_path), final_path)
     make_comparison_plots(results, "./plots")
 
     print_banner("ALL EXPERIMENTS FINISHED")

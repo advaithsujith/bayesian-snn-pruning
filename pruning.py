@@ -3,15 +3,41 @@ Posterior-uncertainty-based structured pruning.
 
 Pruning criterion
 ------------------
-For every structurally-prunable BayesianConv2d / BayesianLinear layer, a
-channel/neuron is marked for removal if its learned posterior gate
-satisfies log_alpha > threshold (default 3.0, following Molchanov,
-Ashukha & Vetrov, 2017 -- corresponding to an effective binary dropout
-rate above 95%, i.e. the network learned that this structure's output is
-indistinguishable from noise). This is a posterior-uncertainty criterion:
-it is derived purely from each gate's learned noise-to-signal ratio, not
-from weight magnitude, activation statistics, or any hand-designed
-importance heuristic.
+Every structurally-prunable BayesianConv2d / BayesianLinear layer is
+scored by its learned posterior gate: `log_alpha_j` is unit j's
+noise-to-signal ratio, so a *low* log_alpha means the network kept that
+unit's output crisp and a high one means it learned the output is
+indistinguishable from noise. This is a posterior-uncertainty criterion --
+derived purely from the learned gate, not from weight magnitude,
+activation statistics, or any hand-designed importance heuristic.
+
+Turning that score into a keep/drop decision is a separate choice, and
+this module supports two (see KeepPlan):
+
+* **Threshold** (`log_alpha > 3.0`, following Molchanov, Ashukha &
+  Vetrov, 2017 -- an effective binary dropout rate above 95%). Faithful
+  to the source method, but the resulting sparsity is *emergent*: it is
+  whatever the threshold happens to cut, which is why the same
+  `beta_max` gives 27.7% on LeNet and 98.8% on VGG9, and why hitting any
+  particular sparsity meant re-running gate training at a new beta_max.
+
+* **Ranked to a target sparsity** -- sort by log_alpha and keep the best
+  k. The criterion is unchanged (still posterior uncertainty, still the
+  same learned gates); only the cut point becomes an explicit input
+  rather than an outcome. This is what makes the comparison the
+  dissertation actually claims possible: one gate-training run yields a
+  whole accuracy-vs-sparsity curve, the bio-inspired criteria in
+  activity_pruning.py already select their keep-sets exactly this way
+  (`select_keep_mask`, same `round`-based counting), so matched sparsity
+  becomes true by construction rather than by coincidence, and published
+  operating points (e.g. DPAP's 33.46% / 50.80%) can be hit directly.
+
+  The failure mode to watch is gate *saturation*: units pinned at the
+  clamp ceiling are tied, and ties are broken by index order, which is
+  arbitrary. A run whose gates all saturated will still produce a
+  network at exactly the requested sparsity and will not look wrong from
+  the outside. `KeepPlan.saturation_report` exists to make that visible;
+  check it before believing a ranked result.
 
 Physical rebuilding
 --------------------
@@ -26,13 +52,18 @@ in models.py's module docstring for why only each BasicBlock's internal
 `conv1` is physically prunable.
 """
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import torch
 import torch.nn as nn
 
-from bayesian_layers import BayesianConv2d, BayesianLinear, collect_bayesian_layers
-from config import ArchConfig, SNNConfig
+from bayesian_layers import (
+    BayesianConv2d,
+    BayesianLinear,
+    collect_bayesian_layers,
+    collect_prunable_bayesian_layers,
+)
+from config import ArchConfig, BayesianConfig, SNNConfig
 from encoding import encode_timestep
 from models import (
     LeNetSNN,
@@ -44,13 +75,104 @@ from models import (
     _VGG9_CONV_CHANNELS,
 )
 
+GatedLayer = "BayesianConv2d | BayesianLinear"
+
 
 # ---------------------------------------------------------------------------
-# Mask / index utilities shared across architectures
+# Keep-set decisions
+#
+# Every architecture's rebuild routine consults a KeepPlan rather than
+# recomputing a criterion inline. That indirection is the point: the plan is
+# built once, the diagnostics are read off the same object the rebuild uses,
+# and the two therefore cannot disagree. They previously could -- and did:
+# metrics.count_remaining_structures reported a layer as 0-remaining while
+# compute_keep_indices was quietly keeping one unit to avoid a zero-width
+# layer, and it reported ResNet18's conv2 channels as pruned when
+# _prune_basic_block never removes them.
 # ---------------------------------------------------------------------------
 
 
-def compute_keep_indices(layer: "BayesianConv2d | BayesianLinear", threshold: float) -> torch.Tensor:
+class KeepPlan:
+    """Which units each gated layer keeps, decided once for a whole model.
+
+    Keyed by the layer module itself (nn.Module hashes by identity), so a
+    plan is bound to the exact model it was built from and cannot be
+    silently applied to another.
+    """
+
+    def __init__(self, keeps: Dict[nn.Module, torch.Tensor], mode: str, detail: str = "") -> None:
+        self.keeps = keeps
+        self.mode = mode
+        self.detail = detail
+
+    def indices(self, layer: nn.Module) -> torch.Tensor:
+        """Sorted keep-indices for one layer."""
+        if layer not in self.keeps:
+            raise KeyError(
+                "this KeepPlan has no entry for the given layer; it was almost "
+                "certainly built from a different model instance"
+            )
+        return self.keeps[layer]
+
+    def describe(self) -> str:
+        return f"{self.mode}({self.detail})" if self.detail else self.mode
+
+    def keep_counts(self) -> Tuple[int, ...]:
+        return tuple(int(idx.numel()) for idx in self.keeps.values())
+
+    def saturation_report(self, model: nn.Module, tol: float = 1e-3) -> Dict[str, float]:
+        """
+        How much of the ranking this plan used was decided by ties.
+
+        A gate clamped at `log_alpha_clamp_max` receives no gradient, so
+        once several units pin there they are indistinguishable and the
+        sort falls back to index order. Ranked pruning cannot tell that
+        apart from a confident decision, so it is reported explicitly:
+        `frac_saturated_high` near 1.0 means the "ranking" is arbitrary
+        and the resulting sparsity figure is meaningless even though the
+        run completed cleanly.
+        """
+        high = low = total = 0
+        for layer in collect_prunable_bayesian_layers(model):
+            la = layer.log_alpha.detach()
+            high += int((la >= layer.log_alpha_clamp_max - tol).sum())
+            low += int((la <= layer.log_alpha_clamp_min + tol).sum())
+            total += int(la.numel())
+        if total == 0:
+            return {"frac_saturated_high": 0.0, "frac_saturated_low": 0.0, "total_gates": 0}
+        return {
+            "frac_saturated_high": high / total,
+            "frac_saturated_low": low / total,
+            "total_gates": total,
+        }
+
+
+def _ranked_keep_indices(layer: GatedLayer, keep_count: int) -> torch.Tensor:
+    """Sorted indices of the `keep_count` units with the lowest log_alpha.
+
+    Ranking uses the *raw* parameter rather than `_clamped_log_alpha()`:
+    the clamp is a forward-pass guard, and collapsing everything beyond it
+    to one value would throw away whatever ordering momentum did manage to
+    establish among saturated gates.
+    """
+    n = layer.log_alpha.numel()
+    keep_count = min(max(1, int(keep_count)), n)
+    order = torch.argsort(layer.log_alpha.detach())
+    return order[:keep_count].sort().values.long()
+
+
+def _keep_count_for_fraction(n: int, keep_fraction: float, min_keep: int = 1) -> int:
+    """Units to keep in a layer of `n` at a target fraction.
+
+    Deliberately identical to activity_pruning.select_keep_mask's
+    `min(max(1, round(f * n)), n)` -- if the two rounded differently, a
+    "matched sparsity" comparison would silently compare networks of
+    different widths.
+    """
+    return min(max(min_keep, round(keep_fraction * n)), n)
+
+
+def compute_keep_indices(layer: GatedLayer, threshold: float) -> torch.Tensor:
     """
     Return the (sorted) indices of channels/neurons to KEEP for one layer.
 
@@ -64,6 +186,301 @@ def compute_keep_indices(layer: "BayesianConv2d | BayesianLinear", threshold: fl
     if keep.numel() == 0:
         keep = layer.log_alpha.detach().argmin().unsqueeze(0)
     return keep.long()
+
+
+def _all_gated_layers(model: nn.Module) -> List[GatedLayer]:
+    return collect_bayesian_layers(model)
+
+
+def _plan_from_counts(
+    model: nn.Module, counts: Dict[nn.Module, int], mode: str, detail: str = ""
+) -> KeepPlan:
+    """Build a plan that keeps the best `counts[layer]` units of each prunable
+    layer, and every unit of every non-prunable one."""
+    keeps: Dict[nn.Module, torch.Tensor] = {}
+    for layer in _all_gated_layers(model):
+        if layer.structurally_prunable:
+            keeps[layer] = _ranked_keep_indices(layer, counts[layer])
+        else:
+            keeps[layer] = torch.arange(layer.log_alpha.numel(), dtype=torch.long)
+    return KeepPlan(keeps, mode, detail)
+
+
+def threshold_plan(model: nn.Module, threshold: float) -> KeepPlan:
+    """Molchanov-style plan: drop every unit with log_alpha above `threshold`.
+
+    Sparsity is an outcome, not an input. Reproduces the original
+    behaviour of this module exactly, including the keep-at-least-one
+    fallback.
+    """
+    keeps: Dict[nn.Module, torch.Tensor] = {}
+    for layer in _all_gated_layers(model):
+        if layer.structurally_prunable:
+            keeps[layer] = compute_keep_indices(layer, threshold)
+        else:
+            keeps[layer] = torch.arange(layer.log_alpha.numel(), dtype=torch.long)
+    return KeepPlan(keeps, "threshold", f"log_alpha>{threshold:g}")
+
+
+def uniform_ratio_plan(model: nn.Module, keep_fraction: float, min_keep: int = 1) -> KeepPlan:
+    """Keep the same *fraction* of units in every prunable layer.
+
+    This is the strictly-controlled comparison point: run at the same
+    keep_fraction as a bio-inspired criterion and the two pruned networks
+    have identical layer widths, so the only thing that differs between
+    them is which units were chosen. Nothing about the architecture, the
+    parameter count or the FLOPs can confound the accuracy difference.
+
+    It also denies the Bayesian criterion its allocation freedom, which is
+    a real part of what it does (VGG9's fc1 collapsing 800 -> 21 while the
+    conv stack stayed wide). Use global_ratio_plan to measure that, and
+    this one to isolate the selection quality.
+    """
+    counts = {
+        layer: _keep_count_for_fraction(layer.log_alpha.numel(), keep_fraction, min_keep)
+        for layer in collect_prunable_bayesian_layers(model)
+    }
+    return _plan_from_counts(model, counts, "uniform_ratio", f"keep_fraction={keep_fraction:g}")
+
+
+def global_ratio_plan(model: nn.Module, keep_fraction: float, min_keep: int = 1) -> KeepPlan:
+    """Keep the best `keep_fraction` of all prunable units, ranked across the
+    whole network rather than within each layer.
+
+    log_alpha is a noise-to-signal *ratio* and therefore dimensionless, so
+    comparing it across layers is meaningful in a way that comparing raw
+    activations or weight norms would not be. This lets the criterion
+    decide where the redundancy is, which is the behaviour the threshold
+    rule had and the per-layer version gives up.
+
+    `min_keep` is a floor, not a suggestion: a global ranking is free to
+    empty a whole layer, and a severed layer is not a sparse network but a
+    broken one (LeNet's fc2 collapsing to a single unit cost ~43
+    accuracy points and no amount of fine-tuning recovered it). Promoting
+    units to satisfy the floor can push the realised keep-count slightly
+    above the target; the promotion count is recorded in the plan detail.
+    """
+    layers = collect_prunable_bayesian_layers(model)
+    if not layers:
+        return _plan_from_counts(model, {}, "global_ratio", f"keep_fraction={keep_fraction:g}")
+
+    scores = torch.cat([layer.log_alpha.detach().flatten() for layer in layers])
+    owner = torch.cat(
+        [
+            torch.full((layer.log_alpha.numel(),), i, dtype=torch.long)
+            for i, layer in enumerate(layers)
+        ]
+    )
+    total = int(scores.numel())
+    target = min(max(1, round(keep_fraction * total)), total)
+
+    order = torch.argsort(scores)
+    selected = torch.zeros(total, dtype=torch.bool)
+    selected[order[:target]] = True
+
+    counts: Dict[nn.Module, int] = {}
+    promoted = 0
+    for i, layer in enumerate(layers):
+        n = int((owner == i).sum())
+        kept = int(selected[owner == i].sum())
+        floor = min(min_keep, n)
+        if kept < floor:
+            promoted += floor - kept
+            kept = floor
+        counts[layer] = kept
+
+    detail = f"keep_fraction={keep_fraction:g}"
+    if promoted:
+        detail += f", {promoted} unit(s) promoted to satisfy min_keep={min_keep}"
+    return _plan_from_counts(model, counts, "global_ratio", detail)
+
+
+def _pruned_param_count(model: nn.Module, model_name: str, plan: KeepPlan, snn_cfg: SNNConfig) -> int:
+    """Parameters remaining if `plan` were applied. Uses the real rebuild
+    routines rather than a parallel formula, so the planner and the thing
+    it plans for can never drift apart."""
+    from metrics import count_parameters  # local: metrics imports bayesian_layers, not this
+
+    was_training = model.training
+    pruned = prune_model(model, model_name, plan, snn_cfg)
+    model.train(was_training)
+    return count_parameters(pruned, exclude_gates=True)
+
+
+def param_target_plan(
+    model: nn.Module,
+    model_name: str,
+    snn_cfg: SNNConfig,
+    target_pruned_pct: float,
+    mode: str = "uniform",
+    min_keep: int = 1,
+    max_iter: int = 30,
+) -> Tuple[KeepPlan, float]:
+    """
+    Find the plan whose *parameter* pruning percentage is closest to
+    `target_pruned_pct`, and return it with the percentage it achieves.
+
+    Sparsity is quoted in the literature as a fraction of parameters (or
+    connections) removed, but a keep-fraction is a fraction of *units*.
+    Those are not the same number and the gap is large: dropping the same
+    fraction of units from two adjacent layers shrinks the weight matrix
+    between them on both axes, so a uniform per-layer keep_fraction of
+    0.72 on LeNet removes 46% of parameters, not 28%. Any comparison
+    against a published pruning percentage has to go through this
+    conversion or it is comparing different quantities.
+
+    Parameter count is monotonically non-decreasing in the keep fraction
+    but takes integer steps, so an exact hit is usually not available;
+    bisection runs to `max_iter` and the closest achievable point is
+    returned. Rebuilds are memoised on the keep-count vector, so the loop
+    costs far fewer than `max_iter` model constructions. Runs entirely on
+    whatever device the model is on and touches no data -- no GPU time.
+    """
+    fraction, pct, plan = _bisect_to_param_target(
+        model, model_name, snn_cfg, target_pruned_pct, mode, min_keep, max_iter
+    )
+    promoted = plan.detail.partition(", ")[2]
+    plan.detail = (
+        f"keep_fraction={fraction:.4f} -> {pct:.2f}% of parameters pruned "
+        f"(target {target_pruned_pct:g}%)"
+    )
+    if promoted:
+        plan.detail += f"; {promoted}"
+    return plan, pct
+
+
+def _bisect_to_param_target(
+    model: nn.Module,
+    model_name: str,
+    snn_cfg: SNNConfig,
+    target_pruned_pct: float,
+    mode: str,
+    min_keep: int,
+    max_iter: int,
+) -> Tuple[float, float, KeepPlan]:
+    """Bisect the keep-fraction until the realised parameter-pruning
+    percentage is as close to the target as the integer steps allow.
+    Returns (keep_fraction, achieved_pct, plan)."""
+    build = {"uniform": uniform_ratio_plan, "global": global_ratio_plan}
+    if mode not in build:
+        raise ValueError(f"Unknown ranked-pruning mode '{mode}'. Options: {list(build)}")
+
+    from metrics import count_parameters
+
+    total_params = count_parameters(model, exclude_gates=True)
+    cache: Dict[Tuple[int, ...], float] = {}
+
+    def evaluate(keep_fraction: float) -> Tuple[float, KeepPlan]:
+        plan = build[mode](model, keep_fraction, min_keep)
+        key = plan.keep_counts()
+        if key not in cache:
+            remaining = _pruned_param_count(model, model_name, plan, snn_cfg)
+            cache[key] = 100.0 * (1.0 - remaining / total_params)
+        return cache[key], plan
+
+    lo, hi = 0.0, 1.0
+    best_pct, best_plan = evaluate(1.0)
+    best = (1.0, best_pct, best_plan)
+    best_err = abs(best_pct - target_pruned_pct)
+
+    for _ in range(max_iter):
+        mid = 0.5 * (lo + hi)
+        pct, plan = evaluate(mid)
+        err = abs(pct - target_pruned_pct)
+        if err < best_err:
+            best_err, best = err, (mid, pct, plan)
+        if pct > target_pruned_pct:
+            lo = mid  # pruning too hard -> keep more
+        else:
+            hi = mid
+        if hi - lo < 1e-6:
+            break
+    return best
+
+
+def keep_fraction_for_param_target(
+    model: nn.Module,
+    model_name: str,
+    snn_cfg: SNNConfig,
+    target_pruned_pct: float,
+    min_keep: int = 1,
+    max_iter: int = 30,
+) -> Tuple[float, float]:
+    """
+    The uniform per-layer keep_fraction that removes `target_pruned_pct` of
+    parameters, plus the percentage it actually achieves.
+
+    Needed to set `BioPruningConfig.keep_fractions` for a matched-sparsity
+    comparison: the bio criteria take a keep_fraction as input, while the
+    Bayesian side and every published baseline quote parameter
+    percentages. Converting between them by eye is how "matched sparsity"
+    ended up comparing a 27.7%-pruned network against a 98.5%-pruned one.
+    Purely geometric -- no data, no training, no GPU.
+    """
+    fraction, pct, _ = _bisect_to_param_target(
+        model, model_name, snn_cfg, target_pruned_pct, "uniform", min_keep, max_iter
+    )
+    return fraction, pct
+
+
+def build_keep_plan(
+    model: nn.Module,
+    model_name: str,
+    snn_cfg: SNNConfig,
+    bayesian_cfg: BayesianConfig,
+) -> KeepPlan:
+    """Build the KeepPlan a config asks for. `prune_mode="threshold"` is the
+    default and reproduces every pre-existing experiment unchanged."""
+    mode = bayesian_cfg.prune_mode
+    if mode == "threshold":
+        return threshold_plan(model, bayesian_cfg.prune_threshold)
+    if mode == "uniform_ratio":
+        return uniform_ratio_plan(model, bayesian_cfg.keep_fraction, bayesian_cfg.min_keep_per_layer)
+    if mode == "global_ratio":
+        return global_ratio_plan(model, bayesian_cfg.keep_fraction, bayesian_cfg.min_keep_per_layer)
+    if mode in ("param_target", "param_target_global"):
+        plan, _ = param_target_plan(
+            model,
+            model_name,
+            snn_cfg,
+            bayesian_cfg.target_pruned_pct,
+            mode="global" if mode.endswith("global") else "uniform",
+            min_keep=bayesian_cfg.min_keep_per_layer,
+        )
+        return plan
+    raise ValueError(
+        f"Unknown prune_mode '{mode}'. Options: threshold, uniform_ratio, "
+        "global_ratio, param_target, param_target_global"
+    )
+
+
+def remaining_structures_report(model: nn.Module, plan: KeepPlan) -> Dict[str, Dict[str, Any]]:
+    """
+    Per-layer (total, remaining, pruned) counts **as the rebuild will
+    actually apply them**.
+
+    Preferred over metrics.count_remaining_structures, which re-derives the
+    decision from a threshold and so can disagree with what was built. Two
+    ways it did: a layer whose gates all crossed the threshold was reported
+    as 0 remaining although compute_keep_indices keeps one unit, and
+    ResNet18's residual-tied conv2 was reported as 0/512 remaining although
+    _prune_basic_block never removes a single one of its output channels.
+    """
+    report: Dict[str, Dict[str, Any]] = {}
+    for name, module in model.named_modules():
+        if not isinstance(module, (BayesianConv2d, BayesianLinear)):
+            continue
+        keep = plan.indices(module)
+        total = int(module.log_alpha.numel())
+        remaining = int(keep.numel())
+        report[name] = {
+            "total": total,
+            "remaining": remaining,
+            "pruned": total - remaining,
+            "structurally_prunable": module.structurally_prunable,
+            "median_log_alpha": float(module.log_alpha.detach().median()),
+        }
+    return report
 
 
 def channel_keep_to_flat_indices(keep_channels: torch.Tensor, spatial_size: int) -> torch.Tensor:
@@ -96,9 +513,15 @@ def slice_batchnorm(bn: nn.BatchNorm2d, keep_idx: torch.Tensor) -> nn.BatchNorm2
 def compute_uncertainty_report(model: nn.Module, threshold: float) -> Dict[str, Dict[str, float]]:
     """
     Summarise the learned posterior uncertainty of every Bayesian layer:
-    min / median / max log_alpha and the fraction of units past the
-    pruning threshold. Used for the "Computing posterior uncertainty..."
-    logging step and for the uncertainty-histogram plots.
+    min / median / max log_alpha, the fraction of units past the pruning
+    threshold, and the fraction pinned at the clamp ceiling. Used for the
+    "Computing posterior uncertainty..." logging step and for the
+    uncertainty-histogram plots.
+
+    `frac_saturated` and `std` matter most under ranked pruning: a layer
+    whose gates have all saturated has no usable internal ordering left,
+    and one whose `std` is ~0 never differentiated its units at all. Both
+    look identical to a healthy layer in `frac_prunable` alone.
     """
     report: Dict[str, Dict[str, float]] = {}
     for name, module in model.named_modules():
@@ -108,7 +531,11 @@ def compute_uncertainty_report(model: nn.Module, threshold: float) -> Dict[str, 
                 "min": float(log_alpha.min()),
                 "median": float(log_alpha.median()),
                 "max": float(log_alpha.max()),
+                "std": float(log_alpha.std()) if log_alpha.numel() > 1 else 0.0,
                 "frac_prunable": float((log_alpha > threshold).float().mean()),
+                "frac_saturated": float(
+                    (log_alpha >= module.log_alpha_clamp_max - 1e-3).float().mean()
+                ),
                 "structurally_prunable": module.structurally_prunable,
             }
     return report
@@ -172,12 +599,12 @@ class PrunedLeNetSNN(nn.Module):
         return torch.stack(spk_out_rec, dim=0)
 
 
-def prune_lenet(model: LeNetSNN, threshold: float, snn_cfg: SNNConfig) -> PrunedLeNetSNN:
+def prune_lenet(model: LeNetSNN, plan: KeepPlan, snn_cfg: SNNConfig) -> PrunedLeNetSNN:
     """Physically prune a trained LeNetSNN into a smaller PrunedLeNetSNN."""
-    keep1 = compute_keep_indices(model.conv1, threshold)
-    keep2 = compute_keep_indices(model.conv2, threshold)
-    keep_fc1 = compute_keep_indices(model.fc1, threshold)
-    keep_fc2 = compute_keep_indices(model.fc2, threshold)
+    keep1 = plan.indices(model.conv1)
+    keep2 = plan.indices(model.conv2)
+    keep_fc1 = plan.indices(model.fc1)
+    keep_fc2 = plan.indices(model.fc2)
 
     new_conv1 = nn.Conv2d(3, len(keep1), kernel_size=5)
     with torch.no_grad():
@@ -258,7 +685,7 @@ class PrunedVGG9SNN(nn.Module):
         return torch.stack(spk_out_rec, dim=0)
 
 
-def prune_vgg9(model: VGG9SNN, threshold: float, snn_cfg: SNNConfig) -> PrunedVGG9SNN:
+def prune_vgg9(model: VGG9SNN, plan: KeepPlan, snn_cfg: SNNConfig) -> PrunedVGG9SNN:
     """Physically prune a trained VGG9SNN into a smaller PrunedVGG9SNN.
 
     Channel keep-masks are propagated sequentially through the conv chain:
@@ -270,7 +697,7 @@ def prune_vgg9(model: VGG9SNN, threshold: float, snn_cfg: SNNConfig) -> PrunedVG
     prev_keep = torch.arange(3)
 
     for conv in model.conv_layers:
-        keep_out = compute_keep_indices(conv, threshold)
+        keep_out = plan.indices(conv)
         new_conv = nn.Conv2d(
             in_channels=len(prev_keep),
             out_channels=len(keep_out),
@@ -286,7 +713,7 @@ def prune_vgg9(model: VGG9SNN, threshold: float, snn_cfg: SNNConfig) -> PrunedVG
     spatial = 4  # 3 max-pools: 32 -> 16 -> 8 -> 4
     flat_idx = channel_keep_to_flat_indices(prev_keep, spatial_size=spatial * spatial)
 
-    keep_fc1 = compute_keep_indices(model.fc1, threshold)
+    keep_fc1 = plan.indices(model.fc1)
     new_fc1 = nn.Linear(len(flat_idx), len(keep_fc1))
     with torch.no_grad():
         new_fc1.weight.copy_(model.fc1.linear.weight[keep_fc1][:, flat_idx])
@@ -525,10 +952,16 @@ def _rebuild_vgg_style(
     return pruned
 
 
-def prune_vgg_style(model: nn.Module, threshold: float, snn_cfg: SNNConfig) -> PrunedVGGStyleSNN:
-    """Physically prune a trained VGGStyleSNN using posterior uncertainty."""
-    conv_keeps = [compute_keep_indices(conv, threshold) for conv in model.conv_layers]
-    fc_keeps = [compute_keep_indices(fc, threshold) for fc in model.fc_layers]
+def prune_vgg_style(model: nn.Module, plan: "KeepPlan | float", snn_cfg: SNNConfig) -> PrunedVGGStyleSNN:
+    """Physically prune a trained VGGStyleSNN using posterior uncertainty.
+
+    `plan` may be a bare float for backwards compatibility, in which case
+    it is interpreted as the Molchanov log_alpha threshold.
+    """
+    if not isinstance(plan, KeepPlan):
+        plan = threshold_plan(model, float(plan))
+    conv_keeps = [plan.indices(conv) for conv in model.conv_layers]
+    fc_keeps = [plan.indices(fc) for fc in model.fc_layers]
     return _rebuild_vgg_style(model, model.arch_cfg, snn_cfg, conv_keeps, fc_keeps)
 
 
@@ -627,9 +1060,9 @@ class PrunedSpikingResNet18(nn.Module):
         return torch.stack(spk_out_rec, dim=0)
 
 
-def _prune_basic_block(block: SpikingBasicBlock, threshold: float, snn_cfg: SNNConfig) -> PrunedBasicBlock:
+def _prune_basic_block(block: SpikingBasicBlock, plan: KeepPlan, snn_cfg: SNNConfig) -> PrunedBasicBlock:
     """Prune one BasicBlock's internal (conv1) channels only."""
-    keep_mid = compute_keep_indices(block.conv1, threshold)
+    keep_mid = plan.indices(block.conv1)
 
     new_conv1 = nn.Conv2d(
         in_channels=block.conv1.conv.in_channels,
@@ -675,7 +1108,7 @@ def _prune_basic_block(block: SpikingBasicBlock, threshold: float, snn_cfg: SNNC
     return PrunedBasicBlock(new_conv1, new_bn1, new_conv2, new_bn2, new_downsample, snn_cfg)
 
 
-def prune_resnet18(model: SpikingResNet18, threshold: float, snn_cfg: SNNConfig) -> PrunedSpikingResNet18:
+def prune_resnet18(model: SpikingResNet18, plan: KeepPlan, snn_cfg: SNNConfig) -> PrunedSpikingResNet18:
     """
     Physically prune a trained SpikingResNet18.
 
@@ -693,7 +1126,7 @@ def prune_resnet18(model: SpikingResNet18, threshold: float, snn_cfg: SNNConfig)
 
     new_stages: List[List[PrunedBasicBlock]] = []
     for stage in model._all_stages():
-        new_stages.append([_prune_basic_block(block, threshold, snn_cfg) for block in stage])
+        new_stages.append([_prune_basic_block(block, plan, snn_cfg) for block in stage])
 
     new_fc_out = nn.Linear(model.fc_out.in_features, model.fc_out.out_features)
     with torch.no_grad():
@@ -708,8 +1141,14 @@ def prune_resnet18(model: SpikingResNet18, threshold: float, snn_cfg: SNNConfig)
 # ---------------------------------------------------------------------------
 
 
-def prune_model(model: nn.Module, model_name: str, threshold: float, snn_cfg: SNNConfig) -> nn.Module:
+def prune_model(
+    model: nn.Module, model_name: str, plan: "KeepPlan | float", snn_cfg: SNNConfig
+) -> nn.Module:
     """Dispatch to the correct architecture-specific physical pruning routine.
+
+    `plan` is normally a KeepPlan (see build_keep_plan). A bare float is
+    accepted and interpreted as the Molchanov log_alpha threshold, so every
+    existing call site keeps working unchanged.
 
     Any VGGStyleSNN (the configurable conv-stack family used for the paper
     replications) routes to `prune_vgg_style` regardless of its config name,
@@ -728,8 +1167,10 @@ def prune_model(model: nn.Module, model_name: str, threshold: float, snn_cfg: SN
             f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
             "any other name requires the model to be a VGGStyleSNN."
         )
+    if not isinstance(plan, KeepPlan):
+        plan = threshold_plan(model, float(plan))
     model.eval()
     with torch.no_grad():
         if is_vgg_style:
-            return prune_vgg_style(model, threshold, snn_cfg)
-        return dispatch[model_name](model, threshold, snn_cfg)
+            return prune_vgg_style(model, plan, snn_cfg)
+        return dispatch[model_name](model, plan, snn_cfg)

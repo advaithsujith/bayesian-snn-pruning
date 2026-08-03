@@ -1,6 +1,38 @@
 """
 Sweep `beta_max` against a frozen pretrained baseline.
 
+SUPERSEDED -- do not submit this. Use run_sparsity_curve.py.
+-------------------------------------------------------------
+Two independent reasons, both found after this script was written and
+before it was ever run:
+
+1. **It cannot answer the question it was built to answer.** `beta_max` is
+   not a speed control under Adam, which normalises each update by that
+   parameter's own running gradient magnitude: wherever one term dominates,
+   the update on `log_alpha` is about `lr * sign(grad)`, independent of the
+   gradient's size and therefore of `beta_max`. What `beta_max` moves is
+   the point where the two gradients cancel, not the rate of approach. So
+   four points spread over an 80x range are likely to show a cliff rather
+   than a curve, at ~2h each (75 gate epochs at 75s plus 30 fine-tune
+   epochs at 51s, per outputs/dpap_repl/training_log.csv). The balance it
+   was meant to probe is measured directly, in seconds, by
+   train.gate_pressure_diagnostic.
+
+2. **Its selection procedure is not defensible.** It ranks trials by test
+   accuracy: `dpap_repl` sets `val_fraction=0.0`, so `val_loader` *is* the
+   test set, the fine-tune phase restores its best checkpoint by that
+   number, and the printed ranking then picks `beta_max` from it. That is
+   a pruning hyperparameter chosen on the test set, on a checkpoint also
+   chosen on the test set. The loaders below now come from
+   `get_pruning_phase_loaders` so the leak is closed, but the deeper point
+   stands: with ranked target-sparsity pruning there is nothing left for
+   this sweep to select. `beta_max` no longer has to land the sparsity on
+   a target -- it only has to make the gates differentiate from each other.
+
+Kept rather than deleted because the frozen-baseline trial harness below
+is sound and would be worth reviving if some *other* gate-training
+hyperparameter ever needs a sweep.
+
 Why a sweep rather than repeated full runs
 -------------------------------------------
 `beta_max` sets how hard the KL term pushes gates toward pruning, and it
@@ -36,17 +68,21 @@ import torch
 
 from bayesian_layers import set_bayesian_mode
 from config import ALL_EXPERIMENTS, ExperimentConfig
-from datasets import get_cifar10_loaders
+from datasets import get_cifar10_loaders, get_pruning_phase_loaders
 from evaluate import full_evaluation
 from metrics import (
     compute_and_set_unit_costs,
     count_parameters,
-    count_remaining_structures,
     pruning_percentage,
     write_csv,
 )
 from models import build_model
-from pruning import compute_uncertainty_report, prune_model
+from pruning import (
+    build_keep_plan,
+    compute_uncertainty_report,
+    prune_model,
+    remaining_structures_report,
+)
 from train import run_training
 from utils import ensure_dirs, get_device, print_banner, set_seed, setup_logger
 
@@ -109,11 +145,13 @@ def run_one_trial(
     for name, s in report.items():
         logger.info(
             f"[{tag}]   {name}: median_log_alpha={s['median']:.2f} "
-            f"frac_prunable={s['frac_prunable']:.3f}"
+            f"frac_prunable={s['frac_prunable']:.3f} "
+            f"frac_saturated={s['frac_saturated']:.3f}"
         )
-    remaining_report = count_remaining_structures(model, cfg.bayesian.prune_threshold)
+    keep_plan = build_keep_plan(model, model_name, cfg.snn, cfg.bayesian)
+    remaining_report = remaining_structures_report(model, keep_plan)
 
-    pruned = prune_model(model, model_name, cfg.bayesian.prune_threshold, cfg.snn).to(device)
+    pruned = prune_model(model, model_name, keep_plan, cfg.snn).to(device)
     remaining_params = count_parameters(pruned, exclude_gates=True)
     pct = pruning_percentage(original_params, remaining_params)
     logger.info(f"[{tag}] params {original_params} -> {remaining_params} ({pct:.1f}% pruned)")
@@ -156,8 +194,13 @@ def run_one_trial(
         "Fine Tune Best Val": finetune["best_val_acc"],
         "FLOPs": eval_after["flops"],
         "Latency": eval_after["latency_ms"],
-        "Layers Fully Pruned": sum(
-            1 for s in remaining_report.values() if s["remaining"] == 0
+        # Counted from the plan the rebuild actually used, so this reports
+        # layers reduced to their minimum width rather than layers the
+        # threshold nominally emptied (which the rebuild never allows).
+        "Layers At Min Width": sum(
+            1
+            for s in remaining_report.values()
+            if s["structurally_prunable"] and s["remaining"] <= cfg.bayesian.min_keep_per_layer
         ),
     }
 
@@ -186,8 +229,21 @@ def main() -> None:
         )
 
     print_banner(f"beta_max sweep: {args.model}\n{len(args.betas)} trials from one frozen baseline")
+    print(
+        "\nWARNING: this script is superseded -- see its module docstring. Under Adam,\n"
+        "beta_max sets where the task and KL gradients cancel, not how fast log_alpha\n"
+        "moves, so a spread of values gives a cliff rather than a curve. Prefer\n"
+        "run_sparsity_curve.py, which reaches any sparsity from one gate-training run.\n"
+    )
     set_seed(base_cfg.seed)
-    loaders = get_cifar10_loaders(base_cfg.data, base_cfg.train.batch_size, base_cfg.seed)
+    # Train/validate on the pruning split, never the test set: this script
+    # ranks trials by accuracy, and with dpap_repl's val_fraction=0.0 the
+    # unsplit val_loader is the test set.
+    train_loader, val_loader, _ = get_pruning_phase_loaders(
+        base_cfg.data, base_cfg.train.batch_size, base_cfg.seed
+    )
+    _, _, test_loader = get_cifar10_loaders(base_cfg.data, base_cfg.train.batch_size, base_cfg.seed)
+    loaders = (train_loader, val_loader, test_loader)
 
     results: List[Dict[str, Any]] = []
     for i, beta_max in enumerate(args.betas, start=1):
@@ -201,11 +257,11 @@ def main() -> None:
         write_csv(results, os.path.join(out_dir, "summary.csv"))
 
     print_banner("SWEEP FINISHED")
-    print(f"{'beta_max':>10} {'pruned %':>10} {'accuracy':>10} {'dead layers':>12}")
+    print(f"{'beta_max':>10} {'pruned %':>10} {'accuracy':>10} {'min-width layers':>18}")
     for r in sorted(results, key=lambda r: -r["Accuracy After"]):
         print(
             f"{r['beta_max']:>10g} {r['Pruning Percentage']:>10.2f} "
-            f"{r['Accuracy After']:>10.4f} {r['Layers Fully Pruned']:>12d}"
+            f"{r['Accuracy After']:>10.4f} {r['Layers At Min Width']:>18d}"
         )
     print(f"\nWrote {os.path.join(out_dir, 'summary.csv')}")
 

@@ -37,7 +37,7 @@ from encoding import poisson_encode
 from losses import get_task_loss, unilateral_mse
 from metrics import count_parameters
 from models import VGG9SNN, VGGStyleSNN, build_model
-from pruning import prune_vgg_style
+from pruning import prune_vgg_style, threshold_plan
 from train import build_optimizer, build_scheduler
 from activity_pruning import _register_bn_remask_hooks, prune_vggstyle_activity
 
@@ -96,7 +96,7 @@ def main():
         m.conv_layers[0].log_alpha.fill_(-3.0); m.conv_layers[0].log_alpha[1] = 5.0
         m.conv_layers[1].log_alpha.fill_(-3.0); m.conv_layers[1].log_alpha[2] = 5.0
         m.fc_layers[0].log_alpha.fill_(-3.0);   m.fc_layers[0].log_alpha[3] = 5.0
-    pruned = prune_vgg_style(m, threshold=3.0, snn_cfg=snn2)
+    pruned = prune_vgg_style(m, threshold_plan(m, 3.0), snn_cfg=snn2)
 
     check("conv0 width 4 -> 3", pruned.conv_layers[0].out_channels == 3)
     check("conv1 width 6 -> 5", pruned.conv_layers[1].out_channels == 5)
@@ -145,7 +145,7 @@ def main():
     with torch.no_grad():
         m2.conv_layers[1].log_alpha.fill_(-3.0)
         m2.conv_layers[1].log_alpha[0] = 5.0
-    p2 = prune_vgg_style(m2, threshold=3.0, snn_cfg=snn2)
+    p2 = prune_vgg_style(m2, threshold_plan(m2, 3.0), snn_cfg=snn2)
     check("no-hidden-fc: classifier input = survivors * spatial",
           p2.fc_out.in_features == 5 * nofc.spatial_after_convs() ** 2)
     p2.eval()
@@ -178,7 +178,7 @@ def main():
             lif.beta.fill_(0.11 + 0.01 * i)
         m3.lif_fc_layers[0].beta.fill_(0.42)
         m3.conv_layers[0].log_alpha.fill_(-3.0); m3.conv_layers[0].log_alpha[1] = 5.0
-    p3 = prune_vgg_style(m3, threshold=3.0, snn_cfg=lb_snn)
+    p3 = prune_vgg_style(m3, threshold_plan(m3, 3.0), snn_cfg=lb_snn)
     check(f"learned conv beta carried into pruned model (got {float(p3.lif_layers[0].beta):.3f})",
           abs(float(p3.lif_layers[0].beta) - 0.11) < 1e-6)
     check(f"learned fc beta carried into pruned model (got {float(p3.lif_fc_layers[0].beta):.3f})",
@@ -278,7 +278,7 @@ def main():
           abs(dcfg.train.lr - 5e-3 * 50 / 1024) < 1e-12)
     dm = build_model("dpap_repl", dcfg.snn, dcfg.bayesian, arch_cfg=dcfg.arch)
     set_bayesian_mode(dm, True)
-    dp = prune_vgg_style(dm, threshold=3.0, snn_cfg=dcfg.snn)
+    dp = prune_vgg_style(dm, threshold_plan(dm, 3.0), snn_cfg=dcfg.snn)
     dp.eval()
     with torch.no_grad():
         check("dpap model prunes and forwards", dp(x).shape == (8, 2, 10))

@@ -9,6 +9,18 @@
 #SBATCH --error=logs/slurm_%j.err
 
 # ---------------------------------------------------------------------------
+# SUPERSEDED -- submit slurm_curve.sh instead.
+#
+# This sweeps beta_max in the hope of landing near a target sparsity. Under
+# Adam that does not work as intended: beta_max sets where the task and KL
+# gradients cancel, not how fast log_alpha moves, so a spread of values
+# gives a cliff rather than a curve -- at roughly 2h per point. And with
+# dpap_repl's val_fraction=0.0 it was ranking candidates by test accuracy.
+# See sweep_beta.py's module docstring for the full argument.
+#
+# run_sparsity_curve.py reaches any sparsity from a single gate-training run,
+# so there is nothing left for this to select.
+#
 # beta_max sweep against a frozen pretrained baseline.
 #
 # Each trial runs only the stages that depend on beta_max (gate training,
@@ -21,6 +33,10 @@
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
+
+echo "slurm_sweep.sh is superseded by slurm_curve.sh -- see the header." >&2
+echo "Remove this guard deliberately if you really do want the sweep." >&2
+exit 1
 
 echo "===================================================="
 echo "Job started: $(date)"

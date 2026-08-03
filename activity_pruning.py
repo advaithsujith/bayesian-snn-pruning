@@ -319,36 +319,42 @@ def _register_bn_remask_hooks(model: nn.Module, model_name: str) -> List[Any]:
         to fix -- and silently, since the criterion would then be scoring
         channels that are not actually dead.
 
+    Both families now set `defer_gate` on their normalised convs, which
+    applies `hard_mask` after the BatchNorm structurally, so in practice
+    every branch below short-circuits and this returns no handles. It is
+    kept rather than deleted because the leakage is a property of gate
+    placement, not of the architecture: any conv that goes back to gating
+    before its norm needs this again, and the check is one comparison.
+
     LeNet/VGG9 place no BatchNorm between a prunable layer and its LIF
     neuron, so this stays a genuine no-op for them.
     """
     handles: List[Any] = []
 
+    def _add_hook(norm: nn.Module, conv: nn.Module) -> None:
+        if conv.defer_gate:
+            # The gate -- and therefore hard_mask -- is already applied
+            # after this BatchNorm (see BayesianConv2d.defer_gate), so a
+            # masked channel is zero downstream by construction and this
+            # hook would only re-apply the same mask a second time.
+            return
+
+        def _hook(_module, _inputs, output, _conv=conv):
+            return output * _conv.hard_mask.view(1, -1, 1, 1)
+
+        handles.append(norm.register_forward_hook(_hook))
+
     if isinstance(model, VGGStyleSNN):
         for conv, norm in zip(model.conv_layers, model.norm_layers):
-            if not isinstance(norm, nn.BatchNorm2d):
-                continue
-            if conv.defer_gate:
-                # The gate -- and therefore hard_mask -- is already applied
-                # after this BatchNorm (see BayesianConv2d.defer_gate), so a
-                # masked channel is zero downstream by construction and this
-                # hook would only re-apply the same mask a second time.
-                continue
-
-            def _hook(_module, _inputs, output, _conv=conv):
-                return output * _conv.hard_mask.view(1, -1, 1, 1)
-
-            handles.append(norm.register_forward_hook(_hook))
+            if isinstance(norm, nn.BatchNorm2d):
+                _add_hook(norm, conv)
         return handles
 
     if model_name != "resnet18":
         return []
     for stage in model._all_stages():
         for block in stage:
-            def _hook(_module, _inputs, output, _conv=block.conv1):
-                return output * _conv.hard_mask.view(1, -1, 1, 1)
-
-            handles.append(block.bn1.register_forward_hook(_hook))
+            _add_hook(block.bn1, block.conv1)
     return handles
 
 

@@ -40,6 +40,11 @@ from config import ArchConfig, SNNConfig, BayesianConfig
 from encoding import encode_timestep
 
 
+# Normalisation layers that renormalise away a gate applied before them.
+# Used by assert_gate_after_norm.
+_NORM_TYPES = (nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d)
+
+
 def _get_surrogate_grad(name: str):
     """Map a config string to an snnTorch surrogate-gradient function."""
     mapping = {
@@ -238,7 +243,14 @@ class SpikingBasicBlock(nn.Module):
     output channel count is tied to the block's residual addition and to
     the input of the next block, so it is marked non-prunable
     (structurally_prunable=False) -- see the module-level docstring for
-    why. Both still carry Bayesian gates and contribute to the KL loss.
+    why. Both still carry Bayesian gates, but only `conv1`'s is sampled
+    and only `conv1`'s enters the KL (see
+    bayesian_layers.collect_prunable_bayesian_layers).
+
+    Both convs feed a BatchNorm, so both defer their gate to after it --
+    see BayesianConv2d.defer_gate. Applying the gate first lets BatchNorm
+    divide the injected noise straight back out, which leaves the task
+    loss unable to feel log_alpha at all.
     """
 
     expansion = 1
@@ -262,6 +274,7 @@ class SpikingBasicBlock(nn.Module):
             in_channels, out_channels, kernel_size=3, stride=stride, padding=1, **gate_kwargs
         )
         self.conv1.structurally_prunable = True
+        self.conv1.defer_gate = True  # conv -> bn -> gate -> lif
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.lif1 = _make_leaky(snn_cfg)
 
@@ -269,6 +282,7 @@ class SpikingBasicBlock(nn.Module):
             out_channels, out_channels, kernel_size=3, stride=1, padding=1, **gate_kwargs
         )
         self.conv2.structurally_prunable = False
+        self.conv2.defer_gate = True
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.lif2 = _make_leaky(snn_cfg)
 
@@ -287,10 +301,14 @@ class SpikingBasicBlock(nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         identity = x if self.downsample is None else self.downsample(x)
 
-        out = self.bn1(self.conv1(x))
+        # `conv(x)` returns the ungated convolution because defer_gate is
+        # set, so the gate is applied to the normalised activation instead.
+        out = self.conv1.apply_gate(self.bn1(self.conv1(x)))
         spk1, mem1 = self.lif1(out, mem1)
 
-        out = self.bn2(self.conv2(spk1))
+        # conv2's gate acts on its own output, before the residual addition
+        # -- the identity path is not this layer's to scale.
+        out = self.conv2.apply_gate(self.bn2(self.conv2(spk1)))
         out = out + identity
         spk2, mem2 = self.lif2(out, mem2)
 
@@ -323,6 +341,7 @@ class SpikingResNet18(nn.Module):
         # stage-1 block expects; kept non-prunable so no block boundary
         # needs input-side reindexing (see module docstring).
         self.stem_conv.structurally_prunable = False
+        self.stem_conv.defer_gate = True  # conv -> bn -> gate -> lif
         self.stem_bn = nn.BatchNorm2d(64)
         self.stem_lif = _make_leaky(snn_cfg)
 
@@ -364,7 +383,7 @@ class SpikingResNet18(nn.Module):
 
         spk_out_rec: List[torch.Tensor] = []
         for _ in range(self.num_steps):
-            cur = self.stem_bn(self.stem_conv(x))
+            cur = self.stem_conv.apply_gate(self.stem_bn(self.stem_conv(x)))
             spk, stem_mem = self.stem_lif(cur, stem_mem)
 
             for stage_idx, stage in enumerate(stages):
@@ -574,6 +593,64 @@ class VGGStyleSNN(nn.Module):
         return torch.stack(spk_out_rec, dim=0)
 
 
+def assert_gate_after_norm(model: nn.Module) -> None:
+    """
+    Raise if any gated convolution whose output feeds a normalisation layer
+    still applies its gate *before* that normalisation.
+
+    This is the single most expensive class of bug this project has hit: a
+    gate placed before a BatchNorm has its injected variance renormalised
+    straight back out, so the task loss cannot feel log_alpha, the KL term
+    meets no opposition, and every gate runs to the clamp ceiling no matter
+    what beta_max is set to. It cost three collapsed DPAP runs and silently
+    degraded ResNet18's stage4 before being found, and neither failure
+    looked like a placement bug from the outside.
+
+    Ordering cannot be recovered from the module tree (it lives in each
+    architecture's `forward`), so each family is checked explicitly. Adding
+    a new normalised architecture means adding it here -- an unrecognised
+    model that mixes BatchNorm with gated convs is rejected rather than
+    waved through, because "no check exists" and "the check passed" must
+    not look the same.
+    """
+    if isinstance(model, SpikingResNet18):
+        offenders = [
+            name
+            for name, module in model.named_modules()
+            if isinstance(module, BayesianConv2d) and not module.defer_gate
+        ]
+    elif isinstance(model, VGGStyleSNN):
+        offenders = [
+            f"conv_layers.{i}"
+            for i, (conv, norm) in enumerate(zip(model.conv_layers, model.norm_layers))
+            if isinstance(norm, _NORM_TYPES) and not conv.defer_gate
+        ]
+    elif isinstance(model, (LeNetSNN, VGG9SNN)):
+        # Neither places a normalisation layer between a gated layer and its
+        # neuron, so both orderings are identical here.
+        offenders = []
+    else:
+        has_norm = any(isinstance(m, _NORM_TYPES) for m in model.modules())
+        has_gated_conv = any(isinstance(m, BayesianConv2d) for m in model.modules())
+        if has_norm and has_gated_conv:
+            raise NotImplementedError(
+                f"{type(model).__name__} mixes normalisation layers with gated "
+                "convolutions but has no gate-placement check. Add one to "
+                "models.assert_gate_after_norm before training it -- see that "
+                "function's docstring for what goes wrong silently otherwise."
+            )
+        offenders = []
+
+    if offenders:
+        raise ValueError(
+            f"{type(model).__name__}: gated convolution(s) {offenders} feed a "
+            "normalisation layer but have defer_gate=False, so the gate is "
+            "applied before the normalisation and the task loss cannot see it. "
+            "Set defer_gate=True and apply the gate via apply_gate() after the "
+            "norm in forward()."
+        )
+
+
 def build_model(
     name: str,
     snn_cfg: SNNConfig,
@@ -587,6 +664,10 @@ def build_model(
     hard-coded classes and ignore `arch_cfg`. Any other name builds a
     configurable VGGStyleSNN from `arch_cfg`, which is how the paper
     replications are expressed -- see docs/replication_targets.md.
+
+    Every model is checked for correct gate/normalisation ordering before
+    being returned (assert_gate_after_norm), so a misplacement cannot reach
+    a GPU queue.
     """
     builders = {
         "lenet": LeNetSNN,
@@ -594,10 +675,14 @@ def build_model(
         "resnet18": SpikingResNet18,
     }
     if name in builders:
-        return builders[name](snn_cfg, bayesian_cfg, num_classes=num_classes)
-    if arch_cfg is None:
+        model = builders[name](snn_cfg, bayesian_cfg, num_classes=num_classes)
+    elif arch_cfg is None:
         raise ValueError(
             f"Unknown model name '{name}' and no arch_cfg given. Built-in options: "
             f"{list(builders)}; any other name requires an ArchConfig."
         )
-    return VGGStyleSNN(arch_cfg, snn_cfg, bayesian_cfg, num_classes=num_classes)
+    else:
+        model = VGGStyleSNN(arch_cfg, snn_cfg, bayesian_cfg, num_classes=num_classes)
+
+    assert_gate_after_norm(model)
+    return model

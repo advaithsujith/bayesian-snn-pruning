@@ -45,15 +45,25 @@ hyperparameter used anywhere in the codebase is defined there.
 ## Running on an HPC cluster (SLURM)
 
 ```bash
-sbatch slurm.sh
+python tests/test_vggstyle.py && python tests/test_ranked_pruning.py   # CPU, seconds
+sbatch slurm.sh          # full pipeline
+sbatch slurm_curve.sh    # accuracy-vs-sparsity curve from one gate-training run
 ```
 
+Run both test files before every submission. They need no GPU and no
+CIFAR-10, they take seconds, and they catch the class of bug that
+otherwise costs a queue slot to discover, gate/normalisation
+misplacement, keep-set/report disagreement, snnTorch version differences.
+
 Edit `slurm.sh`'s `#SBATCH` header (partition name, GPU type, walltime,
-memory) to match your cluster's queue configuration first — these vary
+memory) to match your cluster's queue configuration first, these vary
 between institutions and cannot be guessed correctly in advance. The
 script creates a virtual environment, installs `requirements.txt`, prints
 GPU/hardware diagnostics via `nvidia-smi`, then runs `python run_all.py`,
 with stdout/stderr captured to `logs/slurm_<jobid>.out` / `.err`.
+
+CIFAR-10 must be pre-downloaded on the login node, GPU compute nodes have
+no internet access and the download hangs there.
 
 ## Pipeline
 
@@ -161,6 +171,42 @@ swamps its mean — this is what drives redundant structures toward
 thresholds on (default 3.0, corresponding to an effective binary dropout
 rate above 95%, following Molchanov et al., 2017).
 
+**Gate placement.** Wherever a gated convolution feeds a normalisation
+layer, the gate is applied *after* the normalisation
+(`BayesianConv2d.defer_gate`). Applied before, BatchNorm renormalises away
+precisely the variance the gate injects, so the task loss cannot feel
+`log_alpha` at all, measured at 2.4e-7 versus 2.4 for a downstream
+gradient in `tests/test_ranked_pruning.py`, a factor of ten million. The
+KL term then meets no opposition and every gate runs to the clamp ceiling
+regardless of `beta_max`. `models.assert_gate_after_norm` is called from
+`build_model`, so this cannot silently regress, and a new normalised
+architecture is rejected until a check is added for it.
+
+**Turning gates into a keep/drop decision.** The criterion is always
+posterior uncertainty (`log_alpha`); `BayesianConfig.prune_mode` selects
+where the cut goes.
+
+| mode | cut |
+|---|---|
+| `threshold` (default) | `log_alpha > prune_threshold`, Molchanov et al. Sparsity is an *outcome* |
+| `uniform_ratio` | keep `keep_fraction` of units in every layer, identical widths to a bio run at the same fraction |
+| `global_ratio` | keep the best `keep_fraction` ranked network-wide, letting the criterion allocate |
+| `param_target` / `param_target_global` | bisect the fraction until `target_pruned_pct` of *parameters* are gone |
+
+The ranked modes are what make matched-sparsity comparison true by
+construction rather than by coincidence, and they let one gate-training
+run produce a whole accuracy-vs-sparsity curve, see
+`run_sparsity_curve.py`. Note that a keep-fraction of *units* is not a
+percentage of *parameters*: on LeNet a uniform keep_fraction of 0.72
+removes 46% of parameters, not 28%. Use
+`pruning.keep_fraction_for_param_target` to convert rather than estimating.
+
+The failure mode ranked pruning introduces is silent: gates pinned at the
+clamp ceiling are tied, ties break by index order, and the run still hits
+its sparsity target and reports a plausible accuracy. `frac_saturated` is
+logged every epoch and per layer, and `KeepPlan.saturation_report` is
+written into `summary.txt`, check it before believing a ranked result.
+
 **Residual pruning caveat.** In Spiking ResNet-18, only each
 `BasicBlock`'s internal `conv1` output channels are physically prunable.
 `conv2`'s output channels are tied to the block's residual addition (and
@@ -169,7 +215,37 @@ block, so both are excluded from physical channel removal to keep every
 residual addition dimensionally valid without extra projection logic —
 see the docstrings in `models.py` and `pruning.py` for the full rationale.
 This is a standard, documented simplification in the structured-pruning
-literature for residual architectures, not an oversight.
+literature for residual architectures, not an oversight. Those gates are
+excluded from the KL and are never sampled
+(`bayesian_layers.collect_prunable_bayesian_layers`): pressure on a gate
+that can never be removed buys no compression and only injects noise into
+a layer that survives at full width. On ResNet-18 that was 1984 of 3904
+gate units, i.e. slightly over half of all KL pressure.
+
+## Accuracy-vs-sparsity curves
+
+```bash
+# zero GPU: what keep_fraction and layer widths does each target imply?
+python run_sparsity_curve.py --model lenet --targets 27.74 50 90 --plan-only
+
+# gate-train once, then rebuild + fine-tune at each target
+python run_sparsity_curve.py --model dpap_repl --targets 20 33.46 50.80 70 90
+```
+
+Supersedes `sweep_beta.py` / `slurm_sweep.sh`, which re-ran gate training
+per `beta_max` value hoping to land near a sparsity. Under Adam that does
+not work as intended: Adam normalises each update by that parameter's own
+running gradient magnitude, so where one term dominates the update on
+`log_alpha` is about `lr * sign(grad)`, independent of gradient size and
+therefore of `beta_max`. `beta_max` moves the point where the two
+gradients cancel, not the rate of approach, so a spread of values gives a
+cliff rather than a curve. The balance it was meant to probe is measured
+directly by `train.gate_pressure_diagnostic`, logged every 5 epochs during
+gate training, in seconds rather than GPU-hours.
+
+`beta_max` still matters under ranked pruning, it has to make gates
+*differentiate* from each other, but it no longer has to land the
+sparsity on a target, which is a far weaker requirement.
 
 ## Hyperparameter search
 

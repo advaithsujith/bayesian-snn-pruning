@@ -697,3 +697,28 @@ summarised in `docs/fresh_review_2026-08-03.md`. **Its headline was: do not
 submit the beta sweep, and fix four zero-GPU-cost issues first, because they
 change results that already exist.** If you are a later fresh reader, treat
 that document as prior art rather than repeating it — but do challenge it.
+
+## Second pass: all seven zero-GPU items implemented (2026-08-03)
+
+A second fresh reader worked through the reviewer's zero-GPU list. See
+`docs/review_response_2026-08-03.md` for what was built, which of the
+reviewer's claims were confirmed by direct measurement, and the three it
+got factually wrong. Short version:
+
+- **All seven items are done**, plus `run_sparsity_curve.py`, the consumer
+  that makes ranked pruning actually usable. Defaults are unchanged, so
+  every pre-existing experiment still reproduces.
+- **`tests/test_ranked_pruning.py`** (34 CPU checks) now guards them. Run it
+  and `tests/test_vggstyle.py` before every CSF3 submission.
+- **The reviewer's `keep_fraction ≈ 0.72` was wrong**, it gives 46.4% on
+  LeNet, not 27.7%. The right value is ≈0.844, and it is now computed by
+  `pruning.keep_fraction_for_param_target` rather than estimated.
+- **Ranked pruning has a silent failure mode:** saturated gates are tied,
+  ties break by index order, and the run still hits its sparsity target and
+  reports a plausible accuracy. `frac_saturated` is now logged everywhere.
+  Check it before believing any curve point, `dpap_repl`'s last gate
+  training saturated, and ranked pruning hides that rather than fixing it.
+- **Per-channel gate noise and the KL scoping invalidate every existing
+  Bayesian conv result** (LeNet, VGG9, ResNet18, dpap_repl). The code
+  changes were free; the re-runs are not.
+- `slurm_sweep.sh` now refuses to run. Submit `slurm_curve.sh` instead.
