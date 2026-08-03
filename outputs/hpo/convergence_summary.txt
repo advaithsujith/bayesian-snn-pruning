@@ -1,0 +1,21 @@
+Multi-sampler HPO convergence summary
+============================================================
+
+Method: bayesian
+    random: value=0.2111 params={'beta_max': 0.31861045232482016}
+       tpe: value=0.2074 params={'beta_max': 1.5938909637287855}
+     cmaes: value=0.2109 params={'beta_max': 0.04102676526174899}
+  overall best across samplers: {'sampler': 'random', 'trial': 8, 'beta_max': 0.31861045232482016, 'val_accuracy': 0.7111328125, 'pruning_percentage': 0.0, 'objective_value': 0.21113281250000004}
+
+Method: sca
+    random: value=0.2639 params={'total_epochs': 96, 'sca_num_cycles': 10, 'sca_lr': 0.0011265466963346032}
+       tpe: value=0.2375 params={'total_epochs': 97, 'sca_num_cycles': 7, 'sca_lr': 0.00027366538708377907}
+     cmaes: value=0.2316 params={'total_epochs': 63, 'sca_num_cycles': 5, 'sca_lr': 0.00045384245064662194}
+  overall best across samplers: {'sampler': 'random', 'trial': 11, 'total_epochs': 96, 'sca_num_cycles': 10, 'sca_lr': 0.0011265466963346032, 'val_accuracy': 0.2638671875, 'pruning_percentage': 98.49369415862981, 'objective_value': 0.2638671875}
+
+Method: dpap
+    random: value=0.2254 params={'dpap_train_epochs': 96, 'dpap_ema_decay': 0.9780706427351021, 'dpap_survival_decay': 0.05978999788110852, 'dpap_lr': 0.001582654190464757}
+       tpe: value=0.2766 params={'dpap_train_epochs': 32, 'dpap_ema_decay': 0.8556482155169074, 'dpap_survival_decay': 0.0007774596577465797, 'dpap_lr': 0.0014219772799623543}
+     cmaes: value=0.2332 params={'dpap_train_epochs': 59, 'dpap_ema_decay': 0.8573770321906847, 'dpap_survival_decay': 0.04343575395471865, 'dpap_lr': 0.0018929112256547557}
+  overall best across samplers: {'sampler': 'tpe', 'trial': 14, 'dpap_train_epochs': 32, 'dpap_ema_decay': 0.8556482155169074, 'dpap_survival_decay': 0.0007774596577465797, 'dpap_lr': 0.0014219772799623543, 'val_accuracy': 0.2765625, 'pruning_percentage': 98.49369415862981, 'objective_value': 0.2765625}
+

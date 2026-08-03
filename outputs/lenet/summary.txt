@@ -1,18 +1,18 @@
 Experiment summary: lenet
 ==================================================
 Original parameters (deterministic baseline): 62006
-Remaining parameters (after structured pruning): 44803
-Compression ratio: 1.384x
-Pruning percentage: 27.74%
+Remaining parameters (after structured pruning): 21039
+Compression ratio: 2.947x
+Pruning percentage: 66.07%
 
 Test accuracy before Bayesian pruning: 0.6895
-Test accuracy after pruning + fine-tuning: 0.7051
-Accuracy change: +0.0156
+Test accuracy after pruning + fine-tuning: 0.4424
+Accuracy change: -0.2470
 
-Estimated FLOPs (post-pruning): 15,864,150
-Inference latency (post-pruning): 35.478 ms
-Peak GPU memory (post-pruning): 18.3 MB
+Estimated FLOPs (post-pruning): 15,272,750
+Inference latency (post-pruning): 35.958 ms
+Peak GPU memory (post-pruning): 18.1 MB
 
-Pretraining time: 1926.9s (best val acc 0.6992)
-Bayesian gate training time: 2922.8s (best val acc 0.7018)
-Fine-tuning time: 589.3s (best val acc 0.7092)
+Pretraining time: 2009.4s (best val acc 0.6992)
+Bayesian gate training time: 3038.1s (best val acc 0.6924)
+Fine-tuning time: 616.8s (best val acc 0.4566)
