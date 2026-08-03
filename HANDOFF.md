@@ -11,6 +11,47 @@ many hours of real HPC time to discover.
 
 # READ FIRST: state as of 2026-08-03, and the open decision
 
+## UPDATE, 2026-08-03 evening: the blocker is BROKEN. First positive core result.
+
+The `beta_max=0.01` curve run on `dpap_repl` finished at 19:03. Gate ranking
+USABLE (std 0.308, saturation 0.000, every row). Test accuracies, against
+the random control and DPAP's published numbers:
+
+| pruned % | Bayesian | random control | gap | DPAP published |
+|---|---|---|---|---|
+| 19.98 | 93.28 | 91.74 | +1.54 | -- |
+| 33.35 | 93.38 | 91.13 | +2.25 | 94.27 |
+| 50.80 | 93.34 | 90.62 | +2.72 | 93.83 |
+| 70.08 | 92.46 | 88.76 | +3.70 | -- |
+| 89.98 | 89.39 | 84.14 | +5.25 | -- |
+
+Beats random everywhere with the gap *widening* in sparsity -- the
+signature of an informative ranking, and the dissertation's core figure.
+Under DPAP's own operating points by <1pp (drops from own baseline:
+ours -0.97/-1.01 vs their -0.27/-0.71). Note the flat plateau from 20% to
+50.8% (93.3 +- 0.05): the limit there is recovery from the gate phase, not
+capacity, so a longer fine-tune (30 -> 60 epochs) on one point is a cheap
+probe that might lift the whole plateau. n=1 seed -- the easiest examiner
+attack; seeds at the two DPAP points are the next GPU priority after the
+SynOps pair. Results in `outputs/dpap_repl/sparsity_curve_beta0.01/`
+(push from CSF3 before they get lost).
+
+Also this session (2026-08-03, local commits `990b0e5`, `397344a`,
+independent-reviewed): the SynOps-aware machinery. SynOps measurement
+(`metrics.measure_synops`, `measure_synops_unit_costs`), budgeted
+cost-aware-vs-cost-blind selection (`pruning.synops_budget_plan`), a
+dual-ascent SynOps-budget Lagrangian in the loss (replaces the disproven
+fixed-gamma approach; see `BayesianConfig.synops_budget_fraction`), and a
+split SGD gate optimizer (`--gate-optimizer sgd`, untested on GPU, held in
+reserve since Adam at beta 0.01 worked). Next submission, reusing the
+usable gates (no new gate training):
+`sbatch slurm_curve.sh --model dpap_repl --tag beta0.01 --reuse-gates --synops-budgets 0.5 0.3`
+after `git pull` and the three test suites (`tests/test_synops.py` is new).
+Deadline, finally answered: **early September 2026.** Experiments must
+effectively end by ~mid-August to leave writing time; the dissertation
+template is in `dissertation/` (untracked; fix `meng` -> `msc` in the
+documentclass).
+
 **Everything from "The research goal" down to "Session 3" is historical and
 parts of it are stale**, including several quoted results and the entire
 "QUESTION FOR THE FRESH-CONTEXT READER" section, which has already been
