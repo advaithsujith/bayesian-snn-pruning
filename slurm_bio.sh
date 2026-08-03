@@ -23,10 +23,19 @@
 # 96h may not be enough for all three architectures x three criteria x
 # every keep_fraction in config.py's BioPruningConfig at full epoch
 # counts in one job -- if a sanity-check run shows per-epoch time is too
-# slow to fit, split into separate sbatch submissions (e.g. one per
-# architecture, by temporarily editing MODEL_ORDER in run_bio_pruning.py,
-# or start with a single keep_fraction in config.py before widening the
-# sweep).
+# slow to fit, split into separate sbatch submissions.
+#
+# Arguments given to sbatch pass straight through to run_bio_pruning.py, so
+# splitting the sweep no longer means editing the script. The
+# matched-sparsity comparison against the Bayesian curve is one line:
+#
+#   sbatch slurm_bio.sh --models dpap_repl --keep-fractions 0.82 0.70 \
+#       --output outputs/bio_results_dpap_repl.csv
+#
+# (take the keep-fractions from
+#  `python run_sparsity_curve.py --model dpap_repl --targets ... --plan-only`,
+#  which converts a parameter-pruning target into the per-layer keep
+#  fraction the bio criteria consume -- the two are not the same number.)
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -64,7 +73,7 @@ echo "----------------------------------------------------"
 # --- Run the bio-inspired pruning pipeline ----------------------------------
 mkdir -p checkpoints outputs/lenet outputs/vgg9 outputs/resnet18 plots logs
 
-python run_bio_pruning.py
+python run_bio_pruning.py "$@"
 
 echo "===================================================="
 echo "Job finished: $(date)"
