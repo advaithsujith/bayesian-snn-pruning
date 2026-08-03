@@ -6,7 +6,7 @@ combination with the Bayesian KL term, plus the KL annealing schedule.
 import torch
 import torch.nn.functional as F
 
-from bayesian_layers import total_expected_cost, total_kl
+from bayesian_layers import total_expected_cost, total_expected_synops, total_kl
 
 
 def spike_rate_cross_entropy(spk_rec: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
@@ -100,20 +100,40 @@ def bayesian_snn_loss(
     gamma: float,
     prune_threshold: float,
     loss_type: str = "spike_rate_ce",
-) -> "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]":
+    lam: float = 0.0,
+    synops_budget: float = 0.0,
+) -> "tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]":
     """
     Full training loss for a Bayesian SNN: task loss + beta * KL +
-    gamma * expected FLOPs cost.
+    gamma * expected FLOPs cost + lambda * SynOps budget violation.
 
     `loss_type` selects the task-loss term; it defaults to the spike-rate
     cross-entropy every existing experiment uses, and only the DPAP
     replication overrides it.
 
-    Returns (total_loss, task_loss, kl_term, cost_term) so callers can log
-    each component separately.
+    The SynOps term is a Lagrangian, not a weighted penalty:
+    `lam * (E[SynOps] / synops_budget - 1)`, active only when
+    `synops_budget > 0`. Dividing by the budget makes the term (and
+    therefore `lam` and its dual-ascent step size) dimensionless, so the
+    same `synops_lambda_lr` transfers across architectures whose absolute
+    SynOps differ by orders of magnitude. `lam` itself is owned and
+    updated by train.run_training via dual ascent; this function only
+    consumes the current value. The plain linear form (rather than a
+    relu hinge) is standard dual ascent: while `lam > 0` an under-budget
+    model earns a small bonus, and the multiplier update then decays
+    `lam` back toward zero.
+
+    Returns (total_loss, task_loss, kl_term, cost_term, synops_term_raw)
+    where synops_term_raw is E[SynOps] itself (not multiplied by lam), so
+    callers can log the interpretable quantity.
     """
     task_loss = get_task_loss(loss_type)(spk_rec, targets)
     kl_term = total_kl(model)
     cost_term = total_expected_cost(model, prune_threshold)
     total_loss = task_loss + beta * kl_term + gamma * cost_term
-    return total_loss, task_loss, kl_term, cost_term
+    if synops_budget > 0.0:
+        expected_synops = total_expected_synops(model)
+        total_loss = total_loss + lam * (expected_synops / synops_budget - 1.0)
+    else:
+        expected_synops = torch.zeros_like(task_loss)
+    return total_loss, task_loss, kl_term, cost_term, expected_synops

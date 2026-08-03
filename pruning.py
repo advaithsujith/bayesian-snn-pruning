@@ -52,6 +52,7 @@ in models.py's module docstring for why only each BasicBlock's internal
 `conv1` is physically prunable.
 """
 
+import math
 from typing import Any, Dict, List, Tuple
 
 import torch
@@ -337,6 +338,146 @@ def global_ratio_plan(model: nn.Module, keep_fraction: float, min_keep: int = 1)
     if promoted:
         detail += f", {promoted} unit(s) promoted to satisfy min_keep={min_keep}"
     return _plan_from_counts(model, counts, "global_ratio", detail)
+
+
+def synops_budget_plan(
+    model: nn.Module,
+    unit_costs: Dict[nn.Module, torch.Tensor],
+    budget_fraction: float,
+    rank_by: str = "density",
+    min_keep: int = 1,
+) -> KeepPlan:
+    """
+    Keep-set chosen under a SynOps budget: the pruned network may cost at
+    most `budget_fraction` of the unpruned network's measured SynOps
+    (`unit_costs` from metrics.measure_synops_unit_costs, keyed by layer
+    module exactly as this plan will be).
+
+    Two ranking rules, differing ONLY in the ordering -- the budget
+    accounting, floors and tie handling are identical, which is what makes
+    the pair a controlled comparison:
+
+    * `rank_by="density"` -- the cost-aware arm. Units are taken in order
+      of importance per unit cost, the classic greedy knapsack heuristic
+      (near-optimal here, where any single unit is small against the
+      budget; FALCON solves the same selection exactly as an ILP and is
+      the precedent that budgeted selection beats loss-side cost
+      minimisation). A quiet channel is cheap, so it needs less importance
+      to earn its place; a busy channel must justify its cost. Greedy
+      skip-and-continue: a unit too expensive for the remaining budget is
+      skipped and cheaper ones after it may still fit.
+
+    * `rank_by="importance"` -- the cost-blind control. Units are taken
+      strictly in posterior-uncertainty order (lowest log_alpha first),
+      and selection stops at the largest importance-prefix that fits the
+      budget. No skip-and-continue: peeking at cost to hop over an
+      expensive unit would make the control quietly cost-aware.
+
+    Importance is `sigmoid(-log_alpha)` = 1/(1+alpha). Any monotone
+    transform of log_alpha yields the same cost-blind ranking; the choice
+    only shapes the density trade-off, and this one is bounded, centred at
+    the alpha=1 decision point, and already used by the loss-side term
+    (bayesian_layers.total_expected_synops), so the two SynOps mechanisms
+    price importance identically.
+
+    `min_keep` floors are satisfied first, by importance, and win over the
+    budget: a severed layer is a broken network, not a cheap one. If the
+    floors alone exceed the budget that is recorded in the plan detail
+    rather than raised, since the caller can read the realised fraction
+    off plan_synops_fraction.
+    """
+    if rank_by not in ("density", "importance"):
+        raise ValueError(f"Unknown rank_by '{rank_by}'. Options: density, importance")
+    layers = collect_prunable_bayesian_layers(model)
+    if not layers:
+        raise ValueError("model has no structurally prunable Bayesian layers")
+    for layer in layers:
+        if layer not in unit_costs:
+            raise KeyError(
+                "unit_costs has no entry for a prunable layer; it was almost "
+                "certainly measured on a different model instance"
+            )
+        if int(unit_costs[layer].numel()) != int(layer.log_alpha.numel()):
+            raise ValueError("unit_costs entry length does not match the layer's unit count")
+
+    entries = []  # (layer_idx, unit_idx, log_alpha, cost)
+    total_cost = 0.0
+    for li, layer in enumerate(layers):
+        la = layer.log_alpha.detach().float().cpu()
+        cost = unit_costs[layer].detach().float().cpu()
+        total_cost += float(cost.sum())
+        for j in range(la.numel()):
+            entries.append((li, j, float(la[j]), float(cost[j])))
+    if total_cost <= 0.0:
+        raise ValueError("total measured SynOps is zero; no budget can be defined")
+    budget = budget_fraction * total_cost
+
+    # Floors first, by importance (lowest log_alpha), independent of cost.
+    kept: Dict[int, set] = {li: set() for li in range(len(layers))}
+    spent = 0.0
+    for li, layer in enumerate(layers):
+        la = layer.log_alpha.detach().float().cpu()
+        floor = min(min_keep, int(la.numel()))
+        for j in torch.argsort(la)[:floor].tolist():
+            kept[li].add(j)
+            spent += float(unit_costs[layer][j])
+
+    candidates = [e for e in entries if e[1] not in kept[e[0]]]
+    eps = 1e-12
+    if rank_by == "density":
+        # sigmoid(-log_alpha) in plain python; clamp the exponent so a gate
+        # pinned at the clamp floor cannot overflow exp().
+        candidates.sort(
+            key=lambda e: (1.0 / (1.0 + math.exp(min(e[2], 60.0)))) / max(e[3], eps),
+            reverse=True,
+        )
+        for li, j, _la, cost in candidates:
+            if spent + cost <= budget:
+                kept[li].add(j)
+                spent += cost
+    else:
+        candidates.sort(key=lambda e: e[2])  # ascending log_alpha = descending importance
+        for li, j, _la, cost in candidates:
+            if spent + cost > budget:
+                break
+            kept[li].add(j)
+            spent += cost
+
+    keeps: Dict[nn.Module, torch.Tensor] = {}
+    for layer in _all_gated_layers(model):
+        if layer.structurally_prunable:
+            li = layers.index(layer)
+            keeps[layer] = torch.tensor(sorted(kept[li]), dtype=torch.long)
+        else:
+            keeps[layer] = torch.arange(layer.log_alpha.numel(), dtype=torch.long)
+
+    n_kept = sum(len(s) for s in kept.values())
+    n_total = len(entries)
+    detail = (
+        f"budget={budget_fraction:g} of measured SynOps, rank_by={rank_by}, "
+        f"achieved={spent / total_cost:.4f}, kept {n_kept}/{n_total} units"
+    )
+    if spent > budget:
+        detail += f"; min_keep floors alone exceed the budget by {spent - budget:,.0f}"
+    return KeepPlan(keeps, "synops_budget", detail)
+
+
+def plan_synops_fraction(
+    model: nn.Module, plan: KeepPlan, unit_costs: Dict[nn.Module, torch.Tensor]
+) -> float:
+    """Fraction of the unpruned network's measured SynOps that `plan`'s
+    keep-set retains. Works for ANY plan (including the cost-blind modes),
+    which is what makes 'matched SynOps budget' checkable rather than
+    asserted."""
+    total = 0.0
+    kept = 0.0
+    for layer in collect_prunable_bayesian_layers(model):
+        cost = unit_costs[layer].detach().float().cpu()
+        total += float(cost.sum())
+        kept += float(cost[plan.indices(layer)].sum())
+    if total <= 0.0:
+        raise ValueError("total measured SynOps is zero")
+    return kept / total
 
 
 def _pruned_param_count(model: nn.Module, model_name: str, plan: KeepPlan, snn_cfg: SNNConfig) -> int:

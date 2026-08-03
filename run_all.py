@@ -301,6 +301,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         prune_threshold=cfg.bayesian.prune_threshold,
         restore_best_checkpoint=False,
         gate_diagnostic_every=5,
+        gate_optimizer_name=cfg.bayesian.gate_optimizer,
+        gate_lr=cfg.bayesian.gate_lr,
     )
     torch.save(model.state_dict(), os.path.join(cfg.output_dir, "bayesian_model.pt"))
 

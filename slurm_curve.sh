@@ -25,7 +25,16 @@
 # Requires outputs/dpap_repl/trained_model.pt (the 94.35% replicated
 # baseline). See slurm.sh for the CSF3 partition/GPU-request notes.
 #
-# Before submitting: python tests/test_ranked_pruning.py && python tests/test_vggstyle.py
+# Any arguments given to sbatch are passed straight through to
+# run_sparsity_curve.py, so each experimental arm is one submission line:
+#
+#   sbatch slurm_curve.sh --model dpap_repl --tag sgd \
+#       --gate-optimizer sgd --gate-lr 0.05 --targets 20 33.46 50.80 70 90
+#
+# With no arguments it runs the default beta0.01 Adam curve below.
+#
+# Before submitting: python tests/test_ranked_pruning.py &&
+#   python tests/test_vggstyle.py && python tests/test_synops.py
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
@@ -63,11 +72,15 @@ python run_sparsity_curve.py --model dpap_repl --diagnose-only
 #
 # Stops before the five fine-tunes if the gates did not differentiate, so a
 # bad gate phase costs ~1.5h rather than ~4h.
-python run_sparsity_curve.py \
-    --model dpap_repl \
-    --mode uniform \
-    --tag beta0.01 \
-    --targets 20 33.46 50.80 70 90
+if [ "$#" -gt 0 ]; then
+    python run_sparsity_curve.py "$@"
+else
+    python run_sparsity_curve.py \
+        --model dpap_repl \
+        --mode uniform \
+        --tag beta0.01 \
+        --targets 20 33.46 50.80 70 90
+fi
 
 echo "===================================================="
 echo "Job finished: $(date)"

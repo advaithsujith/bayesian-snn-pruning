@@ -185,6 +185,313 @@ def compute_and_set_unit_costs(
         h.remove()
 
 
+# ---------------------------------------------------------------------------
+# SynOps: the SNN compute-cost metric
+#
+# A synapse only does work when the neuron feeding it fires, so an SNN's
+# cost is the number of spike-triggered synaptic operations, not its dense
+# MAC count. estimate_flops prices every connection as if it fired every
+# timestep -- correct for an ANN, and blind to the one thing that makes an
+# SNN efficient. SynOps is the metric DPAP, SCA and the wider neuromorphic
+# literature report. Claim discipline (HANDOFF.md): SynOps is an energy
+# proxy for event-driven hardware; it is NOT a GPU speedup -- a GPU
+# multiplies zeros at full price, and measure_latency_ms already captures
+# the real GPU-side gain from physically smaller tensors. Report the two
+# separately.
+# ---------------------------------------------------------------------------
+
+
+class _LayerInputStats:
+    """Per-layer accumulator: nonzero counts of a module's input, both as a
+    per-channel/per-feature vector and as scalar totals."""
+
+    def __init__(self) -> None:
+        self.per_unit: "torch.Tensor | None" = None
+        self.nonzero = 0.0
+        self.elements = 0.0
+        self.dense_macs = 0.0
+        self.synops = 0.0
+
+
+def _dense_macs_for_call(module: nn.Module, output: torch.Tensor) -> float:
+    """Multiply-accumulates one forward call of `module` would cost densely
+    -- the same formulas _FlopCounter uses."""
+    if isinstance(module, nn.Conv2d):
+        batch, out_channels, out_h, out_w = output.shape
+        in_per_group = module.in_channels // module.groups
+        kernel = module.kernel_size[0] * module.kernel_size[1]
+        return float(in_per_group * kernel * out_channels * out_h * out_w * batch)
+    batch = output.shape[0]
+    return float(module.in_features * module.out_features * batch)
+
+
+@torch.no_grad()
+def measure_synops(
+    model: nn.Module,
+    loader: Any,
+    device: torch.device,
+    max_batches: int = 8,
+) -> Dict[str, Any]:
+    """
+    Measure the model's SynOps per inference (one sample, all timesteps) on
+    real data, alongside its dense MAC count for reference.
+
+    Per Conv2d/Linear call, event-driven MACs = (nonzero fraction of the
+    input) * (dense MACs of the call): only a nonzero input element
+    triggers its synapses. For stride-1 same-padded convs this equals
+    nonzero_inputs * k^2 * C_out exactly. Since every model's forward()
+    loops over `num_steps` internally, hooks fire once per timestep and
+    the totals come out already summed over time. The first conv's input
+    is the analog image (nonzero fraction ~1 under direct encoding), so
+    it is automatically priced densely -- the standard convention for the
+    input layer in the SNN literature.
+
+    Works on any model containing Conv2d/Linear submodules, gated or
+    physically pruned, so before/after comparisons use one code path.
+    Runs in eval mode (deterministic gates, dropout off) and restores the
+    previous training state.
+
+    Returns {"synops_per_sample", "dense_macs_per_sample", "per_layer"}
+    where per_layer maps module name -> {"synops", "dense_macs",
+    "input_event_frac"} (all per sample).
+    """
+    name_of = {m: name for name, m in model.named_modules()}
+    stats: Dict[nn.Module, _LayerInputStats] = {}
+    handles: List[Any] = []
+
+    def _hook(module: nn.Module, inputs: Any, output: torch.Tensor) -> None:
+        x = inputs[0]
+        s = stats.setdefault(module, _LayerInputStats())
+        nonzero = float((x != 0).sum())
+        elements = float(x.numel())
+        dense = _dense_macs_for_call(module, output)
+        s.nonzero += nonzero
+        s.elements += elements
+        s.dense_macs += dense
+        s.synops += dense * (nonzero / elements) if elements else 0.0
+
+    for module in model.modules():
+        if isinstance(module, (nn.Conv2d, nn.Linear)):
+            handles.append(module.register_forward_hook(_hook))
+
+    was_training = model.training
+    model.eval()
+    n_samples = 0
+    try:
+        for batch_idx, (images, _) in enumerate(loader):
+            if batch_idx >= max_batches:
+                break
+            images = images.to(device)
+            model(images)
+            n_samples += images.shape[0]
+    finally:
+        for h in handles:
+            h.remove()
+        model.train(was_training)
+
+    if n_samples == 0:
+        raise ValueError("measure_synops saw no data; loader was empty or max_batches=0")
+
+    per_layer: Dict[str, Dict[str, float]] = {}
+    total_synops = 0.0
+    total_dense = 0.0
+    for module, s in stats.items():
+        per_layer[name_of.get(module, repr(module))] = {
+            "synops": s.synops / n_samples,
+            "dense_macs": s.dense_macs / n_samples,
+            "input_event_frac": s.nonzero / s.elements if s.elements else 0.0,
+        }
+        total_synops += s.synops
+        total_dense += s.dense_macs
+
+    return {
+        "synops_per_sample": total_synops / n_samples,
+        "dense_macs_per_sample": total_dense / n_samples,
+        "per_layer": per_layer,
+    }
+
+
+def _synops_chain(model: nn.Module, model_name: str) -> List["tuple[Any, nn.Module, nn.Module]"]:
+    """(gated_layer, its inner Conv2d/Linear, consumer inner Conv2d/Linear)
+    for every gated layer, in depth order. The consumer is the module that
+    reads the gated layer's output, which is where that layer's spikes cost
+    downstream work.
+
+    Supports the sequential families only. SpikingResNet18 is rejected:
+    a block's conv1 output feeds conv2, but the residual addition means a
+    channel's downstream cost is not attributable to one consumer, and
+    ResNet18 is demoted to a documented negative result anyway (HANDOFF.md).
+    """
+    from models import LeNetSNN, VGG9SNN, VGGStyleSNN  # local: avoid an import cycle
+
+    if isinstance(model, VGGStyleSNN):
+        convs = list(model.conv_layers)
+        fcs = list(model.fc_layers)
+        chain = []
+        for i, conv in enumerate(convs):
+            if i + 1 < len(convs):
+                consumer = convs[i + 1].conv
+            elif fcs:
+                consumer = fcs[0].linear
+            else:
+                consumer = model.fc_out
+            chain.append((conv, conv.conv, consumer))
+        for i, fc in enumerate(fcs):
+            consumer = fcs[i + 1].linear if i + 1 < len(fcs) else model.fc_out
+            chain.append((fc, fc.linear, consumer))
+        return chain
+
+    if isinstance(model, LeNetSNN):
+        return [
+            (model.conv1, model.conv1.conv, model.conv2.conv),
+            (model.conv2, model.conv2.conv, model.fc1.linear),
+            (model.fc1, model.fc1.linear, model.fc2.linear),
+            (model.fc2, model.fc2.linear, model.fc_out),
+        ]
+
+    if isinstance(model, VGG9SNN):
+        convs = list(model.conv_layers)
+        chain = []
+        for i, conv in enumerate(convs):
+            consumer = convs[i + 1].conv if i + 1 < len(convs) else model.fc1.linear
+            chain.append((conv, conv.conv, consumer))
+        chain.append((model.fc1, model.fc1.linear, model.fc_out))
+        return chain
+
+    raise ValueError(
+        f"per-unit SynOps costs are not defined for '{model_name}' "
+        f"({type(model).__name__}); supported: LeNetSNN, VGG9SNN, and any "
+        "VGGStyleSNN. ResNet18's residual additions make per-channel "
+        "downstream cost non-attributable."
+    )
+
+
+def _macs_per_input_event(consumer: nn.Module) -> float:
+    """MACs one nonzero input element triggers in `consumer`: every synapse
+    that reads it. Conv: the element sits in k^2 receptive fields of each of
+    C_out filters (stride 1, same padding -- true of every conv in the
+    supported families). Linear: one weight per output feature."""
+    if isinstance(consumer, nn.Conv2d):
+        return float(
+            consumer.kernel_size[0] * consumer.kernel_size[1]
+            * consumer.out_channels // consumer.groups
+        )
+    return float(consumer.out_features)
+
+
+@torch.no_grad()
+def measure_synops_unit_costs(
+    model: nn.Module,
+    model_name: str,
+    loader: Any,
+    device: torch.device,
+    max_batches: int = 8,
+) -> Dict[nn.Module, torch.Tensor]:
+    """
+    Measure, per prunable unit j, the SynOps saved by removing it:
+
+        cost_j = r_in(l) * static_unit_cost_j   (computing j: only nonzero
+                                                 inputs trigger its synapses)
+               + events_j * macs_per_event(l+1) (j's own spikes driving the
+                                                 consumer layer)
+
+    where r_in(l) is the measured nonzero fraction of layer l's input,
+    events_j is unit j's measured per-sample output event count as seen at
+    the consumer's input (post-pooling, summed over timesteps), and the
+    static per-unit dense cost comes from compute_and_set_unit_costs (which
+    this function calls first, so `unit_cost` buffers are consistent
+    intermediates). The second term is the point of using SynOps at all: a
+    channel that rarely fires is nearly free to keep regardless of its
+    parameter count.
+
+    First-order approximation, stated rather than hidden: removing units
+    changes the surviving units' firing rates, which this snapshot cannot
+    see. That is why gate training re-measures every
+    `synops_recount_every` epochs rather than trusting one snapshot.
+
+    Returns {gated_layer_module: per-unit cost tensor (cpu, float)} for
+    every gated layer in the chain -- keyed by module, matching how
+    KeepPlan is keyed. Write into the model's buffers with
+    set_synops_unit_costs when the costs are for the loss term rather than
+    for selection.
+    """
+    chain = _synops_chain(model, model_name)
+
+    first_images, _ = next(iter(loader))
+    compute_and_set_unit_costs(model, (1, *first_images.shape[1:]), device)
+
+    hooked = {inner for _, inner, _ in chain} | {consumer for _, _, consumer in chain}
+    stats: Dict[nn.Module, _LayerInputStats] = {m: _LayerInputStats() for m in hooked}
+    handles: List[Any] = []
+
+    def _make_hook(module: nn.Module):
+        def _hook(_module: nn.Module, inputs: Any, _output: torch.Tensor) -> None:
+            x = inputs[0]
+            s = stats[module]
+            nz = x != 0
+            per_unit = nz.sum(dim=(0, 2, 3)) if x.dim() == 4 else nz.sum(dim=0)
+            per_unit = per_unit.float().cpu()
+            s.per_unit = per_unit if s.per_unit is None else s.per_unit + per_unit
+            s.nonzero += float(nz.sum())
+            s.elements += float(x.numel())
+
+        return _hook
+
+    for module in hooked:
+        handles.append(module.register_forward_hook(_make_hook(module)))
+
+    was_training = model.training
+    model.eval()
+    n_samples = 0
+    try:
+        for batch_idx, (images, _) in enumerate(loader):
+            if batch_idx >= max_batches:
+                break
+            images = images.to(device)
+            model(images)
+            n_samples += images.shape[0]
+    finally:
+        for h in handles:
+            h.remove()
+        model.train(was_training)
+
+    if n_samples == 0:
+        raise ValueError("measure_synops_unit_costs saw no data; loader was empty or max_batches=0")
+
+    costs: Dict[nn.Module, torch.Tensor] = {}
+    for layer, inner, consumer in chain:
+        own = stats[inner]
+        in_frac = own.nonzero / own.elements if own.elements else 0.0
+        term1 = in_frac * layer.unit_cost.detach().float().cpu()
+
+        events = stats[consumer].per_unit / n_samples
+        n_units = int(layer.unit_cost.numel())
+        if events.numel() != n_units:
+            # A conv feeding a Linear through flatten: the consumer sees
+            # C * spatial features; fold each channel's spatial block.
+            block = events.numel() // n_units
+            if block * n_units != events.numel():
+                raise RuntimeError(
+                    f"cannot map {events.numel()} consumer input features onto "
+                    f"{n_units} producer units; the flatten geometry is not an "
+                    "integer block per channel"
+                )
+            events = events.view(n_units, block).sum(dim=1)
+        term2 = events * _macs_per_input_event(consumer)
+
+        costs[layer] = (term1 + term2).float()
+    return costs
+
+
+def set_synops_unit_costs(model: nn.Module, costs: Dict[nn.Module, torch.Tensor]) -> None:
+    """Write measured per-unit SynOps costs into each layer's `unit_cost`
+    buffer, for consumption by bayesian_layers.total_expected_synops. After
+    this, the buffers no longer hold static dense FLOPs -- which is why the
+    SynOps budget term and the legacy gamma term are mutually exclusive."""
+    for layer, cost in costs.items():
+        layer.set_unit_cost(cost)
+
+
 def measure_gpu_memory_mb(device: torch.device) -> float:
     """Peak CUDA memory allocated, in megabytes. Returns 0.0 on CPU."""
     if device.type != "cuda":

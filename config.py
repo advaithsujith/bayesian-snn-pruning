@@ -191,6 +191,49 @@ class BayesianConfig:
     gamma_max: float = 0.0  # final weight of the expected-FLOPs-cost term (0.0 = disabled)
     cost_warmup_epochs: int = 15  # epochs over which gamma is linearly annealed to gamma_max
 
+    # -- Gate-phase optimizer split (see train.build_gate_split_optimizers) --
+    # "inherit": log_alpha trains inside the same optimizer as the weights
+    #            (previous behaviour, and the default).
+    # "sgd":     log_alpha gets its own plain SGD (no momentum) at `gate_lr`,
+    #            while the weights keep the phase's configured optimizer.
+    # Motivation: under Adam the per-parameter update is ~lr * sign(grad)
+    # whenever one loss term dominates, so gates march at a constant rate
+    # per epoch regardless of how the task-vs-KL gradient balance changes --
+    # the equilibrium the mechanism relies on assumes steps proportional to
+    # gradient magnitude, which plain SGD restores. See HANDOFF.md
+    # ("Why beta_max went 0.4 to 0.01") for the measured march.
+    gate_optimizer: str = "inherit"  # "inherit" | "sgd"
+    gate_lr: Optional[float] = None  # None => bayesian_train_lr
+
+    # -- SynOps-budget loss term (dual-ascent Lagrangian; see train.run_training) --
+    # None disables the term entirely (default; every existing experiment is
+    # unchanged). A value b in (0, 1] constrains the expected SynOps of the
+    # surviving network to b * (its measured SynOps at the start of gate
+    # training):
+    #     loss += lambda * (E[SynOps] / budget - 1)
+    # with lambda >= 0 updated by dual ascent at the end of every epoch:
+    #     lambda <- max(0, lambda + synops_lambda_lr * (E[SynOps]-budget)/budget)
+    # The multiplier tunes itself: pressure rises while the model is over
+    # budget and decays back toward zero once under it. This deliberately
+    # replaces the fixed `gamma_max` weighting for compute-aware pruning,
+    # which failed in four runs (calibrated values changed nothing, 30x
+    # values collapsed the network); FALCON's ablations (arXiv 2403.07094)
+    # found budget-constrained formulations strictly better than plain cost
+    # minimisation, and HALP (arXiv 2110.10811) uses the same
+    # pressure-follows-violation idea for latency. E[SynOps] uses the
+    # measured per-unit SynOps costs (metrics.measure_synops_unit_costs) and
+    # the well-conditioned keep-probability surrogate sigmoid(-log_alpha) --
+    # see bayesian_layers.total_expected_synops. Mutually exclusive with
+    # gamma_max > 0, since both write to the same `unit_cost` buffers.
+    synops_budget_fraction: Optional[float] = None
+    synops_lambda_lr: float = 0.05
+    # Epochs between re-measurements of the per-unit SynOps costs during
+    # gate training (firing rates drift as the network trains). 0 = measure
+    # once at phase start and hold.
+    synops_recount_every: int = 1
+    # Batches of the training loader used per rate measurement.
+    synops_measure_batches: int = 8
+
 
 @dataclass
 class TrainConfig:

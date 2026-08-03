@@ -44,6 +44,19 @@ Usage
     # reuse gates trained by an earlier invocation or by run_all.py
     python run_sparsity_curve.py --model dpap_repl --targets 20 40 60 --reuse-gates
 
+    # SynOps-budgeted selection: each budget runs cost-blind AND cost-aware
+    # from the same gates -- the paired comparison at matched compute budget
+    python run_sparsity_curve.py --model dpap_repl --synops-budgets 0.5 0.3 --reuse-gates
+
+    # the two-arm gate-optimizer experiment (submit both, different tags)
+    python run_sparsity_curve.py --model dpap_repl --targets 33.46 50.80 --tag adam
+    python run_sparsity_curve.py --model dpap_repl --targets 33.46 50.80 \
+        --gate-optimizer sgd --gate-lr 0.05 --tag sgd
+
+    # SynOps budget inside the gate-training loss (dual-ascent Lagrangian)
+    python run_sparsity_curve.py --model dpap_repl --synops-budgets 0.5 \
+        --synops-loss-budget 0.5 --tag synopsloss
+
 Writes `outputs/<model>/sparsity_curve/summary.csv` plus per-target
 per-layer structure reports.
 """
@@ -61,7 +74,9 @@ from evaluate import full_evaluation
 from metrics import (
     compute_and_set_unit_costs,
     count_parameters,
+    measure_synops_unit_costs,
     pruning_percentage,
+    set_synops_unit_costs,
     write_csv,
 )
 from models import build_model
@@ -69,8 +84,10 @@ from pruning import (
     KeepPlan,
     compute_uncertainty_report,
     param_target_plan,
+    plan_synops_fraction,
     prune_model,
     remaining_structures_report,
+    synops_budget_plan,
 )
 from train import run_training
 from utils import ensure_dirs, get_device, print_banner, set_seed, setup_logger
@@ -212,6 +229,33 @@ def run_curve(args: argparse.Namespace) -> None:
 
     csv_rows: List[Dict[str, Any]] = []
 
+    # CLI overrides fall back to the config's values, so a submitted job can
+    # flip one arm's optimizer or budget without editing config.py -- that is
+    # what makes a two-arm (Adam vs SGD-gates) submission two sbatch lines.
+    gate_optimizer_name = args.gate_optimizer or cfg.bayesian.gate_optimizer
+    gate_lr = args.gate_lr if args.gate_lr is not None else cfg.bayesian.gate_lr
+    synops_loss_budget = (
+        args.synops_loss_budget
+        if args.synops_loss_budget is not None
+        else cfg.bayesian.synops_budget_fraction
+    )
+    synops_refresh_fn = None
+    if synops_loss_budget is not None:
+        if cfg.bayesian.gamma_max > 0.0:
+            raise SystemExit(
+                "The SynOps budget term and gamma_max are mutually exclusive: both "
+                "write to the same unit_cost buffers. Set gamma_max=0 for this run."
+            )
+
+        def synops_refresh_fn(m):
+            set_synops_unit_costs(
+                m,
+                measure_synops_unit_costs(
+                    m, args.model, train_loader, device,
+                    max_batches=cfg.bayesian.synops_measure_batches,
+                ),
+            )
+
     if args.reuse_gates and os.path.isfile(gate_path):
         print(f"\nReusing trained gates: {gate_path}")
         logger.info(f"Reusing trained gates from {gate_path}")
@@ -227,6 +271,10 @@ def run_curve(args: argparse.Namespace) -> None:
         model = build_and_load(args.model, cfg, device, pretrained_path)
 
         print("\nTraining Bayesian gates (once, for every target on the curve)...")
+        if gate_optimizer_name != "inherit":
+            print(f"  gate optimizer: {gate_optimizer_name} (gate_lr={gate_lr})")
+        if synops_loss_budget is not None:
+            print(f"  SynOps budget term active: {synops_loss_budget:g} of dense SynOps")
         set_bayesian_mode(model, True)
         run_training(
             model, train_loader, val_loader,
@@ -252,6 +300,12 @@ def run_curve(args: argparse.Namespace) -> None:
             prune_threshold=cfg.bayesian.prune_threshold,
             restore_best_checkpoint=False,
             gate_diagnostic_every=5,
+            gate_optimizer_name=gate_optimizer_name,
+            gate_lr=gate_lr,
+            synops_budget_fraction=synops_loss_budget,
+            synops_lambda_lr=cfg.bayesian.synops_lambda_lr,
+            synops_recount_every=cfg.bayesian.synops_recount_every,
+            synops_refresh_fn=synops_refresh_fn,
         )
         torch.save(model.state_dict(), gate_path)
 
@@ -289,14 +343,19 @@ def run_curve(args: argparse.Namespace) -> None:
     original_params = count_parameters(model, exclude_gates=True)
     results: List[Dict[str, Any]] = []
 
-    for i, target in enumerate(args.targets, start=1):
-        tag = f"target{target:g}"
-        print(f"\n--- point {i}/{len(args.targets)}: {target:g}% of parameters pruned ---")
+    def execute_point(
+        plan: KeepPlan,
+        tag: str,
+        label: str,
+        selection: str,
+        synops_budget: "float | str" = "",
+        kept_synops_fraction: "float | str" = "",
+    ) -> None:
+        """Rebuild, fine-tune, evaluate and record one curve point.
 
-        plan, achieved = param_target_plan(
-            model, args.model, cfg.snn, target, mode=args.mode,
-            min_keep=cfg.bayesian.min_keep_per_layer,
-        )
+        Every row carries the same key set no matter which loop produced
+        it: write_csv takes the CSV header from the first row, so rows
+        with differing keys would crash the writer mid-run."""
         saturation = plan.saturation_report(model)
         usable, reason = plan.ranking_is_usable(model)
         logger.info(f"[{tag}] {plan.describe()}")
@@ -336,7 +395,10 @@ def run_curve(args: argparse.Namespace) -> None:
             (cfg.latency_batch_size, 3, 32, 32),
             cfg.latency_num_warmup, cfg.latency_num_runs,
         )
-        logger.info(f"[{tag}] test accuracy {eval_after['test_accuracy']:.4f}")
+        logger.info(
+            f"[{tag}] test accuracy {eval_after['test_accuracy']:.4f}, "
+            f"synops/sample {eval_after['synops']:,.0f}"
+        )
 
         point_dir = os.path.join(out_dir, tag)
         ensure_dirs(point_dir)
@@ -347,14 +409,18 @@ def run_curve(args: argparse.Namespace) -> None:
         )
 
         results.append({
-            "Target Pruned %": target,
+            "Point": label,
+            "Selection": selection,
             "Achieved Pruned %": pruning_percentage(original_params, remaining_params),
+            "SynOps Budget": synops_budget,
+            "Kept SynOps Fraction": kept_synops_fraction,
             "Keep Plan": plan.describe(),
-            "Mode": args.mode,
             "Original Parameters": original_params,
             "Remaining Parameters": remaining_params,
             "Accuracy After": eval_after["test_accuracy"],
             "Fine Tune Best Val": finetune["best_val_acc"],
+            "SynOps After": eval_after["synops"],
+            "Dense MACs After": eval_after["dense_macs"],
             "Gate Saturation": saturation["frac_saturated_high"],
             "Log Alpha Std": saturation["log_alpha_std"],
             "Ranking Usable": usable,
@@ -366,12 +432,48 @@ def run_curve(args: argparse.Namespace) -> None:
         # still leaves the completed points behind.
         write_csv(results, os.path.join(out_dir, "summary.csv"))
 
+    for i, target in enumerate(args.targets, start=1):
+        tag = f"target{target:g}"
+        print(f"\n--- target point {i}/{len(args.targets)}: {target:g}% of parameters pruned ---")
+        plan, achieved = param_target_plan(
+            model, args.model, cfg.snn, target, mode=args.mode,
+            min_keep=cfg.bayesian.min_keep_per_layer,
+        )
+        execute_point(plan, tag, f"params {target:g}%", f"log_alpha/{args.mode}")
+
+    if args.synops_budgets:
+        # One measurement serves every budget point: the costs describe the
+        # gate-trained model being pruned, and both arms must price units
+        # identically or the comparison is confounded.
+        print("\nMeasuring per-unit SynOps costs on the gate-trained model...")
+        unit_costs = measure_synops_unit_costs(
+            model, args.model, train_loader, device, max_batches=args.synops_batches
+        )
+        for i, budget in enumerate(args.synops_budgets, start=1):
+            # importance (cost-blind control) first, density (cost-aware)
+            # second: if wallclock dies between them, the control exists.
+            for rank_by in ("importance", "density"):
+                tag = f"synops{budget:g}_{rank_by}"
+                print(
+                    f"\n--- budget point {i}/{len(args.synops_budgets)} ({rank_by}): "
+                    f"{budget:g} of dense SynOps ---"
+                )
+                plan = synops_budget_plan(
+                    model, unit_costs, budget, rank_by=rank_by,
+                    min_keep=cfg.bayesian.min_keep_per_layer,
+                )
+                kept = plan_synops_fraction(model, plan, unit_costs)
+                execute_point(plan, tag, f"synops {budget:g}", rank_by, budget, kept)
+
     print_banner("SPARSITY CURVE FINISHED")
-    print(f"{'pruned %':>10} {'accuracy':>10} {'saturation':>12} {'la std':>9} {'usable':>8}")
+    print(
+        f"{'point':>16} {'selection':>18} {'pruned %':>10} {'accuracy':>10} "
+        f"{'synops':>14} {'usable':>8}"
+    )
     for r in sorted(results, key=lambda r: r["Achieved Pruned %"]):
         print(
-            f"{r['Achieved Pruned %']:>10.2f} {r['Accuracy After']:>10.4f} "
-            f"{r['Gate Saturation']:>12.3f} {r['Log Alpha Std']:>9.3f} "
+            f"{r['Point']:>16} {r['Selection']:>18} {r['Achieved Pruned %']:>10.2f} "
+            f"{r['Accuracy After']:>10.4f} {r['SynOps After']:>14,.0f} "
             f"{('yes' if r['Ranking Usable'] else 'NO'):>8}"
         )
     if results and not results[0]["Ranking Usable"]:
@@ -421,9 +523,42 @@ def main() -> None:
         help="build the curve even if the gates produced no usable ranking. Only "
              "meaningful for deliberately generating a random-pruning control.",
     )
+    parser.add_argument(
+        "--synops-budgets", type=float, nargs="+", default=[],
+        help="SynOps budgets as fractions of the dense network's measured SynOps "
+             "(e.g. 0.5 0.3). Each budget is run twice from the same gates: once "
+             "cost-blind (importance ranking) and once cost-aware (density "
+             "ranking) -- that pair at matched budget IS the contribution "
+             "comparison.",
+    )
+    parser.add_argument(
+        "--synops-batches", type=int, default=8,
+        help="training-loader batches used to measure per-unit SynOps costs for "
+             "the budgeted selection.",
+    )
+    parser.add_argument(
+        "--synops-loss-budget", type=float, default=None,
+        help="enable the SynOps-budget Lagrangian term DURING gate training, "
+             "constraining expected SynOps to this fraction of the dense "
+             "network's (see BayesianConfig.synops_budget_fraction). Overrides "
+             "the config value; leave unset to use the config (default: off).",
+    )
+    parser.add_argument(
+        "--gate-optimizer", choices=["inherit", "sgd"], default=None,
+        help="override BayesianConfig.gate_optimizer for this run: 'sgd' trains "
+             "log_alpha with plain SGD while the weights keep the configured "
+             "optimizer. See train.build_gate_split_optimizers for why.",
+    )
+    parser.add_argument(
+        "--gate-lr", type=float, default=None,
+        help="learning rate for the split gate optimizer (only meaningful with "
+             "--gate-optimizer sgd). Overrides BayesianConfig.gate_lr.",
+    )
     args = parser.parse_args()
-    if not args.targets and not args.diagnose_only:
-        parser.error("--targets is required unless --diagnose-only is given")
+    if not args.targets and not args.synops_budgets and not args.diagnose_only:
+        parser.error(
+            "--targets and/or --synops-budgets is required unless --diagnose-only is given"
+        )
     run_curve(args)
 
 

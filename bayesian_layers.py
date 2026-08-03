@@ -345,6 +345,53 @@ def total_expected_cost(model: nn.Module, threshold: float) -> torch.Tensor:
     return sum(layer.expected_cost(threshold) for layer in layers)
 
 
+def total_expected_synops(model: nn.Module) -> torch.Tensor:
+    """
+    Expected SynOps of the surviving network under the current posterior:
+    sum over every structurally prunable gate of `unit_cost_j * p_keep_j`,
+    with `p_keep_j = sigmoid(-log_alpha_j) = 1 / (1 + alpha_j)`.
+
+    Two deliberate differences from the legacy `expected_cost(threshold)`:
+
+    * `unit_cost` is expected to hold *measured SynOps* (written per-epoch
+      by metrics.measure_synops_unit_costs via set_unit_cost), not the
+      static dense-FLOPs geometry. A channel that rarely spikes is cheap to
+      keep regardless of its parameter count, which is the entire point of
+      using SynOps as the cost metric for an SNN -- the dense counter never
+      counts a spike and so cannot see that.
+
+    * The keep-probability surrogate is `sigmoid(-log_alpha)` rather than
+      `1 - sigmoid(log_alpha - threshold)`. The old surrogate's gradient at
+      the initialisation point (log_alpha=-3, threshold=3) is 0.0025, so
+      the cost term was ~400x weaker by gradient than by value during
+      exactly the epochs the KL decides everything (HANDOFF.md, "Three
+      things the metric swap does not fix", item 1). sigmoid(-log_alpha)
+      is centred where the decision actually happens: gradient 0.045 at
+      init (~18x more) and 0.25 at log_alpha=0, where a gate's noise
+      equals its signal. It is also 1/(1+alpha), the natural "how much of
+      this unit's signal survives its own noise" quantity, so it needs no
+      threshold hyperparameter at all.
+    """
+    layers = collect_prunable_bayesian_layers(model)
+    if not layers:
+        return _zero_like_model(model)
+    total = _zero_like_model(model)
+    for layer in layers:
+        p_keep = torch.sigmoid(-layer._clamped_log_alpha())
+        total = total + (p_keep * layer.unit_cost).sum()
+    return total
+
+
+def total_unit_cost(model: nn.Module) -> float:
+    """Sum of every structurally prunable layer's `unit_cost` buffer -- the
+    cost of keeping the whole network, i.e. the denominator a SynOps budget
+    fraction is taken of. A plain float: this is bookkeeping, not a loss
+    term, and must never carry gradient."""
+    return float(
+        sum(layer.unit_cost.sum().item() for layer in collect_prunable_bayesian_layers(model))
+    )
+
+
 def set_bayesian_mode(model: nn.Module, active: bool) -> None:
     """
     Toggle `enable_gate_noise` on every Bayesian layer in `model`.

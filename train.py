@@ -36,50 +36,67 @@ def train_one_epoch(
     gamma: float = 0.0,
     prune_threshold: float = 3.0,
     loss_type: str = "spike_rate_ce",
+    gate_optimizer: Optional[torch.optim.Optimizer] = None,
+    lam: float = 0.0,
+    synops_budget: float = 0.0,
 ) -> Dict[str, float]:
     """Run one training epoch. Returns average task loss, KL, expected-cost,
-    total loss, and accuracy. `gamma`/`prune_threshold` only take effect for
-    Bayesian models (bio-inspired pruning models have no gates, so the
-    non-bayesian branch below never uses them). `loss_type` selects the task
-    loss and applies to both branches."""
+    expected-SynOps, total loss, and accuracy. `gamma`/`prune_threshold` only
+    take effect for Bayesian models (bio-inspired pruning models have no
+    gates, so the non-bayesian branch below never uses them). `loss_type`
+    selects the task loss and applies to both branches.
+
+    `gate_optimizer`, when given, holds the log_alpha parameters *instead of*
+    `optimizer` (see build_gate_split_optimizers); both are zeroed and
+    stepped together on every batch, from the same backward pass.
+    `lam`/`synops_budget` parameterise the SynOps-budget Lagrangian term
+    (see losses.bayesian_snn_loss); both default to inert."""
     model.train()
     is_bayesian = len(collect_bayesian_layers(model)) > 0
+    optimizers = [optimizer] + ([gate_optimizer] if gate_optimizer is not None else [])
 
-    total_task_loss, total_kl, total_cost, total_loss, total_acc, n_batches = (
-        0.0, 0.0, 0.0, 0.0, 0.0, 0,
+    total_task_loss, total_kl, total_cost, total_synops, total_loss, total_acc, n_batches = (
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0,
     )
 
     for images, targets in loader:
         images, targets = images.to(device), targets.to(device)
-        optimizer.zero_grad(set_to_none=True)
+        for opt in optimizers:
+            opt.zero_grad(set_to_none=True)
 
         amp_enabled = use_amp and device.type == "cuda"
         with torch.cuda.amp.autocast(enabled=amp_enabled):
             spk_rec = model(images)
             if is_bayesian:
-                loss, task_loss, kl_term, cost_term = bayesian_snn_loss(
-                    spk_rec, targets, model, beta, gamma, prune_threshold, loss_type
+                loss, task_loss, kl_term, cost_term, synops_term = bayesian_snn_loss(
+                    spk_rec, targets, model, beta, gamma, prune_threshold, loss_type,
+                    lam=lam, synops_budget=synops_budget,
                 )
             else:
                 task_loss = get_task_loss(loss_type)(spk_rec, targets)
                 kl_term = torch.tensor(0.0, device=device)
                 cost_term = torch.tensor(0.0, device=device)
+                synops_term = torch.tensor(0.0, device=device)
                 loss = task_loss
 
         if amp_enabled:
             scaler.scale(loss).backward()
-            scaler.unscale_(optimizer)
+            for opt in optimizers:
+                scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
-            scaler.step(optimizer)
+            for opt in optimizers:
+                scaler.step(opt)
             scaler.update()
         else:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
-            optimizer.step()
+            for opt in optimizers:
+                opt.step()
 
         total_task_loss += task_loss.item()
         total_kl += float(kl_term)
         total_cost += float(cost_term)
+        total_synops += float(synops_term)
         total_loss += loss.item()
         total_acc += _spike_accuracy(spk_rec.detach(), targets)
         n_batches += 1
@@ -88,6 +105,7 @@ def train_one_epoch(
         "task_loss": total_task_loss / n_batches,
         "kl": total_kl / n_batches,
         "cost": total_cost / n_batches,
+        "synops": total_synops / n_batches,
         "total_loss": total_loss / n_batches,
         "accuracy": total_acc / n_batches,
     }
@@ -236,6 +254,10 @@ def build_optimizer(model: nn.Module, name: str, lr: float, weight_decay: float)
     as the other would be a materially different optimiser.
     """
     param_groups = _param_groups_excluding_gates(model, weight_decay)
+    return _optimizer_by_name(name, param_groups, lr)
+
+
+def _optimizer_by_name(name: str, param_groups: List[Dict[str, Any]], lr: float) -> torch.optim.Optimizer:
     if name == "adam":
         return torch.optim.Adam(param_groups, lr=lr)
     if name == "adamw":
@@ -243,6 +265,61 @@ def build_optimizer(model: nn.Module, name: str, lr: float, weight_decay: float)
     if name == "sgd":
         return torch.optim.SGD(param_groups, lr=lr, momentum=0.9)
     raise ValueError(f"Unknown optimizer '{name}'")
+
+
+def build_gate_split_optimizers(
+    model: nn.Module,
+    name: str,
+    lr: float,
+    weight_decay: float,
+    gate_optimizer: str = "inherit",
+    gate_lr: Optional[float] = None,
+) -> "tuple[torch.optim.Optimizer, Optional[torch.optim.Optimizer]]":
+    """
+    Build (main_optimizer, gate_optimizer_or_None) for a training phase.
+
+    `gate_optimizer="inherit"` reproduces build_optimizer exactly: one
+    optimizer, gates in their own weight_decay=0 group. `"sgd"` moves every
+    `log_alpha` parameter out of the main optimizer and into a plain SGD
+    (momentum 0, weight decay 0) at `gate_lr` (None => `lr`).
+
+    Why plain SGD, and why no momentum: Adam divides each update by that
+    parameter's own running gradient magnitude, so while one loss term
+    dominates the update on log_alpha is ~lr * sign(grad) -- a constant
+    march per step that is independent of how large the opposing gradient
+    is. The task-vs-KL equilibrium the gate mechanism relies on assumes the
+    step *shrinks* as the two gradients approach balance, which is exactly
+    the gradient-proportional stepping SGD provides. Momentum is left off
+    because it reintroduces a (milder) version of the same insensitivity:
+    accumulated velocity carries a gate past the balance point the current
+    gradient no longer supports.
+
+    Note the scheduler consequence: run_training's LR scheduler is attached
+    to the main optimizer only, so under "sgd" the gate LR is constant for
+    the whole phase. That is deliberate -- a decaying gate LR would make
+    late-phase gate movement vanish for scheduling reasons that have
+    nothing to do with the loss landscape, muddying exactly the
+    "did the gates settle or were they frozen" reading the phase exists
+    to produce.
+    """
+    if gate_optimizer == "inherit":
+        return build_optimizer(model, name, lr, weight_decay), None
+    if gate_optimizer != "sgd":
+        raise ValueError(f"Unknown gate_optimizer '{gate_optimizer}'. Options: inherit, sgd")
+
+    gate_params = [p for pname, p in model.named_parameters() if "log_alpha" in pname]
+    other_params = [p for pname, p in model.named_parameters() if "log_alpha" not in pname]
+    main = _optimizer_by_name(name, [{"params": other_params, "weight_decay": weight_decay}], lr)
+    if not gate_params:
+        # A physically-pruned (non-Bayesian) model has no gates left; the
+        # split silently degenerates to the main optimizer alone.
+        return main, None
+    gates = torch.optim.SGD(
+        [{"params": gate_params, "weight_decay": 0.0}],
+        lr=(lr if gate_lr is None else gate_lr),
+        momentum=0.0,
+    )
+    return main, gates
 
 
 def build_scheduler(
@@ -307,6 +384,12 @@ def run_training(
     lr_warmup_epochs: int = 0,
     min_lr: float = 0.0,
     gate_diagnostic_every: int = 0,
+    gate_optimizer_name: str = "inherit",
+    gate_lr: Optional[float] = None,
+    synops_budget_fraction: Optional[float] = None,
+    synops_lambda_lr: float = 0.05,
+    synops_recount_every: int = 1,
+    synops_refresh_fn: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Full multi-epoch training/fine-tuning loop with validation, cosine LR
@@ -340,11 +423,54 @@ def run_training(
     gradient balance on a fixed batch every N epochs -- see
     gate_pressure_diagnostic for why that measurement, and not a beta_max
     sweep, is what diagnoses a collapse.
+
+    `gate_optimizer_name`/`gate_lr` select a separate plain-SGD optimizer
+    for the log_alpha parameters (see build_gate_split_optimizers). The LR
+    scheduler applies to the main optimizer only.
+
+    `synops_budget_fraction` (with `synops_refresh_fn`) enables the
+    SynOps-budget Lagrangian: the refresh callable re-measures per-unit
+    SynOps costs into every gated layer's `unit_cost` buffer (it is given
+    the model and must handle its own data/device), and is invoked at
+    phase start and every `synops_recount_every` epochs after. The budget
+    itself is frozen at phase start -- `fraction * total_unit_cost` of the
+    *initial* measurement -- so the target does not drift as the network's
+    firing rates change. `lam` starts at 0 and follows dual ascent on the
+    normalised violation each epoch. Returns the final `lam` in the result
+    dict as "final_lambda" when active.
     """
+    from bayesian_layers import total_unit_cost
+
     model.to(device)
-    optimizer = build_optimizer(model, optimizer_name, lr, weight_decay)
+    optimizer, gate_opt = build_gate_split_optimizers(
+        model, optimizer_name, lr, weight_decay, gate_optimizer_name, gate_lr
+    )
     scheduler = build_scheduler(optimizer, scheduler_name, epochs, lr_warmup_epochs, min_lr)
     scaler = torch.cuda.amp.GradScaler(enabled=(use_amp and device.type == "cuda"))
+
+    use_synops = synops_budget_fraction is not None
+    lam = 0.0
+    synops_budget = 0.0
+    if use_synops:
+        if synops_refresh_fn is None:
+            raise ValueError(
+                "synops_budget_fraction is set but no synops_refresh_fn was given; "
+                "without a measurement callable every unit_cost buffer stays zero "
+                "and the budget term would be silently inert"
+            )
+        synops_refresh_fn(model)
+        dense_synops = total_unit_cost(model)
+        if dense_synops <= 0.0:
+            raise ValueError(
+                "measured total SynOps is zero after the initial refresh -- the "
+                "cost measurement found no events, so a budget cannot be defined"
+            )
+        synops_budget = synops_budget_fraction * dense_synops
+        logger.info(
+            f"[{phase_name}] SynOps budget: {synops_budget:,.0f} "
+            f"({synops_budget_fraction:g} of measured dense {dense_synops:,.0f}); "
+            f"lambda_lr={synops_lambda_lr:g}, recount every {synops_recount_every} epoch(s)"
+        )
 
     # One fixed batch, held for the whole phase, so successive diagnostics
     # differ because the model changed rather than because the data did.
@@ -362,6 +488,9 @@ def run_training(
         beta = linear_warmup_schedule(epoch, kl_warmup_epochs, beta_max)
         gamma = linear_warmup_schedule(epoch, cost_warmup_epochs, gamma_max)
 
+        if use_synops and synops_recount_every > 0 and epoch > 0 and epoch % synops_recount_every == 0:
+            synops_refresh_fn(model)
+
         train_stats = train_one_epoch(
             model,
             train_loader,
@@ -374,11 +503,26 @@ def run_training(
             gamma=gamma,
             prune_threshold=prune_threshold,
             loss_type=loss_type,
+            gate_optimizer=gate_opt,
+            lam=lam,
+            synops_budget=synops_budget,
         )
         val_stats = evaluate_loader(model, val_loader, device, loss_type=loss_type)
 
         if scheduler is not None:
             scheduler.step()
+
+        synops_line = ""
+        epoch_lambda = lam
+        if use_synops:
+            violation = (train_stats["synops"] - synops_budget) / synops_budget
+            synops_line = (
+                f" E_synops={train_stats['synops']:,.0f} "
+                f"({train_stats['synops'] / synops_budget:.2f}x budget) lambda={epoch_lambda:.4f}"
+            )
+            # Dual ascent *after* the epoch that trained under the current
+            # lam, so the logged lambda is the one the epoch actually used.
+            lam = max(0.0, lam + synops_lambda_lr * violation)
 
         epoch_time = time.time() - epoch_start
         logger.info(
@@ -388,7 +532,7 @@ def run_training(
             f"train_cost={train_stats['cost']:.2f} gamma={gamma:.6f} "
             f"train_acc={train_stats['accuracy']:.4f} "
             f"val_loss={val_stats['loss']:.4f} val_acc={val_stats['accuracy']:.4f} "
-            f"time={epoch_time:.1f}s"
+            f"time={epoch_time:.1f}s{synops_line}"
         )
 
         if phase_name == "bayesian_train":
@@ -436,6 +580,12 @@ def run_training(
                 "train_total_loss": train_stats["total_loss"],
                 "beta": beta,
                 "gamma": gamma,
+                # Always present (0.0 when the budget term is off) so every
+                # phase's rows share one column set -- write_csv takes its
+                # header from the first row, and run_all.py accumulates all
+                # phases into a single training_log.csv.
+                "train_synops": train_stats["synops"],
+                "lambda": epoch_lambda,
                 "train_accuracy": train_stats["accuracy"],
                 "val_loss": val_stats["loss"],
                 "val_accuracy": val_stats["accuracy"],
@@ -453,4 +603,7 @@ def run_training(
     total_time = time.time() - start_time
     save_checkpoint({"model_state_dict": model.state_dict(), "best_val_acc": best_val_acc}, checkpoint_path)
 
-    return {"best_val_acc": best_val_acc, "total_time_sec": total_time}
+    result = {"best_val_acc": best_val_acc, "total_time_sec": total_time}
+    if use_synops:
+        result["final_lambda"] = lam
+    return result
