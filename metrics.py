@@ -211,6 +211,10 @@ class _LayerInputStats:
         self.elements = 0.0
         self.dense_macs = 0.0
         self.synops = 0.0
+        # Input/output spatial sizes (H*W) of a conv's forward calls; used
+        # to price MACs-per-event correctly for valid-padding convs.
+        self.in_spatial = 0.0
+        self.out_spatial = 0.0
 
 
 def _dense_macs_for_call(module: nn.Module, output: torch.Tensor) -> float:
@@ -366,16 +370,23 @@ def _synops_chain(model: nn.Module, model_name: str) -> List["tuple[Any, nn.Modu
     )
 
 
-def _macs_per_input_event(consumer: nn.Module) -> float:
+def _macs_per_input_event(consumer: nn.Module, out_over_in_spatial: float = 1.0) -> float:
     """MACs one nonzero input element triggers in `consumer`: every synapse
-    that reads it. Conv: the element sits in k^2 receptive fields of each of
-    C_out filters (stride 1, same padding -- true of every conv in the
-    supported families). Linear: one weight per output feature."""
+    that reads it. Linear: one weight per output feature. Conv: an average
+    input position lies inside k^2 * (out_hw / in_hw) kernel windows of
+    each of the C_out filters. The spatial ratio is exactly 1 for the
+    same-padded stride-1 convs of the VGG families, and below 1 for
+    valid-padding convs (LeNet's 5x5s: a 14x14 input maps to a 10x10
+    output, so an average event sits in 25 * 100/196 ~ 12.8 windows, not
+    25 -- border positions fall inside fewer windows). Using the measured
+    ratio keeps this pricing identical to measure_synops's
+    frac-times-dense accounting, so kept-cost fractions reconcile with the
+    network-level SynOps figure."""
     if isinstance(consumer, nn.Conv2d):
         return float(
             consumer.kernel_size[0] * consumer.kernel_size[1]
             * consumer.out_channels // consumer.groups
-        )
+        ) * out_over_in_spatial
     return float(consumer.out_features)
 
 
@@ -425,11 +436,16 @@ def measure_synops_unit_costs(
     handles: List[Any] = []
 
     def _make_hook(module: nn.Module):
-        def _hook(_module: nn.Module, inputs: Any, _output: torch.Tensor) -> None:
+        def _hook(_module: nn.Module, inputs: Any, output: torch.Tensor) -> None:
             x = inputs[0]
             s = stats[module]
             nz = x != 0
-            per_unit = nz.sum(dim=(0, 2, 3)) if x.dim() == 4 else nz.sum(dim=0)
+            if x.dim() == 4:
+                per_unit = nz.sum(dim=(0, 2, 3))
+                s.in_spatial = float(x.shape[2] * x.shape[3])
+                s.out_spatial = float(output.shape[2] * output.shape[3])
+            else:
+                per_unit = nz.sum(dim=0)
             per_unit = per_unit.float().cpu()
             s.per_unit = per_unit if s.per_unit is None else s.per_unit + per_unit
             s.nonzero += float(nz.sum())
@@ -477,7 +493,13 @@ def measure_synops_unit_costs(
                     "integer block per channel"
                 )
             events = events.view(n_units, block).sum(dim=1)
-        term2 = events * _macs_per_input_event(consumer)
+        cs = stats[consumer]
+        ratio = (
+            cs.out_spatial / cs.in_spatial
+            if isinstance(consumer, nn.Conv2d) and cs.in_spatial
+            else 1.0
+        )
+        term2 = events * _macs_per_input_event(consumer, ratio)
 
         costs[layer] = (term1 + term2).float()
     return costs

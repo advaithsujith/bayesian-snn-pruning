@@ -385,6 +385,17 @@ def synops_budget_plan(
     floors alone exceed the budget that is recorded in the plan detail
     rather than raised, since the caller can read the realised fraction
     off plan_synops_fraction.
+
+    Denominator note, for the write-up: `unit_costs` are *marginal* costs
+    (a unit's own compute plus the downstream work its spikes trigger), so
+    their sum counts most layers' work twice -- once as that layer's own
+    input-driven term and once as its producer's downstream term. Every
+    budget, achieved fraction, and plan_synops_fraction here uses that
+    same denominator, so all comparisons are internally consistent, but
+    the fraction is NOT a fraction of measure_synops's network-level
+    figure. When quoting a budget in the dissertation, name the
+    denominator (or quote the pruned model's measured SynOps directly,
+    which the curve script records as "SynOps After").
     """
     if rank_by not in ("density", "importance"):
         raise ValueError(f"Unknown rank_by '{rank_by}'. Options: density, importance")

@@ -25,7 +25,9 @@ from metrics import (
     compute_and_set_unit_costs,
     count_parameters,
     gather_log_alpha_values,
+    measure_synops_unit_costs,
     pruning_percentage,
+    set_synops_unit_costs,
     write_csv,
 )
 from models import build_model
@@ -272,6 +274,28 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     set_bayesian_mode(model, True)
     logger.info("Bayesian gates activated on every structurally-prunable layer.")
 
+    # Honour the config-side switch for the SynOps budget term. Without this
+    # wiring, setting BayesianConfig.synops_budget_fraction and running
+    # run_all.py would produce a silently inert term: a run that looks like
+    # a budget run but is not.
+    synops_refresh_fn = None
+    if cfg.bayesian.synops_budget_fraction is not None:
+        if cfg.bayesian.gamma_max > 0.0:
+            raise ValueError(
+                f"{model_name}: synops_budget_fraction and gamma_max are mutually "
+                "exclusive -- both write to the same unit_cost buffers. Zero "
+                "gamma_max in this experiment's config to run the budget term."
+            )
+
+        def synops_refresh_fn(m):
+            set_synops_unit_costs(
+                m,
+                measure_synops_unit_costs(
+                    m, model_name, prune_train_loader, device,
+                    max_batches=cfg.bayesian.synops_measure_batches,
+                ),
+            )
+
     print("\nTraining Bayesian gates...")
     bayes_result = run_training(
         model,
@@ -303,6 +327,10 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         gate_diagnostic_every=5,
         gate_optimizer_name=cfg.bayesian.gate_optimizer,
         gate_lr=cfg.bayesian.gate_lr,
+        synops_budget_fraction=cfg.bayesian.synops_budget_fraction,
+        synops_lambda_lr=cfg.bayesian.synops_lambda_lr,
+        synops_recount_every=cfg.bayesian.synops_recount_every,
+        synops_refresh_fn=synops_refresh_fn,
     )
     torch.save(model.state_dict(), os.path.join(cfg.output_dir, "bayesian_model.pt"))
 

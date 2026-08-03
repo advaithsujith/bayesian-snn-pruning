@@ -58,12 +58,6 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
 
 mkdir -p checkpoints outputs plots logs
 
-# Pre-flight: can the task loss push back against the KL at all? One batch,
-# under a minute. If the weakest layer's ratio is ~1e-3 or below, the KL is
-# unopposed there, gates will saturate, and every point on the curve below
-# would be ties broken by index order. Cheaper to find out here.
-python run_sparsity_curve.py --model dpap_repl --diagnose-only
-
 # Tagged so this does not overwrite the previous run. The 2026-08-03 run at
 # beta_max=0.4 finished with 89% of gates pinned at the clamp, so its curve
 # measures random structured pruning rather than the criterion; keep it as
@@ -75,6 +69,15 @@ python run_sparsity_curve.py --model dpap_repl --diagnose-only
 if [ "$#" -gt 0 ]; then
     python run_sparsity_curve.py "$@"
 else
+    # Pre-flight: can the task loss push back against the KL at all? One
+    # batch, under a minute. If the weakest layer's ratio is ~1e-3 or below,
+    # the KL is unopposed there, gates will saturate, and every point on the
+    # curve below would be ties broken by index order. Cheaper to find out
+    # here. Only run for the default invocation -- a passthrough arm may
+    # target a different model, and under set -e a wrong-model diagnosis
+    # would kill the job.
+    python run_sparsity_curve.py --model dpap_repl --diagnose-only
+
     python run_sparsity_curve.py \
         --model dpap_repl \
         --mode uniform \

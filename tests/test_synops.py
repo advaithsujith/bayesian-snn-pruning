@@ -37,7 +37,7 @@ from bayesian_layers import (
 from config import ArchConfig, BayesianConfig, SNNConfig
 from losses import bayesian_snn_loss
 from metrics import measure_synops, measure_synops_unit_costs, set_synops_unit_costs
-from models import VGGStyleSNN
+from models import VGGStyleSNN, build_model
 from pruning import plan_synops_fraction, synops_budget_plan
 from train import build_gate_split_optimizers, run_training, train_one_epoch
 
@@ -149,6 +149,39 @@ def main():
     set_synops_unit_costs(m, costs)
     expected_total = 2 * 4320.0 + 3 * 704.0 + 4 * 116.0
     check("total_unit_cost sums the written buffers", close(total_unit_cost(m), expected_total))
+
+    # ------------------------------------------------------------------
+    # 3b. Valid-padding geometry (LeNet's 5x5 convs, padding 0): an average
+    #     input event lands in k^2 * out_hw/in_hw kernel windows, NOT k^2 --
+    #     found by the fresh-context review; the naive k^2 pricing overpriced
+    #     conv1's downstream term by in_hw/out_hw = 196/100 ~ 2x. Hand
+    #     numbers, all-fire, T=2, 32x32 RGB input:
+    #       conv1 (6ch, 28x28, pool to 14x14):
+    #         compute 25*3*784*2 = 117600
+    #         downstream 14*14*2 events * (25*16*100/196) = 80000 -> 197600
+    #       conv2 (16ch, 10x10, pool to 5x5):
+    #         compute 25*6*100*2 = 30000; downstream 25*2 * 120 = 6000 -> 36000
+    #       fc1 (120): compute 400*2 = 800; downstream 2*84 = 168 -> 968
+    #       fc2 (84):  compute 120*2 = 240; downstream 2*10 =  20 -> 260
+    # ------------------------------------------------------------------
+    lenet = build_model("lenet", SNNConfig(num_steps=2, threshold=0.01), BAY)
+    with torch.no_grad():
+        for mod in lenet.modules():
+            if isinstance(mod, (nn.Conv2d, nn.Linear)):
+                mod.weight.copy_(mod.weight.abs() + 0.05)
+                if mod.bias is not None:
+                    mod.bias.fill_(0.1)
+    ldata = loader_of(torch.ones(2, 3, 32, 32), batch_size=2)
+    lcosts = measure_synops_unit_costs(lenet, "lenet", ldata, CPU, max_batches=1)
+    check("lenet conv1 unit cost = 197600", all(close(float(v), 197600.0) for v in lcosts[lenet.conv1]))
+    check("lenet conv2 unit cost = 36000", all(close(float(v), 36000.0) for v in lcosts[lenet.conv2]))
+    check("lenet fc1 unit cost = 968", all(close(float(v), 968.0) for v in lcosts[lenet.fc1]))
+    check("lenet fc2 unit cost = 260", all(close(float(v), 260.0) for v in lcosts[lenet.fc2]))
+    lr_ = measure_synops(lenet, ldata, CPU, max_batches=1)
+    check(
+        "lenet all-fire SynOps = dense MACs (pricing consistency)",
+        close(lr_["synops_per_sample"], lr_["dense_macs_per_sample"]),
+    )
 
     # ------------------------------------------------------------------
     # 4. synops_budget_plan: the two ranking rules differ exactly as
