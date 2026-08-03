@@ -175,6 +175,7 @@ def run_bio_experiment_point(
         f"Pruning percentage: {pruning_percentage(original_params, remaining_params):.2f}%",
         f"Test accuracy after pruning + fine-tuning: {eval_after['test_accuracy']:.4f}",
         f"Estimated FLOPs (post-pruning): {eval_after['flops']:,}",
+        f"Measured SynOps per sample (post-pruning): {eval_after['synops']:,.0f}",
         f"Inference latency (post-pruning): {eval_after['latency_ms']:.3f} ms",
         f"Fine-tuning time: {finetune_result['total_time_sec']:.1f}s "
         f"(best val acc {finetune_result['best_val_acc']:.4f})",
@@ -192,6 +193,14 @@ def run_bio_experiment_point(
         "Accuracy After": eval_after["test_accuracy"],
         "Fine Tune Time": finetune_result["total_time_sec"],
         "FLOPs": eval_after["flops"],
+        # Measured with the same instrument (metrics.measure_synops) the
+        # Bayesian curve uses, so a bio and a Bayesian network pruned to the
+        # same widths can be compared on compute cost directly. That
+        # comparison is the point: an activity-based criterion keeps the
+        # units that fire most by construction, so matched *parameter*
+        # sparsity does not imply matched SynOps.
+        "SynOps": eval_after["synops"],
+        "Dense MACs": eval_after["dense_macs"],
         "Latency": eval_after["latency_ms"],
         "GPU Memory": eval_after["gpu_memory_mb"],
     }
