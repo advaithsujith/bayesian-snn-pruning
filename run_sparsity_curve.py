@@ -468,10 +468,14 @@ def run_curve(args: argparse.Namespace) -> None:
         unit_costs = measure_synops_unit_costs(
             model, args.model, train_loader, device, max_batches=args.synops_batches
         )
+        rank_rules = (
+            ("importance", "density") if args.synops_rank_by == "both"
+            else (args.synops_rank_by,)
+        )
         for i, budget in enumerate(args.synops_budgets, start=1):
             # importance (cost-blind control) first, density (cost-aware)
             # second: if wallclock dies between them, the control exists.
-            for rank_by in ("importance", "density"):
+            for rank_by in rank_rules:
                 tag = f"synops{budget:g}_{rank_by}"
                 print(
                     f"\n--- budget point {i}/{len(args.synops_budgets)} ({rank_by}): "
@@ -557,6 +561,17 @@ def main() -> None:
              "cost-blind (importance ranking) and once cost-aware (density "
              "ranking) -- that pair at matched budget IS the contribution "
              "comparison.",
+    )
+    parser.add_argument(
+        "--synops-rank-by", choices=["both", "importance", "density"], default="both",
+        help="which selection rule(s) to run at each budget. 'both' (default) "
+             "gives the paired cost-blind/cost-aware comparison. Use "
+             "'importance' alone to skip the density arm -- measured on "
+             "dpap_repl, density is close to an anti-ranking there because "
+             "per-unit cost and posterior importance are positively "
+             "correlated across layers (the expensive wide mid-network convs "
+             "are also the ones the criterion values most), so it buys cheap "
+             "units in the layers that matter least.",
     )
     parser.add_argument(
         "--synops-batches", type=int, default=8,
