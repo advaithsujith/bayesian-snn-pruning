@@ -33,7 +33,7 @@ from activity_pruning import (
 )
 from bayesian_layers import set_bayesian_mode
 from config import ALL_EXPERIMENTS, ExperimentConfig
-from datasets import get_cifar10_loaders
+from datasets import get_cifar10_loaders, get_pruning_phase_loaders
 from evaluate import full_evaluation
 from metrics import count_parameters, pruning_percentage, write_csv
 from models import build_model
@@ -234,9 +234,24 @@ def run_bio_experiments_for_model(
 
     print_banner(f"Bio-Inspired Pruning: Experiment {experiment_index} / {total_experiments}\n{model_name.upper()}")
 
-    train_loader, val_loader, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
+    # Pretraining follows the config's own protocol (which for a replication
+    # may deliberately train on all 50k with val == test); every *pruning*
+    # phase uses a genuinely held-out split instead. Without this split the
+    # bio criteria would select their fine-tuned checkpoints on the test set
+    # while the Bayesian side (run_sparsity_curve.py) selects on held-out
+    # data -- handing one arm of the comparison an advantage the other does
+    # not have. Identical loaders on both sides is the whole point of
+    # forking from a shared baseline. See datasets.get_pruning_phase_loaders.
+    pretrain_train_loader, pretrain_val_loader, test_loader = get_cifar10_loaders(
+        cfg.data, cfg.train.batch_size, cfg.seed
+    )
+    train_loader, val_loader, _ = get_pruning_phase_loaders(
+        cfg.data, cfg.train.batch_size, cfg.seed
+    )
 
-    pretrained_path = _ensure_pretrained_checkpoint(model_name, cfg, device, train_loader, val_loader, logger)
+    pretrained_path = _ensure_pretrained_checkpoint(
+        model_name, cfg, device, pretrain_train_loader, pretrain_val_loader, logger
+    )
 
     probe_model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes)
     original_params = count_parameters(probe_model, exclude_gates=True)
