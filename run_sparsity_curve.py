@@ -494,6 +494,7 @@ def run_curve(args: argparse.Namespace) -> None:
                 plan = synops_budget_plan(
                     model, unit_costs, budget, rank_by=rank_by,
                     min_keep=cfg.bayesian.min_keep_per_layer,
+                    min_keep_fraction=args.synops_min_keep_fraction,
                 )
                 kept = plan_synops_fraction(model, plan, unit_costs)
                 execute_point(plan, tag, f"synops {budget:g}", rank_by, budget, kept)
@@ -582,6 +583,16 @@ def main() -> None:
              "correlated across layers (the expensive wide mid-network convs "
              "are also the ones the criterion values most), so it buys cheap "
              "units in the layers that matter least.",
+    )
+    parser.add_argument(
+        "--synops-min-keep-fraction", type=float, default=0.0,
+        help="floor on the fraction of each layer's units a budgeted plan must "
+             "keep (default 0.0, i.e. only the 1-unit floor). Measured on "
+             "dpap_repl, the density rule cut conv_layers.1 from 128 channels "
+             "to its 1-unit floor while leaving the cheapest three layers at "
+             "full width, underfitting at 57% train accuracy. Try 0.25 to test "
+             "whether cost-aware selection is viable once it cannot sever a "
+             "layer.",
     )
     parser.add_argument(
         "--synops-batches", type=int, default=8,

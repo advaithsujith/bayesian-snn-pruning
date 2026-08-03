@@ -232,6 +232,37 @@ def main():
         close(plan_synops_fraction(m2, imp_plan, unit_costs), 3.0 / 1011.0),
     )
 
+    # A fractional floor stops the budget buying its way out of a whole
+    # layer. Reproduces the dpap_repl failure in miniature: layer A's units
+    # cost 1000 each except one, so density strips A to its floor while
+    # keeping the cheap layers whole. With min_keep_fraction=0.5, A must
+    # retain 2 of 4 no matter how expensive it is.
+    with torch.no_grad():
+        m2.conv_layers[0].log_alpha.copy_(torch.tensor([-5.0, -4.0, -3.5, -3.0]))
+    pricey = {
+        m2.conv_layers[0]: torch.tensor([1000.0, 1000.0, 1000.0, 1000.0]),
+        m2.conv_layers[1]: torch.ones(4),
+        m2.fc_layers[0]: torch.ones(4),
+    }
+    starved = synops_budget_plan(m2, pricey, 15.0 / 4008.0, rank_by="density")
+    check(
+        "without a fractional floor an expensive layer collapses to 1 unit",
+        starved.indices(m2.conv_layers[0]).numel() == 1,
+    )
+    floored = synops_budget_plan(
+        m2, pricey, 15.0 / 4008.0, rank_by="density", min_keep_fraction=0.5
+    )
+    check(
+        "min_keep_fraction holds the expensive layer at half width",
+        floored.indices(m2.conv_layers[0]).tolist() == [0, 1],
+    )
+    check(
+        "the floor keeps the most important units, not the cheapest",
+        floored.indices(m2.conv_layers[0]).tolist()
+        == torch.argsort(m2.conv_layers[0].log_alpha.detach())[:2].sort().values.tolist(),
+    )
+    check("fractional floor is recorded in the detail", "min_keep_fraction" in floored.detail)
+
     tiny = synops_budget_plan(m2, unit_costs, 1e-9, rank_by="density")
     check(
         "min_keep floors survive an impossible budget",

@@ -346,6 +346,7 @@ def synops_budget_plan(
     budget_fraction: float,
     rank_by: str = "density",
     min_keep: int = 1,
+    min_keep_fraction: float = 0.0,
 ) -> KeepPlan:
     """
     Keep-set chosen under a SynOps budget: the pruned network may cost at
@@ -380,11 +381,25 @@ def synops_budget_plan(
     (bayesian_layers.total_expected_synops), so the two SynOps mechanisms
     price importance identically.
 
-    `min_keep` floors are satisfied first, by importance, and win over the
-    budget: a severed layer is a broken network, not a cheap one. If the
-    floors alone exceed the budget that is recorded in the plan detail
-    rather than raised, since the caller can read the realised fraction
-    off plan_synops_fraction.
+    Floors are satisfied first, by importance, and win over the budget: a
+    severed layer is a broken network, not a cheap one. Each layer keeps
+    at least `max(min_keep, ceil(min_keep_fraction * width))` units.
+
+    `min_keep_fraction` exists because a floor of one unit is no
+    protection at all when cost and importance are positively correlated.
+    Measured on dpap_repl at a 0.5 budget, the density rule cut
+    `conv_layers.1` from 128 channels to exactly 1 -- its floor, i.e. it
+    would have removed the layer outright -- while leaving the three
+    cheapest layers at full width. The result underfits badly (57% train
+    accuracy) because every feature in the network passes through that
+    single channel, which no amount of downstream width can recover. A
+    fractional floor bounds how much of any one layer the budget can buy
+    its way out of. The same one-unit collapse cost ~43 accuracy points on
+    LeNet's fc2 under threshold pruning (HANDOFF.md bug #6).
+
+    If the floors alone exceed the budget that is recorded in the plan
+    detail rather than raised, since the caller can read the realised
+    fraction off plan_synops_fraction.
 
     Denominator note, for the write-up: `unit_costs` are *marginal* costs
     (a unit's own compute plus the downstream work its spikes trigger), so
@@ -428,7 +443,8 @@ def synops_budget_plan(
     spent = 0.0
     for li, layer in enumerate(layers):
         la = layer.log_alpha.detach().float().cpu()
-        floor = min(min_keep, int(la.numel()))
+        n = int(la.numel())
+        floor = min(max(min_keep, math.ceil(min_keep_fraction * n)), n)
         for j in torch.argsort(la)[:floor].tolist():
             kept[li].add(j)
             spent += float(unit_costs[layer][j])
@@ -468,6 +484,8 @@ def synops_budget_plan(
         f"budget={budget_fraction:g} of measured SynOps, rank_by={rank_by}, "
         f"achieved={spent / total_cost:.4f}, kept {n_kept}/{n_total} units"
     )
+    if min_keep_fraction > 0.0:
+        detail += f", min_keep_fraction={min_keep_fraction:g}"
     if spent > budget:
         detail += f"; min_keep floors alone exceed the budget by {spent - budget:,.0f}"
     return KeepPlan(keeps, "synops_budget", detail)
