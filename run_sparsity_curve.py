@@ -314,7 +314,10 @@ def run_curve(args: argparse.Namespace) -> None:
             cost_warmup_epochs=cfg.bayesian.cost_warmup_epochs,
             loss_type=cfg.pruning_loss(),
             logger=logger,
-            checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{args.model}_curve_gates.pt"),
+            checkpoint_path=os.path.join(
+                cfg.checkpoint_dir,
+                f"{args.model}_{args.tag + '_' if args.tag else ''}curve_gates.pt",
+            ),
             csv_log_rows=csv_rows, phase_name="bayesian_train",
             prune_threshold=cfg.bayesian.prune_threshold,
             restore_best_checkpoint=False,
@@ -405,7 +408,14 @@ def run_curve(args: argparse.Namespace) -> None:
             beta_max=0.0, kl_warmup_epochs=1, gamma_max=0.0, cost_warmup_epochs=1,
             loss_type=cfg.pruning_loss(),
             logger=logger,
-            checkpoint_path=os.path.join(cfg.checkpoint_dir, f"{args.model}_{tag}_finetuned.pt"),
+            # Tag-qualified: two curve runs can differ only in their --tag
+            # (e.g. one trained under a SynOps budget, one not) and would
+            # otherwise write their per-point checkpoints to the same paths,
+            # so concurrent jobs would overwrite each other's.
+            checkpoint_path=os.path.join(
+                cfg.checkpoint_dir,
+                f"{args.model}_{args.tag + '_' if args.tag else ''}{tag}_finetuned.pt",
+            ),
             csv_log_rows=finetune_rows, phase_name="finetune",
         )
 
