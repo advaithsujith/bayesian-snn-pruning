@@ -36,6 +36,32 @@ attack; seeds at the two DPAP points are the next GPU priority after the
 SynOps pair. Results in `outputs/dpap_repl/sparsity_curve_beta0.01/`
 (push from CSF3 before they get lost).
 
+## HEADLINE RESULT (2026-08-04): the SynOps budget in the loss wins on both axes
+
+Paired experiment, same budgets, same cost-blind selection rule, the only
+difference being whether the gate-training loss carried the SynOps budget
+Lagrangian (`outputs/dpap_repl/sparsity_curve_synops` vs
+`sparsity_curve_lagrangian0.5`):
+
+| budget | gates | accuracy | SynOps/sample | params left | layers at min width |
+|---|---|---|---|---|---|
+| 0.5 | baseline | 87.97% | 234.1M | 559,272 | 0 |
+| 0.5 | **budget-trained** | **90.27%** | **212.0M** | 986,763 | 0 |
+| 0.3 | baseline | 67.92% | 101.0M | 114,897 | 1 |
+| 0.3 | **budget-trained** | **80.95%** | **88.4M** | 207,931 | 0 |
+
+**+2.3pp accuracy with 9% fewer SynOps at 0.5; +13.0pp with 12% fewer at
+0.3.** A strict improvement on both axes, not a trade, and the margin
+widens as the budget tightens. Gate health held (`log_alpha` std 0.279,
+zero saturation). Note the baseline's 0.3 point drives a layer to minimum
+width while neither budget-trained point does: training under the
+constraint lets the network *make* units cheap rather than having a
+post-hoc rule sever a layer to afford the budget.
+
+This is the dissertation's novelty claim, evidenced. Caveat: n=1 seed on
+both arms; the comparison is paired and therefore clean, but seeds are
+still the top remaining GPU priority.
+
 ## Negative result, same evening: cost-aware *selection* fails, and why
 
 The first SynOps budget run (`sparsity_curve_synops`, reusing the usable
