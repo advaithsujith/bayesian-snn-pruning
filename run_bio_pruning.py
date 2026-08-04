@@ -75,7 +75,9 @@ def _ensure_pretrained_checkpoint(
         "No pretrained baseline found for this architecture -- training one now "
         "(this becomes the shared starting point for both Bayesian and bio-inspired pruning)."
     )
-    model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes).to(device)
+    model = build_model(
+        model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
+    ).to(device)
     set_bayesian_mode(model, False)
     pretrain_csv_rows: List[Dict[str, Any]] = []
     run_training(
@@ -108,7 +110,9 @@ def run_bio_experiment_point(
     logger,
 ) -> Dict[str, Any]:
     """Run one (architecture, criterion, target keep_fraction) point end to end."""
-    model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes).to(device)
+    model = build_model(
+        model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
+    ).to(device)
     model.load_state_dict(torch.load(pretrained_path, map_location=device))
     set_bayesian_mode(model, False)
 
@@ -253,7 +257,9 @@ def run_bio_experiments_for_model(
         model_name, cfg, device, pretrain_train_loader, pretrain_val_loader, logger
     )
 
-    probe_model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes)
+    probe_model = build_model(
+        model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
+    )
     original_params = count_parameters(probe_model, exclude_gates=True)
     del probe_model
 
