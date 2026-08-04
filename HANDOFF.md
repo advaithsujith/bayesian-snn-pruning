@@ -36,6 +36,38 @@ attack; seeds at the two DPAP points are the next GPU priority after the
 SynOps pair. Results in `outputs/dpap_repl/sparsity_curve_beta0.01/`
 (push from CSF3 before they get lost).
 
+## The four-way comparison (2026-08-04), matched sparsity on the validated platform
+
+`outputs/bio_results_dpap_repl.csv`. All four criteria fork from the same
+94.35% baseline, same 30-epoch fine-tune, same held-out split, and
+identical layer widths at each keep-fraction (0.8164 / 0.7012 from
+`--plan-only`), so only the choice of units differs.
+
+| method | 33.35% pruned | 50.80% pruned | change |
+|---|---|---|---|
+| **Bayesian** | 93.38 | **93.34** | **−0.04** |
+| SCA | **93.61** | 93.08 | −0.53 |
+| DPAP | 93.09 | 92.95 | −0.14 |
+| naive firing-rate | 92.83 | 92.83 | 0.00 |
+
+**There is a crossover, and it is the result.** SCA leads by 0.23pp at
+light sparsity; Bayesian leads by 0.26pp at 50.8% and degrades least of
+all four (−0.04 against SCA's −0.53). Light pruning leaves slack so any
+sensible criterion survives and the comparison is uninformative; the
+ranking only starts to matter as compression tightens. Same shape as the
+random-pruning comparison, whose margin widened from +1.5 to +5.3pp over
+the same direction of travel -- two independent comparisons agreeing.
+
+**Highest-value next run: extend the bio side to 70% and 90%**, where the
+Bayesian curve already sits (92.46 / 89.39). If the bio degradation rate
+holds, that is the strongest figure available and it completes the
+crossover story. Six hours.
+
+**Open check:** naive_firing_rate reports exactly 0.9283 at *both*
+sparsities. Verify full precision in the CSV before quoting; identical to
+four decimals across two different networks is possible but worth ruling
+out as a keep-set bug.
+
 ## HEADLINE RESULT (2026-08-04): the SynOps budget in the loss wins on both axes
 
 Paired experiment, same budgets, same cost-blind selection rule, the only
