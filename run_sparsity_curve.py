@@ -67,7 +67,7 @@ from typing import Any, Dict, List
 
 import torch
 
-from bayesian_layers import set_bayesian_mode
+from bayesian_layers import collect_prunable_bayesian_layers, set_bayesian_mode
 from config import ALL_EXPERIMENTS, ExperimentConfig
 from datasets import get_cifar10_loaders, get_pruning_phase_loaders
 from evaluate import full_evaluation
@@ -217,6 +217,31 @@ def run_curve(args: argparse.Namespace) -> None:
     ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, out_dir)
     logger = setup_logger(f"{args.model}_curve", cfg.log_dir, f"{args.model}_curve.log")
 
+    # CLI overrides fall back to the config's values, so a submitted job can
+    # flip one arm's optimizer or budget without editing config.py -- that is
+    # what makes a two-arm (Adam vs SGD-gates) submission two sbatch lines.
+    # Resolved and validated here, before any data touches disk, so a
+    # misconfigured submission dies in seconds rather than after a dataset
+    # load on a queued GPU.
+    gate_optimizer_name = args.gate_optimizer or cfg.bayesian.gate_optimizer
+    gate_lr = args.gate_lr if args.gate_lr is not None else cfg.bayesian.gate_lr
+    synops_loss_budget = (
+        args.synops_loss_budget
+        if args.synops_loss_budget is not None
+        else cfg.bayesian.synops_budget_fraction
+    )
+    if args.synops_uniform_costs and synops_loss_budget is None:
+        raise SystemExit(
+            "--synops-uniform-costs only affects the budget term in the loss; "
+            "give --synops-loss-budget (or set synops_budget_fraction in config) "
+            "or drop the flag."
+        )
+    if synops_loss_budget is not None and cfg.bayesian.gamma_max > 0.0:
+        raise SystemExit(
+            "The SynOps budget term and gamma_max are mutually exclusive: both "
+            "write to the same unit_cost buffers. Set gamma_max=0 for this run."
+        )
+
     pretrained_path = os.path.join(cfg.output_dir, "trained_model.pt")
     # Gates are always *saved* into this run's own directory; they may be
     # *loaded* from another run's, so a follow-up analysis (e.g. the SynOps
@@ -240,32 +265,32 @@ def run_curve(args: argparse.Namespace) -> None:
 
     csv_rows: List[Dict[str, Any]] = []
 
-    # CLI overrides fall back to the config's values, so a submitted job can
-    # flip one arm's optimizer or budget without editing config.py -- that is
-    # what makes a two-arm (Adam vs SGD-gates) submission two sbatch lines.
-    gate_optimizer_name = args.gate_optimizer or cfg.bayesian.gate_optimizer
-    gate_lr = args.gate_lr if args.gate_lr is not None else cfg.bayesian.gate_lr
-    synops_loss_budget = (
-        args.synops_loss_budget
-        if args.synops_loss_budget is not None
-        else cfg.bayesian.synops_budget_fraction
-    )
     synops_refresh_fn = None
     if synops_loss_budget is not None:
-        if cfg.bayesian.gamma_max > 0.0:
-            raise SystemExit(
-                "The SynOps budget term and gamma_max are mutually exclusive: both "
-                "write to the same unit_cost buffers. Set gamma_max=0 for this run."
-            )
-
-        def synops_refresh_fn(m):
-            set_synops_unit_costs(
-                m,
-                measure_synops_unit_costs(
-                    m, args.model, train_loader, device,
-                    max_batches=cfg.bayesian.synops_measure_batches,
-                ),
-            )
+        if args.synops_uniform_costs:
+            # Ablation arm: the identical Lagrangian machinery, but every unit
+            # costs 1, so E[SynOps] degenerates to the expected number of
+            # surviving units and the constraint knows nothing about which
+            # units are expensive. The SynOps term also pushes log_alpha in
+            # the same direction as the KL, so a gain over KL-only gates could
+            # in principle be generic extra pruning pressure rather than the
+            # energy information. This arm separates the two: whatever it
+            # achieves is pressure alone, and whatever the real-cost arm
+            # achieves beyond it is attributable to the SynOps information
+            # specifically. Selection at the end still uses measured costs,
+            # so all arms are evaluated at the same measured budget.
+            def synops_refresh_fn(m):
+                for layer in collect_prunable_bayesian_layers(m):
+                    layer.set_unit_cost(torch.ones_like(layer.unit_cost))
+        else:
+            def synops_refresh_fn(m):
+                set_synops_unit_costs(
+                    m,
+                    measure_synops_unit_costs(
+                        m, args.model, train_loader, device,
+                        max_batches=cfg.bayesian.synops_measure_batches,
+                    ),
+                )
 
     if args.reuse_gates and os.path.isfile(reuse_gate_path):
         print(f"\nReusing trained gates: {reuse_gate_path}")
@@ -293,7 +318,8 @@ def run_curve(args: argparse.Namespace) -> None:
         if gate_optimizer_name != "inherit":
             print(f"  gate optimizer: {gate_optimizer_name} (gate_lr={gate_lr})")
         if synops_loss_budget is not None:
-            print(f"  SynOps budget term active: {synops_loss_budget:g} of dense SynOps")
+            variant = " (UNIFORM-COST ABLATION)" if args.synops_uniform_costs else ""
+            print(f"  SynOps budget term active: {synops_loss_budget:g} of dense SynOps{variant}")
         set_bayesian_mode(model, True)
         run_training(
             model, train_loader, val_loader,
@@ -590,7 +616,7 @@ def main() -> None:
              "keep (default 0.0, i.e. only the 1-unit floor). Measured on "
              "dpap_repl, the density rule cut conv_layers.1 from 128 channels "
              "to its 1-unit floor while leaving the cheapest three layers at "
-             "full width, underfitting at 57% train accuracy. Try 0.25 to test "
+             "full width, underfitting at 57%% train accuracy. Try 0.25 to test "
              "whether cost-aware selection is viable once it cannot sever a "
              "layer.",
     )
@@ -605,6 +631,16 @@ def main() -> None:
              "constraining expected SynOps to this fraction of the dense "
              "network's (see BayesianConfig.synops_budget_fraction). Overrides "
              "the config value; leave unset to use the config (default: off).",
+    )
+    parser.add_argument(
+        "--synops-uniform-costs", action="store_true",
+        help="ablation: run the budget term with every unit cost set to 1, so "
+             "the Lagrangian applies the same kind of pressure but knows "
+             "nothing about which units are expensive. Whatever this arm "
+             "gains over KL-only gates is generic pressure; whatever the "
+             "real-cost arm gains beyond THIS one is attributable to the "
+             "SynOps information itself. Only meaningful with "
+             "--synops-loss-budget; selection still uses measured costs.",
     )
     parser.add_argument(
         "--gate-optimizer", choices=["inherit", "sgd"], default=None,
