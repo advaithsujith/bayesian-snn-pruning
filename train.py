@@ -336,17 +336,32 @@ def build_scheduler(
     schedule DPAP's code configures (warmup 5 epochs, min_lr 1e-5). Warmup
     matters for AdamW specifically: its decoupled weight decay is applied
     every step from the start, so a cold high-LR start can shrink weights
-    before the gradient signal has stabilised.
+    before the gradient signal has stabilised. It matters just as much for
+    SPEAR's SGD at lr=0.1.
+
+    Asking for 'cosine_warmup' with `warmup_epochs=0` is rejected rather than
+    quietly served as a plain cosine. That degeneration is invisible from the
+    outside -- the run looks like it warmed up and did not -- and it is
+    reachable purely by forgetting to forward the argument at a call site,
+    which had happened at five of them. A silently cold start at lr=0.1 is
+    exactly the failure the warm-up exists to prevent, so "no warm-up was
+    configured" and "warm-up ran" must not look the same.
     """
     if name == "cosine":
         return torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     if name == "cosine_warmup":
+        if warmup_epochs <= 0:
+            raise ValueError(
+                "scheduler 'cosine_warmup' was requested with "
+                f"warmup_epochs={warmup_epochs}. That silently degenerates to a "
+                "plain cosine starting at the full learning rate. Either forward "
+                "the phase's lr_warmup_epochs/min_lr from its config, or ask for "
+                "'cosine' explicitly if no warm-up is intended."
+            )
         cosine_epochs = max(1, epochs - warmup_epochs)
         cosine = torch.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, T_max=cosine_epochs, eta_min=min_lr
         )
-        if warmup_epochs <= 0:
-            return cosine
         warmup = torch.optim.lr_scheduler.LinearLR(
             optimizer, start_factor=1e-3, end_factor=1.0, total_iters=warmup_epochs
         )

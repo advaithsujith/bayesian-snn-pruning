@@ -332,6 +332,14 @@ def run_curve(args: argparse.Namespace) -> None:
             ),
             optimizer_name=cfg.train.optimizer,
             scheduler_name=cfg.train.lr_scheduler,
+            # BEHAVIOUR CHANGE, deliberate. build_scheduler used to accept
+            # 'cosine_warmup' with warmup_epochs=0 and quietly hand back a
+            # plain cosine, so this phase never warmed up even for configs
+            # that ask for it. dpap_repl's archived beta0.01 gate phase was
+            # produced under that silent path; re-running it now warms up over
+            # 5 epochs and will not reproduce it exactly. See HANDOFF.md.
+            lr_warmup_epochs=cfg.train.lr_warmup_epochs,
+            min_lr=cfg.train.min_lr,
             grad_clip_norm=cfg.train.grad_clip_norm,
             use_amp=cfg.train.use_amp, device=device,
             beta_max=cfg.bayesian.beta_max,
@@ -429,6 +437,8 @@ def run_curve(args: argparse.Namespace) -> None:
             weight_decay=cfg.finetune.weight_decay,
             optimizer_name=cfg.finetune.optimizer,
             scheduler_name=cfg.finetune.lr_scheduler,
+            lr_warmup_epochs=cfg.finetune.lr_warmup_epochs,
+            min_lr=cfg.finetune.min_lr,
             grad_clip_norm=cfg.finetune.grad_clip_norm,
             use_amp=cfg.finetune.use_amp, device=device,
             beta_max=0.0, kl_warmup_epochs=1, gamma_max=0.0, cost_warmup_epochs=1,
