@@ -9,7 +9,139 @@ many hours of real HPC time to discover.
 
 ---
 
-# READ FIRST: state as of 2026-08-03, and the open decision
+# READ FIRST: state as of 2026-08-11
+
+## DATA RISK, unresolved and blocking everything
+
+**Every headline number below is unverifiable from the local repo.** Checked
+2026-08-11:
+
+- `outputs/dpap_repl/sparsity_curve_synops/` — **empty directory**
+- `outputs/dpap_repl/sparsity_curve_x/` — **empty directory**
+- `outputs/dpap_repl/sparsity_curve_lagrangian0.5/` — **does not exist**
+- `outputs/dpap_repl/sparsity_curve_beta0.01/` — **does not exist**
+- `outputs/bio_results_dpap_repl.csv` — **does not exist** (only the older
+  `bio_results.csv`, which is the `keep_fraction=0.1` sweep at ~98% pruning on
+  lenet/vgg9/resnet18, not the matched-sparsity four-way comparison)
+
+What *is* local contradicts the story: `outputs/final_results.csv` holds a single
+`dpap_repl` row reading 91.96% before, **9.99% after**, 99.999% pruned, 183
+parameters left. That is a collapsed run, not the 94.35% replication.
+
+So the SynOps table, the four-way comparison, the random-control curve and the
+94.35% baseline exist only as prose in this file and on CSF3 scratch. **Pull
+`outputs/` off CSF3 before doing anything else.** Session 3 already flagged this
+("push from CSF3 before they get lost") and it was never done.
+
+## Reported but undocumented: the Bayesian criterion may be a wash
+
+User reports (2026-08-11, verbally, details not yet captured) that the earlier
+finding of Bayesian beating the activity-based criteria **was a bug**, and that
+corrected numbers put them within ~0.25pp of each other. That is consistent in
+magnitude with the four-way table below (SCA ahead by 0.23pp at light sparsity,
+Bayesian ahead by 0.26pp at 50.8%), and at n=1 seed a gap that size is inside
+the noise either way.
+
+**Outstanding and needed before this can be written up**: what the bug was, when
+it entered, which runs it invalidates, and which survive. The DPAP baseline
+replication is believed unaffected because pretraining runs with gates inert.
+
+If this holds, the project's thesis moves off "Bayesian criterion is better" and
+onto "cost-awareness must live inside the criterion and must enter during
+training, not selection" — which the SynOps result and the cost-aware-selection
+negative result already support jointly.
+
+## SPEAR: the field already prunes SNNs against SynOps
+
+Found 2026-08-11. **SPEAR**, *"Structured Pruning for Spiking Neural Networks via
+Synaptic Operation Estimation and Reinforcement Learning"*, arXiv 2507.02945.
+This was flagged in Session 2 as circumstantial evidence only; the full text has
+now been read.
+
+What it does:
+
+- Structured pruning of SNNs against an **explicit SynOps target**. So "nobody
+  has made SNN pruning SynOps-aware" is **dead as a novelty claim.**
+- Search is **DDPG reinforcement learning** over an already-trained network, not
+  gradient descent. Pruning is treated as a sequential decision problem.
+- SynOps enters as a **soft penalty in the reward** (Target-Aware Reward), not
+  as a hard constraint.
+- Post-fine-tune SynOps is **predicted by linear regression** (their LRE), not
+  measured, because SynOps shifts during fine-tuning. Note this is the same
+  drift problem `synops_recount_every` exists to handle here.
+- **No Bayesian or variational gating.** The search is not differentiable, so
+  the budget cannot influence what the network *becomes* during training.
+- Baselines: SCA-based, NetworkSlimming.
+
+SPEAR's published numbers (static datasets at **T=4** via image copying;
+CIFAR10-DVS at T=10):
+
+| Dataset | Arch | SynOps(%) | Params(%) | Acc(%) |
+|---|---|---|---|---|
+| CIFAR-10 | VGG16 | 52.5 | 14.4 | 91.77 |
+| CIFAR-10 | ResNet18 | 39.2 | 30.3 | 92.78 |
+| CIFAR-100 | VGG16 | 69.0 | 35.0 | 70.50 |
+| CIFAR-100 | ResNet18 | 48.2 | 20.4 | 68.86 |
+| Tiny-ImageNet | VGG16 | 69.5 | 39.0 | 59.47 |
+| Tiny-ImageNet | ResNet18 | 37.8 | 23.3 | 56.62 |
+| ImageNet | ResNet18 | 72.9 | 57.2 | 54.66 |
+| CIFAR10-DVS | 5Conv+1FC | 39.3 | 17.1 | 80.05 |
+
+**Surviving novelty claim**, and it should be stated this narrowly: a
+*differentiable* budget carried *inside* a *Bayesian* criterion, as a hard
+constraint via Lagrangian relaxation with dual ascent, so the same posterior
+that decides redundancy is shaped by cost. SPEAR choosing RL is weak
+circumstantial evidence the field lacked an easy differentiable path here.
+
+## Decision (user, 2026-08-11): replicate SPEAR and compare head to head
+
+Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
+
+- **Target row: CIFAR-10 / VGG16, 52.5% SynOps, 91.77%.** Closest to existing
+  work, and 52.5% SynOps sits almost exactly on the existing 0.5 budget, so it
+  is a near-matched operating point.
+- **Needs a new config**: VGG16 architecture, **T=4**, their training recipe.
+  `dpap_repl` cannot be reused — it is a 6-conv VGG-style stack
+  (`128,128,M,256,256,M,512,512` + 512FC) at **T=8**. Different architecture and
+  different timestep count, and SynOps scales with timesteps, so nothing is
+  comparable without a fresh setup.
+- **Fresh pretrain required.** Pretraining dominated 5.4h of the ~7h DPAP run.
+  This competes directly with the outstanding seed runs for GPU.
+- **Expect imperfect replication.** Same problem class as SCA (see Session 2's
+  replication-targets work): the paper may not state its full training setup.
+  Accepted by the user, to be acknowledged explicitly in the write-up alongside
+  the existing DPAP replication caveat rather than glossed over. Follow
+  `docs/replication_targets.md` conventions: record provenance for every value,
+  and label anything assumed as an assumption rather than a replication.
+
+## Added 2026-08-11: measure_baseline_synops.py (commit aae6beb)
+
+SynOps budgets are defined as a fraction of the unpruned network's measured
+SynOps (`pruning.synops_budget_plan` docstring), but **that denominator was
+never recorded**, which leaves every reported SynOps figure uninterpretable in
+absolute terms.
+
+It cannot be back-solved from the results table: the 0.5 row implies an unpruned
+total of ~468M and the 0.3 row implies ~337M, for the same network. Three
+reasons they disagree:
+
+1. Cost-blind selection (`rank_by="importance"`) stops at the largest importance
+   prefix that fits and does **not** skip-and-continue, so it under-spends the
+   budget by an unknown margin.
+2. Layer floors are satisfied first and **win over the budget**, so a run can
+   also land over.
+3. Reported SynOps is measured post-fine-tune while the budget is enforced at
+   selection time, and firing rates drift in between.
+
+The script loads the saved baseline with gates inert, runs `measure_synops` over
+N test batches, and writes `outputs/<model>/baseline_synops.json` with SynOps per
+sample, dense MACs, the event-driven fraction and the absolute ceilings the 0.5
+and 0.3 budgets correspond to. `slurm_synops.sh` submits it: 20-minute
+wallclock, no training, no gradients.
+
+---
+
+# State as of 2026-08-03, and the open decision
 
 ## UPDATE, 2026-08-03 evening: the blocker is BROKEN. First positive core result.
 
