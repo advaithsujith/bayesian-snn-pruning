@@ -114,6 +114,110 @@ Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
   `docs/replication_targets.md` conventions: record provenance for every value,
   and label anything assumed as an assumption rather than a replication.
 
+## SPEAR replication: BUILT 2026-08-11, not yet run
+
+Config, loss, tests and submission script are in. Zero GPU spent so far.
+Full provenance is in **`docs/replication_targets.md` section 4**, which is
+the source of truth; this is the summary.
+
+**Recipe, all stated in the SPEAR paper text** (unlike SCA): VGG16, T=4 via
+image copying, LIF with **hard reset**, threshold **1.0**, tau **2.0**, no
+input-current decay, arctan surrogate, **TET** loss, **SGD** momentum 0.9,
+wd 5e-5, max lr **0.1**, **210 epochs** (10 linear warm-up + 200 cosine),
+**no augmentation**, fine-tune 210 epochs in the same configuration.
+
+**What was added:**
+- `config.get_spear_repl_config()` (+ `"spear_repl"` in `ALL_EXPERIMENTS`).
+- `losses.tet_loss`, registered as `"tet"`. TET is Deng et al., ICLR 2022
+  (arXiv 2202.11946): per-timestep CE averaged over T, plus an MSE term
+  toward a constant, mixed by lambda. Their CIFAR values are lambda=0.05 and
+  phi=V_th=1.0; SPEAR states neither, so both are assumptions.
+- `ArchConfig.output_readout` ("spikes" default | "current"). See below.
+- `FineTuneConfig.lr_warmup_epochs` / `min_lr`, plumbed through `run_all.py`,
+  `run_sparsity_curve.py` and `run_bio_pruning.py`. Defaults 0 / 0.0, so every
+  existing fine-tune is bit-identical.
+- `run_all.py --model NAME --pretrain-only`. `MODEL_ORDER` previously had to
+  be edited in source to switch architecture.
+- `tests/test_spear.py` (41 CPU checks) and `slurm_spear.sh`.
+
+**The one real design decision: `output_readout="current"`.** TET defines its
+O(t) as the output layer's *pre-synaptic current*, not its spikes, and at T=4
+a summed spike count takes only five values per class, so argmax ties
+constantly and breaks toward class 0. The test measures this: on an untrained
+net the spike readout ties on 4/4 examples, the current readout on 0/4. So
+the SPEAR arm reads `fc_out`'s analog output and skips `lif_out`. Contained
+change: the tensor keeps its [T,B,C] shape and both `_spike_accuracy` and
+`spike_rate_cross_entropy` reduce with `sum(dim=0)`, which is argmax-identical
+on currents, so nothing downstream changed. SynOps counting is untouched
+(`measure_synops` hooks Conv2d/Linear inputs).
+
+**Three things to know before running it:**
+
+1. **There is no go/no-go baseline gate.** SPEAR never publishes an unpruned
+   VGG16 accuracy. The nearest published reference is SCA's **91.14%**, and
+   the link is solid: SPEAR's table quotes SCA's pruned rows *verbatim*
+   (91.67% @ 28.4% params, 90.26% @ 9.3% params match SCA's published rows
+   exactly) and both use VGG16 at T=4. Treat it as a sanity check, not a
+   target. Report our own baseline and our drop from it in the write-up
+   rather than claiming to have reproduced a number they never printed.
+2. **`beta_max=0.01` is a placeholder carried over from DPAP, not a measured
+   value.** It does not transfer: it balances the KL against the task loss's
+   *gradient* on log_alpha, and that ratio moves with architecture, T, and
+   now the analog readout, which removes the quantisation that shaped the
+   gradient on every previous run. Run `train.gate_pressure_diagnostic` on
+   the new baseline and read the ratio first. This is why `slurm_spear.sh`
+   uses `--pretrain-only`.
+3. **Eight values had to be assumed** because neither SPEAR nor SCA states
+   them: the VGG16 spec (assumed standard CIFAR VGG16, 13 conv / 5 pools /
+   no hidden FC / 512->10, verified at 14,728,266 params), BatchNorm
+   presence, TET's lambda and phi, the normalisation constants, batch size,
+   max pooling, conv bias, and the train/validation protocol. All eight are
+   numbered in `get_spear_repl_config()` and listed in the doc. The last
+   three were initially silent dataclass defaults and are now pinned
+   explicitly so each reads as a decision. Note assumption 6 cuts both ways:
+   torchvision's VGG16 uses max pooling, but TET's own VGGSNN uses average,
+   so revisit it if the baseline lands well under 91.14%.
+
+**Independent review, 2026-08-11.** A no-context agent re-read both papers
+against the code. It caught a citation error (the paper is **Xie et al.**, not
+Zhang; corrected in five places, author list now recorded in full in the doc)
+and a silent scheduler bug, below. It confirmed by direct derivation that the
+tau->beta mapping is exact *including reset ordering* (snnTorch's
+`reset_delay=True` default makes `mem_t = beta*(mem_{t-1}*(1-S_{t-1})) + I_t`,
+which is exactly SpikingJelly's hard reset), that `tet_loss` matches Eqs.
+9/12/13 with no target mis-broadcast, that no downstream consumer assumes a
+binary output tensor, and that the parameter count is right.
+
+## BEHAVIOUR CHANGE 2026-08-11: cosine_warmup no longer degenerates silently
+
+Found by the review above, and it affects **dpap_repl**, not just SPEAR.
+
+`train.build_scheduler` accepted `scheduler_name="cosine_warmup"` with
+`warmup_epochs=0` and quietly returned a **plain cosine starting at the full
+learning rate**. Any call site that forgot to forward `lr_warmup_epochs`
+therefore ran with no warm-up while looking, from the config, as though it
+had. **Five call sites had forgotten**: `run_bio_pruning.py` (a full pretrain
+from scratch), `run_sparsity_curve.py` (gate training), `sweep_beta.py` x2 and
+`hpo_search.py` x2. All five now forward the arguments, and `build_scheduler`
+**raises** on `cosine_warmup` with no warm-up rather than serving a cosine,
+because "no warm-up was configured" and "warm-up ran" must not look the same.
+
+**What this changes for existing results.** `dpap_repl` sets
+`lr_scheduler="cosine_warmup"` with 5 warm-up epochs, so its **gate-training
+phase was silently running a plain cosine**. It now warms up over 5 epochs.
+The archived `beta0.01` curve was produced under the old path and a re-run
+will not reproduce it exactly. The pretrained 94.35% baseline is unaffected
+(`run_all.py` always forwarded the arguments for the pretrain phase). If the
+beta0.01 curve is ever regenerated, say so rather than presenting the two as
+the same run.
+
+**Next action:** `sbatch slurm_spear.sh` after `git pull` and the four test
+suites. Estimated ~4-6h for the 210-epoch pretrain, never measured for VGG16
+at T=4 on CSF3, so the script asks for 24h. Note the fine-tune decision was
+**210 epochs at every sparsity point**, matching their recipe rather than
+this project's 30, which is roughly 7x the fine-tune hours of every other
+experiment here and contends directly with the outstanding seed runs.
+
 ## Added 2026-08-11: measure_baseline_synops.py (commit aae6beb)
 
 SynOps budgets are defined as a fraction of the unpruned network's measured

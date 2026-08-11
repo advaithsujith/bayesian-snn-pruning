@@ -6,9 +6,10 @@ pipeline for LeNet-SNN, then VGG9-SNN, then Spiking ResNet-18, and finally
 writes outputs/final_results.csv plus every comparison figure.
 """
 
+import argparse
 import csv
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import matplotlib
 
@@ -170,8 +171,17 @@ def build_summary_text(
     return "\n".join(lines) + "\n"
 
 
-def run_experiment(model_name: str, experiment_index: int, total_experiments: int) -> Dict[str, Any]:
-    """Run the full pipeline for a single architecture end to end."""
+def run_experiment(
+    model_name: str,
+    experiment_index: int,
+    total_experiments: int,
+    pretrain_only: bool = False,
+) -> Optional[Dict[str, Any]]:
+    """Run the full pipeline for a single architecture end to end.
+
+    `pretrain_only` stops after the baseline is trained, evaluated and saved,
+    returning None instead of a results row. See main()'s --pretrain-only.
+    """
     cfg: ExperimentConfig = ALL_EXPERIMENTS[model_name]()
     set_seed(cfg.seed)
     device = get_device(cfg.device)
@@ -269,6 +279,24 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
     logger.info(f"Test accuracy before Bayesian conversion: {eval_before['test_accuracy']:.4f}")
     if not reuse_pretrained:
         torch.save(model.state_dict(), pretrained_path)
+
+    if pretrain_only:
+        print_banner(f"PRETRAIN COMPLETE: {model_name}")
+        print(f"Baseline test accuracy: {eval_before['test_accuracy']:.4f}")
+        print(f"Baseline saved to: {pretrained_path}")
+        print(
+            "\nStopped before gate training, as requested. Next, on this exact "
+            "baseline:\n"
+            "  1. python measure_baseline_synops.py --model "
+            f"{model_name} --batches 8\n"
+            "  2. read the gate-pressure diagnostic before trusting beta_max\n"
+            f"  3. set reuse_pretrained=True in this experiment's config\n"
+        )
+        logger.info(
+            f"pretrain_only: stopped after saving baseline "
+            f"(test acc {eval_before['test_accuracy']:.4f})"
+        )
+        return None
 
     print("\nConverting to Bayesian...")
     set_bayesian_mode(model, True)
@@ -380,6 +408,8 @@ def run_experiment(model_name: str, experiment_index: int, total_experiments: in
         weight_decay=cfg.finetune.weight_decay,
         optimizer_name=cfg.finetune.optimizer,
         scheduler_name=cfg.finetune.lr_scheduler,
+        lr_warmup_epochs=cfg.finetune.lr_warmup_epochs,
+        min_lr=cfg.finetune.min_lr,
         grad_clip_norm=cfg.finetune.grad_clip_norm,
         use_amp=cfg.finetune.use_amp,
         device=device,
@@ -519,17 +549,53 @@ def merge_final_results(new_rows: List[Dict[str, Any]], path: str) -> List[Dict[
 
 
 def main() -> None:
-    """Run every experiment in MODEL_ORDER, then build the cross-model summary."""
+    """Run the selected experiments, then build the cross-model summary."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    # MODEL_ORDER used to be the only way to choose an architecture, so
+    # switching one meant editing this file. That is easy to forget and easy
+    # to commit by accident; --model overrides it without touching source.
+    parser.add_argument(
+        "--model",
+        action="append",
+        choices=sorted(ALL_EXPERIMENTS),
+        help="Experiment to run; repeatable. Defaults to MODEL_ORDER.",
+    )
+    parser.add_argument(
+        "--pretrain-only",
+        action="store_true",
+        help=(
+            "Stop after the baseline is trained, evaluated and saved, skipping "
+            "gate training, pruning and fine-tuning. For a replication whose "
+            "beta_max has not been measured on its own baseline yet: gate "
+            "training at a borrowed beta_max has collapsed three times in this "
+            "project, and there is no point spending the GPU hours before the "
+            "gate-pressure diagnostic has been read."
+        ),
+    )
+    args = parser.parse_args()
+    model_names = args.model or MODEL_ORDER
+
     ensure_dirs("./checkpoints", "./outputs", "./plots", "./logs")
 
     results: List[Dict[str, Any]] = []
-    for i, model_name in enumerate(MODEL_ORDER, start=1):
-        result = run_experiment(model_name, i, len(MODEL_ORDER))
-        results.append(result)
+    for i, model_name in enumerate(model_names, start=1):
+        result = run_experiment(model_name, i, len(model_names), args.pretrain_only)
+        if result is not None:
+            results.append(result)
+
+    if not results:
+        # --pretrain-only: nothing to tabulate, and writing an empty CSV over
+        # outputs/final_results.csv would destroy the other models' rows.
+        return
 
     final_path = "./outputs/final_results.csv"
-    write_csv(merge_final_results(results, final_path), final_path)
-    make_comparison_plots(results, "./plots")
+    merged = merge_final_results(results, final_path)
+    write_csv(merged, final_path)
+    # Plot the merged table, not just this run's rows. The CSV has merged
+    # since the incident that erased the VGG9 figures, but the figures did
+    # not, so a single-model run would redraw every cross-model comparison
+    # chart with one bar on it. Newly easy to trigger now that --model exists.
+    make_comparison_plots(merged, "./plots")
 
     print_banner("ALL EXPERIMENTS FINISHED")
     for r in results:

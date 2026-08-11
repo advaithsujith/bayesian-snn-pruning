@@ -171,18 +171,200 @@ fixed in `get_dpap_repl_config`:
 
 ---
 
+## 4. Xie et al. (SPEAR) -- arXiv 2507.02945
+
+"SPEAR: Structured Pruning for Spiking Neural Networks via Synaptic Operation
+Estimation and Reinforcement Learning", Hui Xie, Yuhe Liu, Shaoqi Yang,
+Jinyang Guo, Yufei Guo, Yuqing Ma, Jiaxin Chen, Jiaheng Liu, Xianglong Liu.
+Author list recorded in full because the first draft of this section
+misattributed it to "Zhang et al.", which would have propagated straight into
+the dissertation bibliography. The head-to-head target for this
+project's SynOps-budget work, because it is the only prior method that also
+prunes SNNs against an explicit SynOps target. No public code could be
+located (searched 2026-08-11; the OpenReview page lists no repository), so
+every value below is from the paper text.
+
+**Why this paper and not the others as the comparison target.** SPEAR
+searches with DDPG reinforcement learning over an already-trained network and
+enters SynOps as a *soft penalty in the reward*, with post-fine-tune SynOps
+*predicted by linear regression* rather than measured. Ours is a
+differentiable hard constraint carried inside the criterion during gate
+training. Same objective, opposite mechanism, so the comparison is meaningful
+rather than incidental.
+
+### Target operating point
+
+| Dataset | Arch | SynOps(%) | Params(%) | Top-1 Acc(%) |
+|---|---|---|---|---|
+| **CIFAR-10** | **VGG16** | **52.5** | **14.4** | **91.77** |
+
+Chosen because 52.5% SynOps sits almost exactly on this project's existing
+0.5 SynOps budget, making it a near-matched operating point. Their full
+CIFAR-10 / VGG16 table (Table 1 and Appendix B Table 7), for context:
+
+| Method | SynOps(%) | Params(%) | Acc(%) |
+|---|---|---|---|
+| NetworkSlimming | 87.3 | 40.3 | 91.22 |
+| NetworkSlimming | 87.3 | 14.3 | 91.16 |
+| SCA-based | 67.8 | 28.4 | 91.67 |
+| SCA-based | 63.0 | 9.3 | 90.26 |
+| SPEAR | 62.5 | 33.1 | 92.49 |
+| **SPEAR** | **52.5** | **14.4** | **91.77** |
+| SPEAR | 46.4 | 11.9 | 91.62 |
+
+### Setup
+
+| Setting | Value | Source |
+|---|---|---|
+| Architecture | VGG16 (also ResNet18; we replicate VGG16 only) | [paper] Sec. 5 |
+| Conv/FC specification | **[UNKNOWN]** -- "VGG16" is named but never specified | see assumption below |
+| Timesteps | **4** | [paper] "We copy the images 4 times along the timeline to obtain input for 4 time steps." |
+| Encoding | **direct** (static image copied per timestep) | [paper] same sentence |
+| Neuron | LIF, **hard reset** | [paper] "LIF neurons with a hard reset mechanism" |
+| Threshold | **1.0** | [paper] "We set the fire threshold as 1.0" |
+| Membrane time constant | **tau = 2.0** | [paper] "set membrane potential time constant as 2.0" |
+| Input current decay | **none** | [paper] "No decay for input currents is used." |
+| Surrogate | **arctan** | [paper] "We use arctan function as the surrogate function." |
+| Loss | **TET** (Deng et al., ICLR 2022) | [paper] "TET is used as loss function." |
+| TET lambda / phi | **[UNKNOWN]** in SPEAR; lam = 0.05, phi = V_th from the TET paper | [paper, TET] Secs. 5.2 / 4.2 |
+| Optimizer | **SGD, momentum 0.9** | [paper] |
+| Weight decay | **5e-5** | [paper] |
+| Epochs | **210** = 10 linear warm-up + 200 cosine annealing | [paper] |
+| Max learning rate | **0.1** | [paper] |
+| Augmentation | **none** -- "For static datasets, no data augmentation is applied" | [paper] |
+| Normalisation | **[UNKNOWN]** | not stated |
+| Batch size | **[UNKNOWN]** | not stated |
+| Framework | SpikingJelly | [paper] |
+| **Unpruned baseline accuracy** | **[UNKNOWN] -- never reported** | see below |
+| Fine-tune after pruning | 210 epochs, "the same configuration as training" | [paper] |
+| SynOps | `SynOps = sum_k s_k * c_k` (spikes fired x synaptic connections), per sample, averaged over the test set; timesteps are inside the spike counts | [paper] |
+| SynOps(%) denominator | "the ratio of SynOps and #parameters over those from pre-trained model" -- i.e. relative to the *unpruned* model's measured SynOps | [paper] |
+
+### The missing baseline, and what to compare against instead
+
+**SPEAR never reports an unpruned VGG16 CIFAR-10 accuracy**, in the text or
+any table. This is the single biggest difference from the DPAP replication,
+which had a published 94.54% to act as a go/no-go gate. There is no
+equivalent gate here.
+
+The usable substitute: SPEAR's table quotes the SCA-based rows **verbatim
+from SCA's own paper** -- 91.67% @ 28.4% params and 90.26% @ 9.3% params
+match SCA's published "91.67% @ 28.39% connectivity" and "90.26% @ 9.31%
+connectivity" exactly (see section 2 above). Both papers also use VGG16 at
+T=4 on CIFAR-10. So the two setups are the same family, and **SCA's stated
+baseline of 91.14% is the closest thing to a published unpruned reference for
+SPEAR's table**. Treat it as context, not as SPEAR's own number.
+
+Practical consequence for the write-up: report the pruned comparison against
+SPEAR's 91.77% as the primary claim, and report *our* replicated baseline and
+our accuracy drop from it alongside, rather than claiming to have reproduced
+a baseline they never published.
+
+### Assumptions (record as assumptions, not as replication)
+
+1. **VGG16 specification.** Neither SPEAR nor SCA states one. Assume the
+   standard CIFAR VGG16: conv `64,64,M,128,128,M,256,256,256,M,512,512,512,M,
+   512,512,512,M` (13 conv layers, 5 pooling stages), no hidden FC layers, a
+   single `512 -> 10` classifier. Five pools take 32px to 1px, so the
+   flattened width is 512. This is the configuration used almost universally
+   for VGG16 on CIFAR-10 and the one SpikingJelly-based SNN work adopts.
+2. **BatchNorm.** Not mentioned by SPEAR. Assumed present (`norm_type="batch"`),
+   as in SCA, which places BN between conv and spiking neuron. Note this makes
+   the gate-placement fix load-bearing: the gate must be applied *after* the
+   norm (`models.assert_gate_after_norm`), the bug that cost three collapsed
+   DPAP runs.
+3. **TET lambda = 0.05, phi = V_th = 1.0**, from the TET paper's CIFAR
+   settings. SPEAR states neither.
+4. **Normalisation** mean (0.4914, 0.4822, 0.4465), std (0.2023, 0.1994,
+   0.2010) -- the standard CIFAR-10 values, and the same std DPAP's code uses.
+5. **Batch size 128**, this project's default. Note their lr of 0.1 is not
+   batch-size-scaled in the paper, unlike DPAP's, so batch size and lr are not
+   coupled here as they were there.
+6. **Max pooling.** SPEAR states no pooling type. Max is what torchvision's
+   VGG16 uses and SPEAR names VGG16 unqualified, so max is the reading. Worth
+   knowing it cuts the other way too: TET's own VGGSNN uses **average**
+   pooling throughout (their Sec. 5, `64C3-128C3-AP2-...`), and this repo's
+   `ArchConfig` docstring argues avg pooling suits binary spike trains, which
+   is why Chowdhury uses it. Revisit if the baseline lands well below SCA's
+   91.14% reference.
+7. **Conv bias present.** Also unstated. torchvision's `vgg16_bn` keeps conv
+   bias, and it is required to reach the 14,728,266 parameter count.
+8. **Train/validation protocol** (`val_fraction=0.0`). Unstated. Training on
+   all 50k and evaluating on test is what SCA and DPAP both do.
+
+Assumptions 6, 7 and 8 were initially left as silent `ArchConfig`/`DataConfig`
+defaults; they are now pinned explicitly in `get_spear_repl_config()` so each
+reads as a decision rather than an oversight.
+
+### Porting notes
+
+- **tau = 2.0 with no input-current decay maps exactly onto snnTorch.**
+  SpikingJelly's `LIFNode(decay_input=False)` updates
+  `v <- v - (v - v_reset)/tau + x`, i.e. `v <- (1 - 1/tau) * v + x`. snnTorch's
+  `Leaky` is `mem <- beta * mem + input`. So `beta = 1 - 1/tau = 0.5`, an
+  exact correspondence rather than the approximate one DPAP's PLIFNode needed.
+- **Hard reset** is `reset_mechanism="zero"` (DPAP and this project's own
+  experiments use `"subtract"`).
+- **`beta` is fixed, not learned** (`learn_beta=False`), unlike DPAP's PLIF.
+- **TET reads the output layer's pre-synaptic current, not its spikes.** Their
+  Eq. 7-9 define `O(t)` as "pre-synaptic input `I(t)` of the output layer".
+  This project's models classify by summed output *spikes*, which at T=4 gives
+  only five distinguishable levels per class and would both cripple the TET
+  cross-entropy and depress accuracy through ties. See the `output_readout`
+  setting on `ArchConfig`. Provenance: this is **[paper] for TET**, which is
+  sufficient since TET is the loss SPEAR trains with, but **[UNKNOWN] for
+  SPEAR**, which never states its readout. Do not write it up as a documented
+  choice of SPEAR's.
+- **No augmentation** is reached with `random_crop_padding=0` and
+  `horizontal_flip_prob=0.0`; both transforms then become no-ops rather than
+  needing a code path of their own.
+
+### Known deviations that remain
+
+Record these in the dissertation, as with DPAP's list in section 3.
+
+- **The pruning stages do not use TET.** `pruning_loss_type="spike_rate_ce"`,
+  so gate training *and the fine-tune* run under cross-entropy while only the
+  pretrain uses TET. SPEAR fine-tunes "in the same configuration as training",
+  so this is a real departure. Rationale, same as DPAP's: a replication's job
+  is to reproduce the paper's baseline, the pruning criterion under test is
+  ours, and TET is a training-dynamics loss aimed at flatter minima whose
+  interaction with the gate mechanism has never been characterised. Accuracy
+  is loss-independent, so the comparison against their published pruned row
+  still holds.
+- **The fine-tune trains on 45k, the pretrain on 50k.** `val_fraction=0.0`
+  gives the pretrain their protocol; `pruning_val_fraction=0.1` then holds out
+  a genuine validation split for the pruning stages so no decision of ours is
+  made on the test set. SPEAR's fine-tune presumably saw all 50k.
+- **`val_fraction=0.0` makes best-checkpoint selection test-set-informed** for
+  the pretrain, exactly as for DPAP. This matches their protocol but makes the
+  baseline a reproduction of that protocol rather than a clean generalisation
+  estimate. **Must be stated in the dissertation, not buried.**
+- **No unpruned baseline to match**, unlike DPAP's 94.54%. See above.
+- **The VGG16 specification is assumed**, so a parameter-count mismatch
+  against theirs cannot be detected: they publish params only as a percentage
+  of their own unpruned model.
+- **`losses.tet_loss`'s `lam` and `phi` are not reachable from the config.**
+  Task losses are looked up as `fn(out_rec, targets)`, so the defaults
+  (0.05 / 1.0) are the only values that can be used. `phi` is meant to track
+  `SNNConfig.threshold`; it is an independent literal, so changing the
+  threshold would silently desync it. Fine at SPEAR's threshold of 1.0, which
+  `tests/test_spear.py` now asserts.
+
+---
+
 ## Summary of what each replication costs us
 
-| | Chowdhury | SCA | DPAP |
-|---|---|---|---|
-| New architecture | yes (8-conv VGG9) | yes (VGG16) | yes (6Conv2FC) |
-| Reuses existing direct-surrogate training | no | yes | yes |
-| New encoding | Poisson | no | no |
-| New pooling | average | no | no |
-| New loss | no | [UNKNOWN] | yes (UnilateralMse) |
-| New neuron behaviour | per-layer thresholds | no | learnable tau (PLIF) |
-| Whole new training stage | yes (ANN pretrain + threshold balance + convert) | no | no |
-| Setup fully documented? | **yes** | **no** (optimizer/lr/loss unknown) | yes, via code |
+| | Chowdhury | SCA | DPAP | SPEAR |
+|---|---|---|---|---|
+| New architecture | yes (8-conv VGG9) | yes (VGG16) | yes (6Conv2FC) | yes (VGG16) |
+| Reuses existing direct-surrogate training | no | yes | yes | yes |
+| New encoding | Poisson | no | no | no |
+| New pooling | average | no | no | no |
+| New loss | no | [UNKNOWN] | yes (UnilateralMse) | yes (TET) |
+| New neuron behaviour | per-layer thresholds | no | learnable tau (PLIF) | hard reset |
+| Whole new training stage | yes (ANN pretrain + threshold balance + convert) | no | no | no |
+| Setup fully documented? | **yes** | **no** (optimizer/lr/loss unknown) | yes, via code | **mostly** (no arch spec, no baseline) |
 
 Ironically the paper whose architecture name matched ours (Chowdhury's
 "VGG9") is the most expensive to replicate, and the one with the cleanest

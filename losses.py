@@ -59,9 +59,58 @@ def unilateral_mse(spk_rec: torch.Tensor, targets: torch.Tensor, thresh: float =
     return F.mse_loss(rates, target_rates)
 
 
+def tet_loss(
+    out_rec: torch.Tensor,
+    targets: torch.Tensor,
+    lam: float = 0.05,
+    phi: float = 1.0,
+) -> torch.Tensor:
+    """
+    Temporal Efficient Training (Deng et al., ICLR 2022, arXiv 2202.11946).
+
+    SPEAR's task loss, needed to replicate Xie et al. (arXiv 2507.02945) --
+    see docs/replication_targets.md. Where the standard rate-coded loss
+    (spike_rate_cross_entropy above) averages the output over time and takes
+    cross-entropy once, TET takes cross-entropy at *every* timestep and
+    averages the losses:
+
+        L_TET  = (1/T) * sum_t CE(O(t), y)                        [their Eq. 9]
+        L_MSE  = (1/T) * sum_t MSE(O(t), phi)                     [their Eq. 12]
+        L_total = (1 - lam) * L_TET + lam * L_MSE                 [their Eq. 13]
+
+    The point of the per-timestep form is optimisation, not accuracy: under a
+    surrogate gradient the summed-output loss lets momentum accumulate around
+    sharp minima, and constraining every moment's output instead drives the
+    network toward a flatter one (their Sec. 4.2). The MSE term regularises
+    each timestep's output toward a constant `phi` so that a single outlier
+    timestep cannot dominate the integrated output.
+
+    `out_rec` is [num_steps, batch, num_classes]. Note that TET defines O(t)
+    as the *pre-synaptic input* of the output layer -- an analog value -- not
+    the output layer's spikes, which is why the SPEAR replication config sets
+    `output_readout="current"`. Passing binary spikes here would put
+    per-timestep cross-entropy on a {0,1} logit vector, which carries almost
+    no gradient signal at SPEAR's T=4.
+
+    Defaults are the values the TET paper states for CIFAR: lam = 0.05
+    ("The lambda is set to 0.05", their Sec. 5.2) and phi = V_th, the firing
+    threshold ("we set phi = V_th in our experiments", their Sec. 4.2), which
+    is 1.0 under SPEAR's LIF settings. SPEAR itself states only "TET is used
+    as loss function" and gives neither value, so both are recorded as
+    assumptions in docs/replication_targets.md rather than as replication.
+    """
+    num_steps = out_rec.shape[0]
+    # Flattening to [T*B, C] and repeating the targets averages over both
+    # time and batch in one call, which is exactly (1/T) sum_t CE(O(t), y).
+    flat_ce = F.cross_entropy(out_rec.flatten(0, 1), targets.repeat(num_steps))
+    reg = F.mse_loss(out_rec, torch.full_like(out_rec, phi))
+    return (1.0 - lam) * flat_ce + lam * reg
+
+
 TASK_LOSSES = {
     "spike_rate_ce": spike_rate_cross_entropy,
     "unilateral_mse": unilateral_mse,
+    "tet": tet_loss,
 }
 
 

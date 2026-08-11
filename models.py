@@ -444,6 +444,7 @@ class VGGStyleSNN(nn.Module):
         self.snn_cfg = snn_cfg
         self.encoding = arch_cfg.encoding
         self.dropout_p = arch_cfg.dropout_p
+        self.output_readout = arch_cfg.output_readout
 
         gate_kwargs = dict(
             log_alpha_init=bayesian_cfg.log_alpha_init,
@@ -528,6 +529,21 @@ class VGGStyleSNN(nn.Module):
 
         self.fc_out = nn.Linear(width, num_classes)  # classifier: never pruned
         self.lif_out = _make_leaky(snn_cfg, output=True)
+        # Under the "current" readout lif_out is constructed but never called,
+        # which is harmless only while it owns no trainable parameter. With
+        # learn_beta it does: snnTorch registers `beta` as an nn.Parameter,
+        # and it would then sit in the optimizer receiving no gradient
+        # forever, counted by count_parameters and copied by
+        # transfer_leaky_state. A frozen ghost parameter is the kind of thing
+        # that is invisible until it corrupts a parameter-count comparison,
+        # so reject the combination rather than carry it.
+        if arch_cfg.output_readout == "current" and snn_cfg.learn_beta:
+            raise ValueError(
+                "output_readout='current' skips the output neuron entirely, but "
+                "learn_beta=True makes its decay a trainable parameter that would "
+                "then never receive a gradient. Use learn_beta=False with the "
+                "current readout, or the 'spikes' readout with learn_beta."
+            )
 
     def _dropout(
         self, spk: torch.Tensor, cache: List["torch.Tensor | None"], idx: int
@@ -552,7 +568,9 @@ class VGGStyleSNN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Simulate `num_steps` timesteps under this config's encoding.
 
-        Returns spk_rec of shape [num_steps, batch_size, num_classes].
+        Returns the output record, shape [num_steps, batch_size, num_classes]
+        -- output-layer spikes, or fc_out's pre-synaptic current when
+        `output_readout="current"` (see ArchConfig.output_readout).
         """
         mem_conv = [lif.init_leaky() for lif in self.lif_layers]
         mem_fc = [lif.init_leaky() for lif in self.lif_fc_layers]
@@ -587,8 +605,15 @@ class VGGStyleSNN(nn.Module):
                 spk = self._dropout(spk, fc_masks, i)
 
             cur_out = self.fc_out(spk)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            if self.output_readout == "current":
+                # lif_out is deliberately left constructed but uncalled: it
+                # holds no trainable parameter unless learn_beta is set, so
+                # skipping it changes no state_dict, while calling it would
+                # burn compute on a spike train nothing reads.
+                spk_out_rec.append(cur_out)
+            else:
+                spk_out, mem_out = self.lif_out(cur_out, mem_out)
+                spk_out_rec.append(spk_out)
 
         return torch.stack(spk_out_rec, dim=0)
 

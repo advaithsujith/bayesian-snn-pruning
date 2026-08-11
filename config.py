@@ -69,6 +69,36 @@ class ArchConfig:
     # activation distribution rather than shared globally. None => use
     # SNNConfig.threshold for every layer.
     layer_thresholds: Optional[List[float]] = None
+    # What the network's per-timestep output is read from.
+    #   "spikes"  -- the output layer's spikes, summed over time to classify.
+    #                Every original experiment uses this; it is the default so
+    #                they stay bit-identical.
+    #   "current" -- the output layer's *pre-synaptic current*, i.e. fc_out's
+    #                analog output, recorded before any spiking neuron.
+    #
+    # "current" exists for the SPEAR replication. Two reasons, both in
+    # docs/replication_targets.md: TET (SPEAR's task loss) defines its O(t) as
+    # "pre-synaptic input I(t) of the output layer", so running it on spikes
+    # would put per-timestep cross-entropy on a binary {0,1} logit vector; and
+    # at SPEAR's T=4 a summed spike count takes only five values per class, so
+    # 10-way classification ties constantly and argmax breaks those ties
+    # toward the lowest class index. Both problems vanish with an analog
+    # readout.
+    #
+    # Provenance, because the distinction matters: TET *states* this
+    # ("We use O(t) to represent pre-synaptic input I(t) of the output
+    # layer", their Sec. 4.1), which is enough on its own since TET is the
+    # loss SPEAR trains with. SPEAR itself never states its readout, and
+    # SCA's was not checked. So this is [paper] for TET and [UNKNOWN] for
+    # SPEAR, not a documented choice of SPEAR's.
+    #
+    # Nothing downstream needs to change: the returned tensor keeps its
+    # [num_steps, batch, num_classes] shape, and both the accuracy helper and
+    # spike_rate_cross_entropy reduce it with sum(dim=0), which is
+    # argmax-identical on currents. SynOps counting is likewise unaffected --
+    # metrics.measure_synops hooks Conv2d/Linear inputs, and fc_out's input is
+    # the last spiking layer's output either way.
+    output_readout: str = "spikes"  # "spikes" | "current"
 
     def __post_init__(self) -> None:
         self.validate()
@@ -107,6 +137,11 @@ class ArchConfig:
             raise ValueError(
                 f"{self.num_pools()} pooling stages reduce a {self.input_size}px "
                 "input below 1px; remove a pooling stage or use a larger input"
+            )
+        if self.output_readout not in ("spikes", "current"):
+            raise ValueError(
+                f"output_readout must be 'spikes' or 'current', got "
+                f"'{self.output_readout}'"
             )
 
     def conv_channels(self) -> List[int]:
@@ -261,6 +296,15 @@ class FineTuneConfig:
     weight_decay: float = 5e-5
     optimizer: str = "adam"
     lr_scheduler: str = "cosine"
+    # Only used by the "cosine_warmup" scheduler; the 0 / 0.0 defaults leave
+    # every pre-existing fine-tune bit-identical. Added for the SPEAR
+    # replication, whose paper fine-tunes "in the same configuration as
+    # training" -- i.e. including the 10-epoch linear warm-up. That warm-up is
+    # load-bearing rather than cosmetic there: their recipe's max LR is 0.1
+    # under SGD, and applying it cold to a freshly rebuilt network would undo
+    # the pruned weights before the gradient signal stabilises.
+    lr_warmup_epochs: int = 0
+    min_lr: float = 0.0
     grad_clip_norm: float = 5.0
     use_amp: bool = True
 
@@ -617,9 +661,185 @@ def get_dpap_repl_config() -> ExperimentConfig:
     return cfg
 
 
+def get_spear_repl_config() -> ExperimentConfig:
+    """
+    Replication of SPEAR's CIFAR-10 / VGG16 setup (Xie et al., arXiv
+    2507.02945), the head-to-head comparison target for this project's
+    SynOps-budget work.
+
+    Every value is transcribed from docs/replication_targets.md section 4,
+    which records provenance per row. SPEAR states its training recipe in the
+    paper text -- unlike SCA -- but states neither the VGG16 specification nor
+    an unpruned baseline accuracy, and no public code could be found. The five
+    values that had to be assumed are listed in that document's "Assumptions"
+    subsection and flagged inline below.
+
+    Eight values had to be assumed and are numbered inline below; the same
+    list is in the doc. Do not promote any of them to a replicated fact.
+
+    Target operating point: **52.5% SynOps, 14.4% params, 91.77% top-1**.
+    That SynOps figure sits almost exactly on this project's existing 0.5
+    budget, which is why this row was chosen over their others.
+
+    **There is no go/no-go baseline gate here**, unlike the DPAP replication's
+    94.54%. SPEAR never publishes an unpruned number. The nearest published
+    reference is SCA's 91.14% baseline, since SPEAR's table quotes SCA's
+    pruned rows verbatim and both use VGG16 at T=4 -- treat it as context for
+    sanity-checking the pretrain, not as a target to hit.
+    """
+    cfg = ExperimentConfig(name="spear_repl")
+    cfg.output_dir = "./outputs/spear_repl"
+
+    # ASSUMPTION (1 of 8): the standard CIFAR VGG16 -- 13 conv layers, 5
+    # pooling stages, no hidden FC, a single 512->10 classifier. SPEAR names
+    # "VGG16" and specifies nothing further; SCA, whose numbers SPEAR quotes,
+    # does not either. Five pools take 32px to 1px, so flatten_dim = 512.
+    # ASSUMPTION (2 of 8): BatchNorm present. Not mentioned by SPEAR; SCA
+    # places BN between conv and spiking neuron. norm_type="batch" makes
+    # VGGStyleSNN defer every conv gate to after its norm, which is mandatory
+    # here -- gating before a BatchNorm is the bug that collapsed three DPAP
+    # runs (see models.assert_gate_after_norm).
+    # ASSUMPTION (6 of 8): max pooling, inherited from ArchConfig's default
+    # and pinned explicitly here so it is a choice rather than an oversight.
+    # SPEAR states no pooling type. Max is what torchvision's VGG16 uses, and
+    # SPEAR names VGG16 without qualification. Noted against it: TET's own
+    # VGGSNN uses average pooling throughout, and this class's docstring
+    # argues avg pooling suits binary spike trains. Revisit if the baseline
+    # lands well under SCA's 91.14% reference.
+    # ASSUMPTION (7 of 8): conv bias present, also an ArchConfig default.
+    # torchvision's vgg16_bn keeps conv bias too, and it is required to reach
+    # the 14,728,266 parameter count asserted in tests/test_spear.py.
+    cfg.arch = ArchConfig(
+        conv_spec=[64, 64, "M", 128, 128, "M", 256, 256, 256, "M",
+                   512, 512, 512, "M", 512, 512, 512, "M"],
+        fc_hidden=[],
+        norm_type="batch",
+        pool_type="max",
+        conv_bias=True,
+        # TET defines its per-timestep output as the output layer's
+        # pre-synaptic current, and at T=4 a summed spike count takes only
+        # five values per class. Both reasons are spelled out on
+        # ArchConfig.output_readout.
+        output_readout="current",
+    )
+
+    # "We copy the images 4 times along the timeline to obtain input for 4
+    # time steps" => T=4 with direct encoding (the ArchConfig default).
+    cfg.snn.num_steps = 4
+    # tau=2.0 with "No decay for input currents": SpikingJelly's
+    # LIFNode(decay_input=False) is v <- (1 - 1/tau) * v + x, and snnTorch's
+    # Leaky is mem <- beta * mem + input, so beta = 1 - 1/tau = 0.5 exactly.
+    # A cleaner correspondence than DPAP's PLIFNode needed.
+    cfg.snn.beta = 0.5
+    cfg.snn.threshold = 1.0
+    cfg.snn.learn_beta = False  # fixed tau, unlike DPAP's parametric LIF
+    cfg.snn.reset_mechanism = "zero"  # "hard reset mechanism"
+    cfg.snn.spike_grad = "atan"  # "We use arctan function as the surrogate"
+
+    # "TET is used as loss function." SPEAR gives neither TET hyperparameter;
+    # losses.tet_loss defaults to the TET paper's own CIFAR values
+    # (lam=0.05, phi=V_th=1.0) -- ASSUMPTION (3 of 8).
+    cfg.loss_type = "tet"
+
+    # SGD momentum 0.9, wd 5e-5, 210 epochs = 10 linear warm-up + 200 cosine,
+    # max lr 0.1. All four stated in the paper.
+    cfg.train.epochs = 210
+    cfg.train.lr = 0.1
+    cfg.train.weight_decay = 5e-5
+    cfg.train.optimizer = "sgd"  # train._optimizer_by_name applies momentum 0.9
+    cfg.train.lr_scheduler = "cosine_warmup"
+    cfg.train.lr_warmup_epochs = 10
+    cfg.train.min_lr = 0.0  # they state max lr only; cosine to 0 is the default
+    # ASSUMPTION (5 of 8): batch size. Not stated. Note their lr is NOT
+    # batch-size-scaled in the paper, unlike DPAP's, so the two are not
+    # coupled here and this does not perturb the stated 0.1.
+    cfg.train.batch_size = 128
+
+    # "For static datasets, no data augmentation is applied." Zeroing both
+    # turns the two transforms into no-ops rather than needing a branch:
+    # RandomCrop(32, padding=0) on a 32px image is the identity, and
+    # RandomHorizontalFlip(p=0.0) never fires. RandAugment / colour jitter /
+    # random erasing are already off by default.
+    cfg.data.random_crop_padding = 0
+    cfg.data.horizontal_flip_prob = 0.0
+    # ASSUMPTION (4 of 8): normalisation. Not stated; these are the standard
+    # CIFAR-10 values and the same std DPAP's code uses.
+    cfg.data.normalize_std = [0.2023, 0.1994, 0.2010]
+    # ASSUMPTION (8 of 8): the train/validation protocol. Not stated either.
+    # Training on all 50k and evaluating on test is what
+    # SCA and DPAP both do, and is the convention this field of work follows;
+    # it is also the setting that reproduces their number rather than
+    # handicapping it. Same split as DPAP's replication, with the same
+    # leakage caveat documented in datasets.get_cifar10_loaders.
+    cfg.data.val_fraction = 0.0
+    # ...but the pruning stages still get a genuine held-out split, so no
+    # decision of *ours* is ever made on the test set.
+    cfg.data.pruning_val_fraction = 0.1
+    cfg.data.num_workers = 8
+
+    # As with DPAP: the replication fixes the architecture and training recipe
+    # so the *baseline* is comparable, while the pruning criterion under test
+    # stays this project's own and runs under the loss it was calibrated for.
+    # TET is a training-dynamics loss aimed at flatter minima, not a pruning
+    # signal, and the gate mechanism has never been characterised under it.
+    # Accuracy is loss-independent, so the comparison against their published
+    # pruned row is unaffected.
+    cfg.pruning_loss_type = "spike_rate_ce"
+
+    # Fine-tuning: "finetune the compressed SNN for 210 epochs in the same
+    # configuration as training". The *optimisation* recipe below is matched
+    # in full (210 epochs, SGD, lr 0.1, 10 warm-up, wd 5e-5), per the decision
+    # to run 210 epochs at every sparsity point rather than only at the
+    # matched one. This is ~7x the fine-tune budget of every other experiment
+    # here and is the dominant GPU cost of the replication.
+    #
+    # Two deliberate departures from "the same configuration", both recorded
+    # in docs/replication_targets.md under "Known deviations that remain":
+    #   1. the fine-tune runs under `pruning_loss_type` (cross-entropy), not
+    #      TET, for the reason given above;
+    #   2. it trains on the 45k pruning split, not the 50k the pretrain uses,
+    #      because pruning_val_fraction=0.1 holds out a genuine validation set
+    #      so no decision of ours is made on the test set.
+    cfg.finetune.epochs = 210
+    cfg.finetune.batch_size = 128
+    cfg.finetune.lr = 0.1
+    cfg.finetune.weight_decay = 5e-5
+    cfg.finetune.optimizer = "sgd"
+    cfg.finetune.lr_scheduler = "cosine_warmup"
+    cfg.finetune.lr_warmup_epochs = 10
+    cfg.finetune.min_lr = 0.0
+
+    # Gate-phase settings are carried over from the DPAP platform as a
+    # STARTING POINT ONLY. beta_max is not transferable between setups: it
+    # balances the KL against the task loss's *gradient* on log_alpha, and
+    # that ratio moves with architecture, timestep count and -- new here --
+    # the analog output readout, which removes the spike-count quantisation
+    # that shaped the gradient on every previous run. Borrowing 0.4 from VGG9
+    # on a value-matching argument is exactly the mistake that cost three
+    # collapsed DPAP runs.
+    #
+    # So: run train.gate_pressure_diagnostic on the trained baseline and read
+    # the |d task/d log_alpha| / (beta * |d KL/d log_alpha|) ratio BEFORE
+    # trusting this number. Target a ratio near 1. It prints before epoch 1;
+    # on the DPAP run it read 1.4e-4 to 3.2e-3 and was ignored, and the run
+    # died by epoch 15.
+    cfg.bayesian.bayesian_train_epochs = 75
+    cfg.bayesian.kl_warmup_epochs = 10
+    cfg.bayesian.beta_max = 0.01
+    cfg.bayesian.bayesian_train_lr = 2e-4
+    cfg.bayesian.bayesian_train_weight_decay = 5e-5
+
+    # No pretrained checkpoint exists yet -- this replication needs a fresh
+    # ~210-epoch pretrain. Flip to True once outputs/spear_repl/trained_model.pt
+    # is saved, so the pruning runs all fork from one identical baseline.
+    cfg.reuse_pretrained = False
+    return cfg
+
+
 ALL_EXPERIMENTS = {
     "lenet": get_lenet_config,
     "vgg9": get_vgg9_config,
     "resnet18": get_resnet18_config,
     "dpap_repl": get_dpap_repl_config,
+    "spear_repl": get_spear_repl_config,
 }

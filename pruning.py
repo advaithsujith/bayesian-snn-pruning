@@ -969,6 +969,7 @@ class PrunedVGGStyleSNN(nn.Module):
         self.arch_cfg = arch_cfg
         self.encoding = arch_cfg.encoding
         self.dropout_p = arch_cfg.dropout_p
+        self.output_readout = arch_cfg.output_readout
         self.pool_flags = _pool_flags_from_spec(arch_cfg.conv_spec)
 
         thresholds = arch_cfg.layer_thresholds
@@ -1033,8 +1034,15 @@ class PrunedVGGStyleSNN(nn.Module):
                 spk = self._dropout(spk, fc_masks, i)
 
             cur_out = self.fc_out(spk)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            if self.output_readout == "current":
+                # Mirrors VGGStyleSNN.forward -- a rebuilt network must read
+                # its output exactly as the network it was pruned from did,
+                # or the fine-tuned accuracy is not on the same scale as the
+                # baseline it is compared against.
+                spk_out_rec.append(cur_out)
+            else:
+                spk_out, mem_out = self.lif_out(cur_out, mem_out)
+                spk_out_rec.append(spk_out)
 
         return torch.stack(spk_out_rec, dim=0)
 
