@@ -37,6 +37,11 @@ mkdir -p logs
 nvidia-smi || true
 python -c "import torch; print('torch', torch.__version__, 'cuda', torch.cuda.is_available())"
 
-python measure_baseline_synops.py --model dpap_repl --batches 8
+# Model defaults to dpap_repl for backwards compatibility; pass any other
+# experiment name as the first argument:
+#   sbatch slurm_synops.sh spear_repl
+MODEL="${1:-dpap_repl}"
 
-echo "Done. Result written to outputs/dpap_repl/baseline_synops.json"
+python measure_baseline_synops.py --model "$MODEL" --batches 8
+
+echo "Done. Result written to outputs/$MODEL/baseline_synops.json"
