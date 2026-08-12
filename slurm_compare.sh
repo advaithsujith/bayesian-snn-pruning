@@ -45,7 +45,20 @@
 
 set -euo pipefail
 
-MODEL="${1:-spear_repl}"
+# The model is REQUIRED, deliberately. This used to default to spear_repl, and
+# three bare `sbatch slurm_compare.sh` calls then all ran the same platform,
+# writing to the same outputs/<model>/sparsity_curve_compare/ and the same
+# checkpoint paths -- three jobs' GPU spent producing one corrupted result.
+# A default that silently picks an experiment is not a convenience.
+if [ $# -lt 1 ]; then
+    echo "usage: sbatch slurm_compare.sh <model> [finetune_epochs] [targets]"
+    echo "  e.g. sbatch slurm_compare.sh spear_repl"
+    echo "       sbatch slurm_compare.sh spear_repl 210 \"50.80\""
+    echo "models: spear_repl | spear_repl_resnet18 | dpap_repl | lenet | vgg9 | resnet18"
+    exit 2
+fi
+
+MODEL="$1"
 FINETUNE_EPOCHS="${2:-30}"
 TARGETS="${3:-33.46 50.80 70 90}"
 
@@ -75,6 +88,23 @@ if [ ! -f "outputs/${MODEL}/trained_model.pt" ]; then
     echo "Run the pretrain job for this platform first."
     exit 1
 fi
+
+# Refuse to start if another compare job is already writing to this platform's
+# output directory. Two concurrent runs share sparsity_curve_compare/ and the
+# per-target checkpoint paths, so the second silently overwrites the first's
+# partial results and both finish looking successful.
+LOCK="outputs/${MODEL}/.compare.lock"
+if [ -f "$LOCK" ]; then
+    OTHER=$(cat "$LOCK")
+    if squeue -j "$OTHER" -h -o %i 2>/dev/null | grep -q .; then
+        echo "ERROR: job ${OTHER} is already running a comparison for ${MODEL}."
+        echo "Wait for it, or scancel it, then resubmit."
+        exit 1
+    fi
+    echo "NOTE: stale lock from job ${OTHER} (no longer queued); continuing."
+fi
+echo "${SLURM_JOB_ID:-manual}" > "$LOCK"
+trap 'rm -f "'"$LOCK"'"' EXIT
 
 python tests/test_spear.py
 

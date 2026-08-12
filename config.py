@@ -991,7 +991,13 @@ def get_spear_repl_resnet18_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_lr = 2e-4
     cfg.bayesian.bayesian_train_weight_decay = 5e-5
 
-    cfg.reuse_pretrained = False  # no baseline trained yet
+    # Reuse outputs/spear_repl_resnet18/trained_model.pt once it exists, so
+    # every pruning attempt forks from one identical baseline instead of
+    # repeating the pretrain. Safe to leave True before the file exists:
+    # run_all.py ANDs this with os.path.isfile and retrains if it is missing,
+    # and slurm_compare.sh refuses to start without it.
+    # Set back to False after any change to the architecture or data pipeline.
+    cfg.reuse_pretrained = True
     return cfg
 
 
