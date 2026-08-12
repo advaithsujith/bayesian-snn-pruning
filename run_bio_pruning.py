@@ -41,7 +41,25 @@ from train import run_training
 from utils import ensure_dirs, get_device, print_banner, set_seed, setup_logger
 
 MODEL_ORDER = ["lenet", "vgg9", "resnet18"]
+# The three activity-based criteria. These run on every architecture here.
 CRITERIA = ["naive_firing_rate", "sca", "dpap"]
+
+# Network Slimming (Liu et al., ICCV 2017) is deliberately NOT in the default
+# list, and the reason is a limitation worth reporting rather than an
+# implementation gap: **it cannot run on an architecture without BatchNorm.**
+# The criterion scores a channel by its BatchNorm scale factor, so where there
+# is no BatchNorm there is nothing to read. That rules out `lenet` and `vgg9`
+# outright -- neither places a normalisation layer between a prunable layer
+# and its neuron (see models.assert_gate_after_norm).
+#
+# State this in the write-up. It is a genuine restriction on the method's
+# generality, and the contrast is favourable: the Bayesian criterion under
+# test reads a posterior over a gate it attaches itself, so it applies to all
+# five architectures unchanged, normalised or not. A criterion that only works
+# on BatchNorm architectures is a weaker general-purpose tool even where it is
+# competitive.
+CRITERIA_REQUIRING_BATCHNORM = ["network_slimming"]
+ALL_CRITERIA = CRITERIA + CRITERIA_REQUIRING_BATCHNORM
 
 
 def _ensure_pretrained_checkpoint(
@@ -143,8 +161,13 @@ def run_bio_experiment_point(
             model, model_name, train_loader, val_loader, device, keep_fraction, cfg.bio,
             cfg.train.grad_clip_norm, cfg.train.use_amp, logger, csv_rows,
         )
+    elif criterion == "network_slimming":
+        keep_masks = run_network_slimming_pruning(
+            model, model_name, train_loader, val_loader, device, keep_fraction, cfg.bio,
+            cfg.train.grad_clip_norm, cfg.train.use_amp, logger, csv_rows,
+        )
     else:
-        raise ValueError(f"Unknown criterion '{criterion}'. Options: {CRITERIA}")
+        raise ValueError(f"Unknown criterion '{criterion}'. Options: {ALL_CRITERIA}")
 
     pruned_model = prune_model_activity(model, model_name, keep_masks, cfg.snn).to(device)
     remaining_params = count_parameters(pruned_model, exclude_gates=True)
@@ -306,7 +329,7 @@ def make_bio_comparison_plots(results: List[Dict[str, Any]], plot_dir: str) -> N
 
     fig, axes = plt.subplots(1, len(models), figsize=(6 * len(models), 5), squeeze=False)
     for ax, model_name in zip(axes[0], models):
-        for criterion in CRITERIA:
+        for criterion in ALL_CRITERIA:
             points = sorted(
                 (r for r in results if r["Model"] == model_name and r["Criterion"] == criterion),
                 key=lambda r: r["Pruning Percentage"],
@@ -347,8 +370,11 @@ def main() -> None:
              "published number.",
     )
     parser.add_argument(
-        "--criteria", nargs="+", default=CRITERIA, choices=CRITERIA,
-        help="which bio-inspired criteria to run.",
+        "--criteria", nargs="+", default=CRITERIA, choices=ALL_CRITERIA,
+        help="which pruning criteria to run. Defaults to the three "
+             "activity-based ones. 'network_slimming' is selectable but not "
+             "default: it needs BatchNorm and so cannot run on lenet or vgg9 "
+             "(see CRITERIA_REQUIRING_BATCHNORM).",
     )
     parser.add_argument(
         "--keep-fractions", type=float, nargs="+", default=None,

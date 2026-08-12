@@ -114,6 +114,75 @@ Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
   `docs/replication_targets.md` conventions: record provenance for every value,
   and label anything assumed as an assumption rather than a replication.
 
+## COMPARISON PLAN (2026-08-12): three architectures, Network Slimming added
+
+Decided with the user. **Compare against published numbers wherever possible
+and reimplement as little as possible**, because every reimplementation is a
+fairness risk this project has already been burned by once (SCA losing to the
+naive static baseline was an undertuning artifact, and it is what killed the
+HPO search).
+
+**Three platforms, all with BatchNorm so every criterion runs on all of them:**
+
+| config | anchor | status |
+|---|---|---|
+| `spear_repl` (VGG16, T=4) | SPEAR 91.77% @ 52.5% SynOps | baseline done, 90.62% |
+| `spear_repl_resnet18` (T=4) | SPEAR 92.78% @ 39.2% SynOps | **built, not run** |
+| `dpap_repl` (6Conv2FC, T=8) | DPAP 94.27% / 93.83% | baseline done, 94.35% |
+
+`dpap_repl` is the cheap third platform: already trained, has BatchNorm, and
+the existing four-way matched-sparsity comparison already lives there, so
+Network Slimming slots in with no new pretrain.
+
+**Rejected: reimplementing SPEAR itself.** DDPG + the LRE regression predictor
++ the TAR reward, with no public code. A fortnight minimum and RL is fragile
+to tune. Under-tuning a competitor's agent and then reporting a win would be
+worse for the dissertation than not comparing at all. Their published numbers
+are used instead, which cannot be accused of sandbagging.
+
+**Rejected: LeNet as a third architecture.** Two independent reasons. SPEAR
+publishes nothing for LeNet, so there is no anchor; and LeNet has no
+BatchNorm, so Network Slimming cannot run on it at all.
+
+### Network Slimming added (Liu et al., ICCV 2017)
+
+`activity_pruning.run_network_slimming_pruning`. L1 penalty on the BatchNorm
+gammas during a sparsity-training phase, then rank channels by |gamma|. It is
+the one competitor cheap enough to reimplement *and* independently published
+on the setup we replicate (SPEAR reports it at 91.16% @ 87.3% SynOps, 14.3%
+params), which makes it **a check on the harness itself**: if ours lands near
+their row, the SCA and DPAP reimplementations are more credible.
+
+Full provenance and both deliberate deviations are in
+`docs/replication_targets.md` section 5. Two things to carry into the write-up:
+
+- **It cannot run on lenet or vgg9 at all**, because neither has a BatchNorm
+  between a prunable layer and its neuron. That is a limitation of the method,
+  and the contrast is favourable: the Bayesian criterion attaches its own gate
+  so it applies unchanged to all five architectures. State it.
+- **Watch `gamma_std`.** All gammas start at 1.0 and the L1 subgradient is
+  identical for every positive channel, so the penalty alone pushes them down
+  uniformly and produces no ranking at all; differentiation comes only from
+  the task gradient pushing back. `gamma_std` near zero means an arbitrary
+  keep-set, the same silent failure as an undifferentiated `log_alpha`, and it
+  still yields a clean-looking curve.
+
+### Structural fix that came out of this: name-based dispatch was unsafe
+
+`spear_repl_resnet18` reuses `SpikingResNet18` under a new config name, and
+**five dispatch points keyed on the config name string** would have broken on
+it. `build_model` was the dangerous one: it would have fallen through to the
+VGGStyleSNN branch and silently built a **VGG9-shaped network** from the
+default `ArchConfig`, training happily on the wrong architecture. Worse,
+`_register_bn_remask_hooks` checked `model_name != "resnet18"` and would have
+silently skipped the BatchNorm remask hooks, reintroducing bug #7 for that
+config only, with nothing to notice.
+
+All five now dispatch on `isinstance`, which is name-independent.
+`SNNConfig.output_readout` also moved off `ArchConfig` for the same underlying
+reason: `LeNetSNN` and `SpikingResNet18` hard-code their structure and never
+receive an `ArchConfig`, so a setting that lives there cannot reach them.
+
 ## NOVELTY NARROWED AGAIN (2026-08-12): Chen et al. already do the Lagrangian
 
 Found in a proper literature pass, full text read, not inferred from an

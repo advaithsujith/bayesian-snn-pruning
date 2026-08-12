@@ -45,6 +45,33 @@ from encoding import encode_timestep
 _NORM_TYPES = (nn.BatchNorm2d, nn.GroupNorm, nn.InstanceNorm2d)
 
 
+def read_output(module: nn.Module, cur_out: torch.Tensor, mem_out: torch.Tensor):
+    """
+    One timestep of the output layer, honouring `SNNConfig.output_readout`.
+
+    Returns `(value_to_record, mem_out)`, where the value is either the output
+    neuron's spikes (default, every original experiment) or `fc_out`'s
+    pre-synaptic current. Shared by all six forward passes -- the four models
+    here and the pruned rebuilds in pruning.py -- so a model and the network
+    rebuilt from it cannot disagree about how their output is read. They must
+    not: a fine-tuned accuracy read one way is not on the same scale as a
+    baseline read the other.
+
+    Under "current" the output neuron is deliberately constructed but never
+    called. It holds no trainable parameter (SNNConfig.__post_init__ rejects
+    learn_beta with this readout), so skipping it changes no state_dict, while
+    calling it would burn compute on a spike train nothing reads. `mem_out` is
+    then returned unchanged and stays at its initial value.
+
+    See SNNConfig.output_readout for why the analog readout exists: TET
+    defines its per-timestep output as the output layer's pre-synaptic input,
+    and at T=4 a summed spike count takes only five values per class.
+    """
+    if module.output_readout == "current":
+        return cur_out, mem_out
+    return module.lif_out(cur_out, mem_out)
+
+
 def _get_surrogate_grad(name: str):
     """Map a config string to an snnTorch surrogate-gradient function."""
     mapping = {
@@ -98,6 +125,7 @@ class LeNetSNN(nn.Module):
     def __init__(self, snn_cfg: SNNConfig, bayesian_cfg: BayesianConfig, num_classes: int = 10):
         super().__init__()
         self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
         gate_kwargs = dict(
             log_alpha_init=bayesian_cfg.log_alpha_init,
             log_alpha_clamp_min=bayesian_cfg.log_alpha_clamp_min,
@@ -147,8 +175,8 @@ class LeNetSNN(nn.Module):
             spk4, mem4 = self.lif4(cur4, mem4)
 
             cur_out = self.fc_out(spk4)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -171,6 +199,7 @@ class VGG9SNN(nn.Module):
         super().__init__()
         self.num_steps = snn_cfg.num_steps
         self.snn_cfg = snn_cfg
+        self.output_readout = snn_cfg.output_readout
         gate_kwargs = dict(
             log_alpha_init=bayesian_cfg.log_alpha_init,
             log_alpha_clamp_min=bayesian_cfg.log_alpha_clamp_min,
@@ -229,8 +258,8 @@ class VGG9SNN(nn.Module):
             spk_fc1, mem_fc1 = self.lif_fc1(cur_fc1, mem_fc1)
 
             cur_out = self.fc_out(spk_fc1)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -330,6 +359,7 @@ class SpikingResNet18(nn.Module):
     def __init__(self, snn_cfg: SNNConfig, bayesian_cfg: BayesianConfig, num_classes: int = 10):
         super().__init__()
         self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
         gate_kwargs = dict(
             log_alpha_init=bayesian_cfg.log_alpha_init,
             log_alpha_clamp_min=bayesian_cfg.log_alpha_clamp_min,
@@ -394,8 +424,8 @@ class SpikingResNet18(nn.Module):
 
             pooled = self.global_pool(spk).flatten(1)
             cur_out = self.fc_out(pooled)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -444,7 +474,7 @@ class VGGStyleSNN(nn.Module):
         self.snn_cfg = snn_cfg
         self.encoding = arch_cfg.encoding
         self.dropout_p = arch_cfg.dropout_p
-        self.output_readout = arch_cfg.output_readout
+        self.output_readout = snn_cfg.output_readout
 
         gate_kwargs = dict(
             log_alpha_init=bayesian_cfg.log_alpha_init,
@@ -529,21 +559,6 @@ class VGGStyleSNN(nn.Module):
 
         self.fc_out = nn.Linear(width, num_classes)  # classifier: never pruned
         self.lif_out = _make_leaky(snn_cfg, output=True)
-        # Under the "current" readout lif_out is constructed but never called,
-        # which is harmless only while it owns no trainable parameter. With
-        # learn_beta it does: snnTorch registers `beta` as an nn.Parameter,
-        # and it would then sit in the optimizer receiving no gradient
-        # forever, counted by count_parameters and copied by
-        # transfer_leaky_state. A frozen ghost parameter is the kind of thing
-        # that is invisible until it corrupts a parameter-count comparison,
-        # so reject the combination rather than carry it.
-        if arch_cfg.output_readout == "current" and snn_cfg.learn_beta:
-            raise ValueError(
-                "output_readout='current' skips the output neuron entirely, but "
-                "learn_beta=True makes its decay a trainable parameter that would "
-                "then never receive a gradient. Use learn_beta=False with the "
-                "current readout, or the 'spikes' readout with learn_beta."
-            )
 
     def _dropout(
         self, spk: torch.Tensor, cache: List["torch.Tensor | None"], idx: int
@@ -605,15 +620,8 @@ class VGGStyleSNN(nn.Module):
                 spk = self._dropout(spk, fc_masks, i)
 
             cur_out = self.fc_out(spk)
-            if self.output_readout == "current":
-                # lif_out is deliberately left constructed but uncalled: it
-                # holds no trainable parameter unless learn_beta is set, so
-                # skipping it changes no state_dict, while calling it would
-                # burn compute on a spike train nothing reads.
-                spk_out_rec.append(cur_out)
-            else:
-                spk_out, mem_out = self.lif_out(cur_out, mem_out)
-                spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -698,6 +706,13 @@ def build_model(
         "lenet": LeNetSNN,
         "vgg9": VGG9SNN,
         "resnet18": SpikingResNet18,
+        # A replication config that reuses one of the hard-coded architectures
+        # must be listed here, or it falls through to the VGGStyleSNN branch
+        # and is built from whatever ArchConfig its config happens to carry --
+        # which for a ResNet config is the *default*, i.e. VGG9. That is a
+        # silently wrong architecture that trains perfectly happily, the exact
+        # failure ArchConfig.validate exists to prevent elsewhere.
+        "spear_repl_resnet18": SpikingResNet18,
     }
     if name in builders:
         model = builders[name](snn_cfg, bayesian_cfg, num_classes=num_classes)

@@ -170,14 +170,24 @@ def get_prunable_layer_lif_pairs(model: nn.Module, model_name: str) -> List[Laye
         "vgg9": _vgg9_layer_lif_pairs,
         "resnet18": _resnet18_layer_lif_pairs,
     }
+    # Dispatch on the class, not the config name: a replication config that
+    # reuses one of these architectures (spear_repl_resnet18 reuses
+    # SpikingResNet18) has a name none of these dicts knows, and falling
+    # through on name alone would either raise or, worse, silently take the
+    # wrong branch.
     if isinstance(model, VGGStyleSNN):
         return _vggstyle_layer_lif_pairs(model)
-    if model_name not in dispatch:
-        raise ValueError(
-            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
-            "any other name requires the model to be a VGGStyleSNN."
-        )
-    return dispatch[model_name](model)
+    if isinstance(model, SpikingResNet18):
+        return _resnet18_layer_lif_pairs(model)
+    if isinstance(model, VGG9SNN):
+        return _vgg9_layer_lif_pairs(model)
+    if isinstance(model, LeNetSNN):
+        return _lenet_layer_lif_pairs(model)
+    raise ValueError(
+        f"No layer/LIF pairing for model '{model_name}' of type "
+        f"{type(model).__name__}. Built-in options: {list(dispatch)}; any other "
+        "name requires the model to be a VGGStyleSNN."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -350,7 +360,11 @@ def _register_bn_remask_hooks(model: nn.Module, model_name: str) -> List[Any]:
                 _add_hook(norm, conv)
         return handles
 
-    if model_name != "resnet18":
+    # By class, not name: spear_repl_resnet18 is a SpikingResNet18 under a
+    # different config name, and a name check would silently skip the remask
+    # hooks -- reintroducing the BatchNorm bias-leakage bug (HANDOFF.md #7)
+    # for that config only, with no error to notice.
+    if not isinstance(model, SpikingResNet18):
         return []
     for stage in model._all_stages():
         for block in stage:
@@ -584,6 +598,195 @@ def run_dpap_pruning(
 
 
 # ---------------------------------------------------------------------------
+# Network Slimming (Liu et al., ICCV 2017, arXiv 1708.06519)
+# ---------------------------------------------------------------------------
+
+
+def _norm_for_prunable_layers(
+    model: nn.Module, pairs: List[LayerLifPair]
+) -> Dict[str, "nn.BatchNorm2d | None"]:
+    """
+    Map each prunable layer name to the BatchNorm that scales its output, or
+    None where there isn't one.
+
+    Only the VGG-style family carries per-conv norms in a parallel
+    `norm_layers` ModuleList, and only its conv layers have them: the fully
+    connected stack has none, and neither do LeNet/VGG9 (norm_type="none").
+    ResNet18's blocks hold their norms inside the block. Returning None rather
+    than raising lets the caller decide, which matters because the fallback is
+    a documented deviation rather than an error.
+    """
+    norms: Dict[str, "nn.BatchNorm2d | None"] = {name: None for name, _, _ in pairs}
+    if isinstance(model, VGGStyleSNN):
+        for i, norm in enumerate(model.norm_layers):
+            if isinstance(norm, nn.BatchNorm2d):
+                norms[f"conv_layers.{i}"] = norm
+    elif isinstance(model, SpikingResNet18):
+        for stage_idx, stage in enumerate(model._all_stages(), start=1):
+            for block_idx, block in enumerate(stage):
+                norms[f"stage{stage_idx}.{block_idx}.conv1"] = block.bn1
+    return norms
+
+
+def _l1_subgradient_hook(weight: torch.Tensor, lam: float, scaler: Any):
+    """
+    Gradient hook adding Network Slimming's L1 subgradient, `lam * sign(gamma)`,
+    to a BatchNorm scale parameter.
+
+    Liu et al. apply "subgradient descent" on the non-smooth L1 term rather
+    than folding it into the loss, which is what this reproduces.
+
+    **The scaler factor is not optional.** Under AMP the loss is multiplied by
+    S before backward, so the gradient arriving here is `S * dL/dgamma`, and
+    `optimizer.step()` divides the whole thing by S afterwards. Adding an
+    unscaled `lam * sign(gamma)` would therefore apply an effective penalty of
+    `lam / S`, with S drifting by orders of magnitude as the scaler adapts --
+    a silently wrong and non-reproducible lambda. Multiplying by the live
+    scale makes the post-unscale term exactly `lam * sign(gamma)`.
+    """
+
+    def hook(grad: torch.Tensor) -> torch.Tensor:
+        scale = scaler.get_scale() if (scaler is not None and scaler.is_enabled()) else 1.0
+        return grad + lam * scale * torch.sign(weight.detach())
+
+    return hook
+
+
+def run_network_slimming_pruning(
+    model: nn.Module,
+    model_name: str,
+    train_loader: DataLoader,
+    val_loader: DataLoader,
+    device: torch.device,
+    keep_fraction: float,
+    bio_cfg: BioPruningConfig,
+    grad_clip_norm: float,
+    use_amp: bool,
+    logger: logging.Logger,
+    csv_log_rows: List[Dict[str, Any]],
+) -> Dict[str, torch.Tensor]:
+    """
+    Network Slimming (Liu et al., ICCV 2017): train with an L1 penalty on the
+    BatchNorm scale factors, then rank channels by |gamma| and keep the top
+    `keep_fraction`.
+
+    Unlike the other three criteria in this file this one is not activity
+    based -- it reads a *learned parameter*, not a firing statistic. It is
+    here because SPEAR reports it as a baseline on exactly the setup
+    `spear_repl` replicates, so its published row (91.16% at 87.3% SynOps,
+    14.3% params) is a check on whether this project's reimplementations are
+    trustworthy at all.
+
+    Also unlike SCA and DPAP, there is no progressive schedule: the network
+    trains at full width throughout and is pruned once at the end. So no hard
+    masks are applied during training and no BatchNorm remasking is needed --
+    the leakage bug those two hit cannot arise here.
+
+    Two deliberate deviations from the paper, both for comparability rather
+    than convenience, and both the same class of change already documented for
+    DPAP in this module's docstring:
+
+    1. **Per-layer selection, not a global threshold.** Liu et al. rank every
+       gamma in the network together and cut at one global percentile, which
+       lets the criterion choose its own per-layer widths. Every other
+       criterion here keeps a fixed fraction *per layer* so that all methods
+       produce identical layer widths at a given keep_fraction and differ only
+       in *which* units survive. Matching that is the whole point of the
+       comparison, so uniform selection wins over fidelity here. Note this
+       denies Network Slimming its allocation freedom, exactly as
+       `pruning.uniform_ratio_plan` denies the Bayesian criterion its own --
+       so the two are handicapped identically.
+    2. **Layers without a BatchNorm fall back to a weight-magnitude score.**
+       The method is only defined for BN-scaled channels. Rather than refuse
+       to prune a fully connected layer that every other criterion does prune
+       (which would break matched sparsity), such layers are scored by the L1
+       norm of each output unit's own weights. This is logged loudly per
+       layer. For `spear_repl` it never fires: `fc_hidden=[]`, so every
+       prunable layer is a BN-backed conv.
+    """
+    pairs = get_prunable_layer_lif_pairs(model, model_name)
+    norms = _norm_for_prunable_layers(model, pairs)
+
+    fallback_layers = [name for name, _, _ in pairs if norms[name] is None]
+    if fallback_layers:
+        logger.warning(
+            f"[network_slimming] {len(fallback_layers)} prunable layer(s) have no "
+            f"BatchNorm and will be scored by weight L1 instead of |gamma|, which "
+            f"is a deviation from Liu et al.: {fallback_layers}"
+        )
+    if all(norms[name] is None for name, _, _ in pairs):
+        raise ValueError(
+            f"Network Slimming needs BatchNorm to score channels, but no prunable "
+            f"layer of '{model_name}' has one. This criterion is only meaningful "
+            "on a normalised architecture (ArchConfig norm_type='batch')."
+        )
+
+    optimizer = build_optimizer(model, "adam", bio_cfg.slim_lr, bio_cfg.slim_weight_decay)
+    scheduler = build_scheduler(optimizer, "cosine", bio_cfg.slim_train_epochs)
+    amp_enabled = use_amp and device.type == "cuda"
+    scaler = torch.cuda.amp.GradScaler(enabled=amp_enabled)
+
+    handles = [
+        norm.weight.register_hook(_l1_subgradient_hook(norm.weight, bio_cfg.slim_l1_lambda, scaler))
+        for norm in norms.values()
+        if norm is not None
+    ]
+
+    try:
+        for epoch in range(bio_cfg.slim_train_epochs):
+            epoch_start = time.time()
+            train_stats = train_one_epoch(
+                model, train_loader, optimizer, device, beta=0.0,
+                grad_clip_norm=grad_clip_norm, use_amp=use_amp, scaler=scaler,
+            )
+            val_stats = evaluate_loader(model, val_loader, device)
+            if scheduler is not None:
+                scheduler.step()
+            epoch_time = time.time() - epoch_start
+
+            # The health signal for this criterion. A working lambda drives a
+            # growing fraction of gammas toward zero while accuracy holds; a
+            # near-zero near_zero_frac after many epochs means the penalty is
+            # too weak and the final ranking will be arbitrary, which is the
+            # same silent failure ranked Bayesian pruning has (see
+            # KeepPlan.ranking_is_usable).
+            all_gammas = torch.cat(
+                [n.weight.detach().abs().flatten().cpu() for n in norms.values() if n is not None]
+            )
+            near_zero = float((all_gammas < 1e-2).float().mean())
+            logger.info(
+                f"[slim_train] epoch {epoch + 1}/{bio_cfg.slim_train_epochs} "
+                f"train_acc={train_stats['accuracy']:.4f} val_acc={val_stats['accuracy']:.4f} "
+                f"gamma_mean={all_gammas.mean():.4f} gamma_std={all_gammas.std():.4f} "
+                f"near_zero_frac={near_zero:.3f} time={epoch_time:.1f}s"
+            )
+            csv_log_rows.append({
+                "phase": "slim_train", "epoch": epoch + 1,
+                "train_task_loss": train_stats["task_loss"], "train_kl": 0.0,
+                "train_total_loss": train_stats["total_loss"], "beta": 0.0,
+                "train_accuracy": train_stats["accuracy"],
+                "val_loss": val_stats["loss"], "val_accuracy": val_stats["accuracy"],
+                "epoch_time_sec": epoch_time,
+            })
+    finally:
+        # Left registered, these would keep perturbing the gradients of every
+        # later phase -- the fine-tune runs on the same BatchNorm objects.
+        for handle in handles:
+            handle.remove()
+
+    keep_masks: Dict[str, torch.Tensor] = {}
+    for name, layer, _ in pairs:
+        norm = norms[name]
+        if norm is not None:
+            scores = norm.weight.detach().abs().float().cpu()
+        else:
+            weight = layer.conv.weight if isinstance(layer, BayesianConv2d) else layer.linear.weight
+            scores = weight.detach().abs().flatten(1).sum(dim=1).float().cpu()
+        keep_masks[name] = select_keep_mask(scores, keep_fraction)
+    return keep_masks
+
+
+# ---------------------------------------------------------------------------
 # Physical rebuilding -- reuses pruning.py's Pruned* classes and slicing
 # utilities unchanged; only the keep-index source differs from pruning.py's
 # threshold-on-log_alpha logic.
@@ -753,16 +956,24 @@ def prune_model_activity(
         "vgg9": prune_vgg9_activity,
         "resnet18": prune_resnet18_activity,
     }
-    is_vgg_style = isinstance(model, VGGStyleSNN)
-    if not is_vgg_style and model_name not in dispatch:
+    # Dispatch by class rather than config name -- see
+    # get_prunable_layer_lif_pairs for why.
+    if isinstance(model, VGGStyleSNN):
+        routine = prune_vggstyle_activity
+    elif isinstance(model, SpikingResNet18):
+        routine = prune_resnet18_activity
+    elif isinstance(model, VGG9SNN):
+        routine = prune_vgg9_activity
+    elif isinstance(model, LeNetSNN):
+        routine = prune_lenet_activity
+    else:
         # Validate before mutating anything, so a rejected call leaves the
         # model's train/eval state exactly as the caller left it.
         raise ValueError(
-            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
-            "any other name requires the model to be a VGGStyleSNN."
+            f"No pruning routine for model '{model_name}' of type "
+            f"{type(model).__name__}. Built-in options: {list(dispatch)}; any "
+            "other name requires the model to be a VGGStyleSNN."
         )
     model.eval()
     with torch.no_grad():
-        if is_vgg_style:
-            return prune_vggstyle_activity(model, keep_masks, snn_cfg)
-        return dispatch[model_name](model, keep_masks, snn_cfg)
+        return routine(model, keep_masks, snn_cfg)

@@ -74,6 +74,7 @@ from models import (
     SpikingBasicBlock,
     _make_leaky,
     _VGG9_CONV_CHANNELS,
+    read_output,
 )
 
 GatedLayer = "BayesianConv2d | BayesianLinear"
@@ -776,6 +777,7 @@ class PrunedLeNetSNN(nn.Module):
     ) -> None:
         super().__init__()
         self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
         self.conv1 = conv1
         self.lif1 = _make_leaky(snn_cfg)
         self.pool1 = nn.MaxPool2d(2)
@@ -807,8 +809,8 @@ class PrunedLeNetSNN(nn.Module):
             cur4 = self.fc2(spk3)
             spk4, mem4 = self.lif4(cur4, mem4)
             cur_out = self.fc_out(spk4)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -867,6 +869,7 @@ class PrunedVGG9SNN(nn.Module):
     ) -> None:
         super().__init__()
         self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
         self.conv_layers = nn.ModuleList(conv_layers)
         self.lif_layers = nn.ModuleList([_make_leaky(snn_cfg) for _ in conv_layers])
         self.pool_flags = pool_flags
@@ -893,8 +896,8 @@ class PrunedVGG9SNN(nn.Module):
             cur_fc1 = self.fc1(spk.flatten(1))
             spk_fc1, mem_fc1 = self.lif_fc1(cur_fc1, mem_fc1)
             cur_out = self.fc_out(spk_fc1)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -969,7 +972,7 @@ class PrunedVGGStyleSNN(nn.Module):
         self.arch_cfg = arch_cfg
         self.encoding = arch_cfg.encoding
         self.dropout_p = arch_cfg.dropout_p
-        self.output_readout = arch_cfg.output_readout
+        self.output_readout = snn_cfg.output_readout
         self.pool_flags = _pool_flags_from_spec(arch_cfg.conv_spec)
 
         thresholds = arch_cfg.layer_thresholds
@@ -1034,15 +1037,8 @@ class PrunedVGGStyleSNN(nn.Module):
                 spk = self._dropout(spk, fc_masks, i)
 
             cur_out = self.fc_out(spk)
-            if self.output_readout == "current":
-                # Mirrors VGGStyleSNN.forward -- a rebuilt network must read
-                # its output exactly as the network it was pruned from did,
-                # or the fine-tuned accuracy is not on the same scale as the
-                # baseline it is compared against.
-                spk_out_rec.append(cur_out)
-            else:
-                spk_out, mem_out = self.lif_out(cur_out, mem_out)
-                spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -1243,6 +1239,7 @@ class PrunedSpikingResNet18(nn.Module):
     ) -> None:
         super().__init__()
         self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
         self.stem_conv = stem_conv
         self.stem_bn = stem_bn
         self.stem_lif = _make_leaky(snn_cfg)
@@ -1276,8 +1273,8 @@ class PrunedSpikingResNet18(nn.Module):
 
             pooled = self.global_pool(spk).flatten(1)
             cur_out = self.fc_out(pooled)
-            spk_out, mem_out = self.lif_out(cur_out, mem_out)
-            spk_out_rec.append(spk_out)
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            spk_out_rec.append(out_t)
 
         return torch.stack(spk_out_rec, dim=0)
 
@@ -1381,18 +1378,28 @@ def prune_model(
         "vgg9": prune_vgg9,
         "resnet18": prune_resnet18,
     }
-    is_vgg_style = isinstance(model, VGGStyleSNN)
-    if not is_vgg_style and model_name not in dispatch:
+    # Dispatch by class rather than config name: a replication config reusing
+    # one of these architectures (spear_repl_resnet18 reuses SpikingResNet18)
+    # carries a name this dict does not know, and a name-keyed lookup would
+    # reject it even though the model is perfectly prunable.
+    if isinstance(model, VGGStyleSNN):
+        routine = prune_vgg_style
+    elif isinstance(model, SpikingResNet18):
+        routine = prune_resnet18
+    elif isinstance(model, VGG9SNN):
+        routine = prune_vgg9
+    elif isinstance(model, LeNetSNN):
+        routine = prune_lenet
+    else:
         # Validate before mutating anything, so a rejected call leaves the
         # model's train/eval state exactly as the caller left it.
         raise ValueError(
-            f"Unknown model name '{model_name}'. Built-in options: {list(dispatch)}; "
-            "any other name requires the model to be a VGGStyleSNN."
+            f"No pruning routine for model '{model_name}' of type "
+            f"{type(model).__name__}. Built-in options: {list(dispatch)}; any "
+            "other name requires the model to be a VGGStyleSNN."
         )
     if not isinstance(plan, KeepPlan):
         plan = threshold_plan(model, float(plan))
     model.eval()
     with torch.no_grad():
-        if is_vgg_style:
-            return prune_vgg_style(model, plan, snn_cfg)
-        return dispatch[model_name](model, plan, snn_cfg)
+        return routine(model, plan, snn_cfg)

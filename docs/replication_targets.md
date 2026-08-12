@@ -194,12 +194,25 @@ rather than incidental.
 
 ### Target operating point
 
-| Dataset | Arch | SynOps(%) | Params(%) | Top-1 Acc(%) |
-|---|---|---|---|---|
-| **CIFAR-10** | **VGG16** | **52.5** | **14.4** | **91.77** |
+| Dataset | Arch | SynOps(%) | Params(%) | Top-1 Acc(%) | config |
+|---|---|---|---|---|---|
+| **CIFAR-10** | **VGG16** | **52.5** | **14.4** | **91.77** | `spear_repl` |
+| **CIFAR-10** | **ResNet18** | **39.2** | **30.3** | **92.78** | `spear_repl_resnet18` |
 
-Chosen because 52.5% SynOps sits almost exactly on this project's existing
-0.5 SynOps budget, making it a near-matched operating point. Their full
+The VGG16 row was chosen because 52.5% SynOps sits almost exactly on this
+project's existing 0.5 SynOps budget, making it a near-matched operating
+point. The ResNet18 row is the second architecture, at a tighter 39.2% budget,
+which is where the budget-in-the-loss effect should show most if the
+`dpap_repl` pattern holds (its margin widened as the budget tightened, +2.3pp
+at 0.5 against +13.0pp at 0.3).
+
+**ResNet18 caveat that must be stated.** Only each BasicBlock's internal
+`conv1` is structurally prunable in this project; `conv2` is residual-tied and
+the stem is fixed (see models.py's residual pruning caveat). SPEAR reaches
+30.3% of parameters, almost certainly more than that constraint permits, so on
+this architecture the **parameter axis is not directly comparable** between us.
+The SynOps axis and the accuracy are. SPEAR's ResNet18 row also has no SCA
+counterpart to borrow as a baseline reference, unlike VGG16. Their full
 CIFAR-10 / VGG16 table (Table 1 and Appendix B Table 7), for context:
 
 | Method | SynOps(%) | Params(%) | Acc(%) |
@@ -388,6 +401,78 @@ Record these in the dissertation, as with DPAP's list in section 3.
   `SNNConfig.threshold`; it is an independent literal, so changing the
   threshold would silently desync it. Fine at SPEAR's threshold of 1.0, which
   `tests/test_spear.py` now asserts.
+
+---
+
+## 5. Liu et al. (Network Slimming) -- ICCV 2017
+
+"Learning Efficient Convolutional Networks through Network Slimming",
+arXiv:1708.06519. Implemented as a criterion in `activity_pruning.py`
+(`run_network_slimming_pruning`), not replicated as a whole setup.
+
+**Why it is here.** It is the one competing method that is both cheap to
+reimplement and independently published *on the setup we replicate*: SPEAR
+reports it on CIFAR-10 / VGG16 / T=4. So it is a check on the harness itself,
+not just another comparator. If our reimplementation lands near their row, the
+SCA and DPAP reimplementations become more credible; if it lands far off, that
+is worth knowing before any of those comparisons are written up.
+
+| Method | SynOps(%) | Params(%) | Acc(%) | Source |
+|---|---|---|---|---|
+| NetworkSlimming | 87.3 | 40.3 | 91.22 | [paper] SPEAR Table 1 |
+| NetworkSlimming | 87.3 | 14.3 | 91.16 | [paper] SPEAR Table 7 |
+
+| Setting | Value | Source |
+|---|---|---|
+| Criterion | L1 penalty on BatchNorm scale factors during training, then rank channels by \|gamma\| | [paper] Sec. 3 |
+| Penalty application | subgradient descent, `grad += lambda * sign(gamma)`, not folded into the loss | [paper] Sec. 3.1 |
+| lambda | **1e-4** for CIFAR VGG; they report insensitivity across ~1e-5 to 1e-3 | [paper] Sec. 4.1 |
+| Selection | **global** percentile across all BN layers | [paper] Sec. 3.1 |
+
+### Deliberate deviations
+
+1. **Per-layer selection, not a global threshold.** Liu et al. rank every
+   gamma together and cut at one global percentile, letting the criterion
+   choose its own per-layer widths. Every criterion in this project instead
+   keeps a fixed fraction *per layer*, so all methods produce identical layer
+   widths at a given keep_fraction and differ only in *which* units survive.
+   That is the comparison the dissertation claims to make, so comparability
+   wins over fidelity. Note it handicaps Network Slimming exactly as
+   `pruning.uniform_ratio_plan` handicaps the Bayesian criterion, by denying
+   both their allocation freedom. Same class of deviation already recorded for
+   DPAP.
+2. **Layers without a BatchNorm fall back to a weight-L1 score**, logged
+   loudly per layer. The method is only defined for BN-scaled channels;
+   refusing to prune a layer every other criterion prunes would break matched
+   sparsity. Never fires on `spear_repl` (`fc_hidden=[]`, so every prunable
+   layer is a BN-backed conv); fires on `dpap_repl`'s single `fc_layers.0`.
+
+### Limitation worth reporting, not hiding
+
+**Network Slimming cannot be applied to `lenet` or `vgg9` at all.** It scores
+channels by their BatchNorm scale factor, and neither architecture has a
+normalisation layer between a prunable layer and its neuron. This is a
+restriction on the *method*, not on this implementation, and the contrast is
+worth making explicitly in the write-up: the Bayesian criterion under test
+attaches its own gate and reads a posterior over it, so it applies unchanged
+to all five architectures here, normalised or not. A criterion that only works
+on BatchNorm architectures is a weaker general-purpose tool even where it is
+competitive on accuracy.
+
+`run_bio_pruning.py` therefore keeps it out of the default criteria list
+(`CRITERIA_REQUIRING_BATCHNORM`) rather than letting it fail at runtime.
+
+### Health signal
+
+The logged `gamma_std` is to this criterion what `log_alpha_std` is to the
+Bayesian one. All gammas initialise at 1.0 and the L1 subgradient is identical
+for every positive channel, so the penalty alone pushes them down *uniformly*
+and produces no ranking whatsoever. Differentiation comes entirely from the
+task gradient pushing back where a channel matters. A run that ends with
+`gamma_std` near zero has produced an arbitrary keep-set, the same silent
+failure mode as an undifferentiated `log_alpha` (see
+`KeepPlan.ranking_is_usable`), and will still yield a clean-looking
+accuracy-vs-sparsity curve. Check it before believing a result.
 
 ---
 

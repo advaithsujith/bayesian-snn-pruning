@@ -28,15 +28,33 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import logging
+
 import torch
 import torch.nn.functional as F
 
-from bayesian_layers import set_bayesian_mode
-from config import ArchConfig, BayesianConfig, SNNConfig, get_spear_repl_config
+from activity_pruning import (
+    _l1_subgradient_hook,
+    _norm_for_prunable_layers,
+    get_prunable_layer_lif_pairs,
+    run_network_slimming_pruning,
+    select_keep_mask,
+)
+from bayesian_layers import BayesianConv2d, set_bayesian_mode
+from config import (
+    ALL_EXPERIMENTS,
+    ArchConfig,
+    BayesianConfig,
+    BioPruningConfig,
+    SNNConfig,
+    get_spear_repl_config,
+    get_spear_repl_resnet18_config,
+)
 from losses import get_task_loss, tet_loss
 from metrics import count_parameters
 from models import VGGStyleSNN, build_model
 from pruning import prune_vgg_style, uniform_ratio_plan
+from run_bio_pruning import ALL_CRITERIA, CRITERIA
 
 
 def check(name, condition):
@@ -52,10 +70,12 @@ def main():
     torch.manual_seed(0)
 
     # --- 1. output_readout validation and default ---
-    check("output_readout defaults to 'spikes'", ArchConfig().output_readout == "spikes")
+    # It lives on SNNConfig, not ArchConfig: LeNetSNN and SpikingResNet18
+    # hard-code their structure and never receive an ArchConfig at all.
+    check("output_readout defaults to 'spikes'", SNNConfig().output_readout == "spikes")
     rejected = False
     try:
-        ArchConfig(output_readout="membrane")
+        SNNConfig(output_readout="membrane")
     except ValueError:
         rejected = True
     check("invalid output_readout is rejected", rejected)
@@ -64,10 +84,12 @@ def main():
     # structural features that matter here (BatchNorm, no hidden fc, T=4).
     small = dict(conv_spec=[8, "M", 16, "M"], fc_hidden=[], norm_type="batch", input_size=8)
     snn4 = SNNConfig(num_steps=4, beta=0.5, threshold=1.0, reset_mechanism="zero")
+    snn4_cur = SNNConfig(num_steps=4, beta=0.5, threshold=1.0, reset_mechanism="zero",
+                         output_readout="current")
     x = torch.randn(4, 3, 8, 8)
 
     spike_model = VGGStyleSNN(ArchConfig(**small), snn4, BAY)
-    cur_model = VGGStyleSNN(ArchConfig(**small, output_readout="current"), snn4, BAY)
+    cur_model = VGGStyleSNN(ArchConfig(**small), snn4_cur, BAY)
     cur_model.load_state_dict(spike_model.state_dict())
 
     # --- 2. "current" returns analog values of the same shape ---
@@ -85,7 +107,7 @@ def main():
     # --- 3. the readout survives the physical rebuild ---
     set_bayesian_mode(cur_model, True)
     plan = uniform_ratio_plan(cur_model, keep_fraction=0.5, min_keep=1)
-    pruned = prune_vgg_style(cur_model, plan, snn4)
+    pruned = prune_vgg_style(cur_model, plan, snn4_cur)
     with torch.no_grad():
         pruned_out = pruned(x)
     check("pruned model keeps [T, B, C] shape", pruned_out.shape == (4, 4, 10))
@@ -151,7 +173,7 @@ def main():
     check("no hidden fc layers", cfg.arch.fc_hidden == [])
     check("flatten_dim = 512", cfg.arch.flatten_dim() == 512)
     check("BatchNorm present", cfg.arch.norm_type == "batch")
-    check("current readout", cfg.arch.output_readout == "current")
+    check("current readout", cfg.snn.output_readout == "current")
 
     # The real thing must build and forward. build_model also runs
     # assert_gate_after_norm, so this is the check that every conv gate is
@@ -194,14 +216,12 @@ def main():
     # a parameter that never receives a gradient.
     orphaned = False
     try:
-        VGGStyleSNN(ArchConfig(**small, output_readout="current"),
-                    SNNConfig(num_steps=4, learn_beta=True), BAY)
+        SNNConfig(num_steps=4, learn_beta=True, output_readout="current")
     except ValueError:
         orphaned = True
     check("learn_beta + current readout is rejected", orphaned)
     check("learn_beta + spikes readout still allowed",
-          VGGStyleSNN(ArchConfig(**small), SNNConfig(num_steps=4, learn_beta=True),
-                      BAY) is not None)
+          SNNConfig(num_steps=4, learn_beta=True).learn_beta is True)
 
     # 'cosine_warmup' with no warm-up silently degenerated to a plain cosine,
     # so a call site that forgot to forward the argument started cold at the
@@ -233,6 +253,83 @@ def main():
     check("max pooling assumption pinned explicitly", cfg.arch.pool_type == "max")
     check("conv bias assumption pinned explicitly", cfg.arch.conv_bias is True)
     check("14,728,266 parameters", count_parameters(model, exclude_gates=True) == 14_728_266)
+
+    # --- 9. the ResNet18 arm, targeting SPEAR's 39.2/30.3/92.78 row ---
+    rcfg = get_spear_repl_resnet18_config()
+    check("resnet18 arm shares the recipe",
+          rcfg.snn.num_steps == 4 and rcfg.loss_type == "tet"
+          and rcfg.train.optimizer == "sgd" and rcfg.train.lr == 0.1
+          and rcfg.train.epochs == 210 and rcfg.snn.reset_mechanism == "zero")
+    check("resnet18 arm uses the current readout", rcfg.snn.output_readout == "current")
+    check("resnet18 arm keeps crop and flip",
+          rcfg.data.random_crop_padding == 4 and rcfg.data.horizontal_flip_prob == 0.5)
+    check("resnet18 arm registered", ALL_EXPERIMENTS["spear_repl_resnet18"] is
+          get_spear_repl_resnet18_config)
+
+    # SpikingResNet18 ignores ArchConfig entirely, which is exactly why the
+    # readout had to move to SNNConfig. Verify it actually reaches the model.
+    rnet = build_model("spear_repl_resnet18", rcfg.snn, rcfg.bayesian)
+    with torch.no_grad():
+        rout = rnet(torch.randn(2, 3, 32, 32))
+    check("resnet18 forwards to [4, 2, 10]", rout.shape == (4, 2, 10))
+    check("resnet18 output is analog, not spikes",
+          not bool(((rout == 0) | (rout == 1)).all()))
+    # The gate-before-BatchNorm fix must hold here too; build_model asserts it.
+    check("resnet18 gates are deferred past their norms",
+          all(m.defer_gate for m in rnet.modules() if isinstance(m, BayesianConv2d)))
+
+    # --- 10. Network Slimming ---
+    # Scores channels by |BN gamma|, so it cannot run without BatchNorm. That
+    # is a limitation of the method, not of this implementation, and it is the
+    # reason it is excluded from the default criteria list.
+    check("network_slimming is not a default criterion",
+          "network_slimming" not in CRITERIA and "network_slimming" in ALL_CRITERIA)
+
+    nosnn = SNNConfig(num_steps=2)
+    nobn = VGGStyleSNN(ArchConfig(conv_spec=[8, "M"], fc_hidden=[], norm_type="none",
+                                  input_size=8), nosnn, BAY)
+    refused = False
+    try:
+        run_network_slimming_pruning(
+            nobn, "nobn", None, None, torch.device("cpu"), 0.5, BioPruningConfig(),
+            5.0, False, logging.getLogger("t"), [],
+        )
+    except ValueError as exc:
+        refused = "BatchNorm" in str(exc)
+    check("network_slimming refuses an architecture without BatchNorm", refused)
+
+    # The L1 subgradient must be scaled by the AMP loss scale, or the
+    # effective lambda silently becomes lambda/scale and drifts with it.
+    gamma = torch.tensor([2.0, -3.0, 0.0])
+    grad = torch.zeros(3)
+
+    class _FakeScaler:
+        def __init__(self, s): self._s = s
+        def is_enabled(self): return True
+        def get_scale(self): return self._s
+
+    lam = 0.1
+    hook_unscaled = _l1_subgradient_hook(gamma, lam, None)
+    hook_scaled = _l1_subgradient_hook(gamma, lam, _FakeScaler(1024.0))
+    check("L1 subgradient is lam*sign(gamma) without AMP",
+          torch.allclose(hook_unscaled(grad), lam * torch.sign(gamma)))
+    check("L1 subgradient is multiplied by the AMP scale",
+          torch.allclose(hook_scaled(grad), 1024.0 * lam * torch.sign(gamma)))
+    check("L1 subgradient is zero where gamma is zero", hook_scaled(grad)[2] == 0.0)
+
+    # It must score by |gamma| and produce masks of the same shape every other
+    # criterion produces, so matched-sparsity comparison holds by construction.
+    bnmodel = VGGStyleSNN(ArchConfig(conv_spec=[8, "M", 16, "M"], fc_hidden=[],
+                                     norm_type="batch", input_size=8), nosnn, BAY)
+    norms = _norm_for_prunable_layers(bnmodel, get_prunable_layer_lif_pairs(bnmodel, "x"))
+    check("every prunable conv is paired with its BatchNorm",
+          all(isinstance(n, torch.nn.BatchNorm2d) for n in norms.values()))
+    with torch.no_grad():  # make the ranking unambiguous
+        bnmodel.norm_layers[0].weight.copy_(torch.tensor([9., 1., 8., 2., 7., 3., 6., 4.]))
+    scores = bnmodel.norm_layers[0].weight.detach().abs()
+    mask = select_keep_mask(scores, 0.5)
+    check("network_slimming keeps the largest |gamma| channels",
+          set(mask.nonzero(as_tuple=True)[0].tolist()) == {0, 2, 4, 6})
 
     print("\nAll SPEAR replication checks passed.")
 

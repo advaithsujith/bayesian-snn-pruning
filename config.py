@@ -26,6 +26,61 @@ class SNNConfig:
     # snntorch reset behaviour: "subtract" (soft reset, subtract threshold)
     # or "zero" (hard reset to resting potential).
     reset_mechanism: str = "subtract"
+    # What the network's per-timestep output is read from.
+    #   "spikes"  -- the output layer's spikes, summed over time to classify.
+    #                Every original experiment uses this; it is the default so
+    #                they stay bit-identical.
+    #   "current" -- the output layer's *pre-synaptic current*, i.e. fc_out's
+    #                analog output, recorded before any spiking neuron.
+    #
+    # Lives here rather than on ArchConfig because it applies to every
+    # architecture, including LeNetSNN and SpikingResNet18, which hard-code
+    # their structure and never receive an ArchConfig at all.
+    #
+    # "current" exists for the SPEAR replication. Two reasons, both in
+    # docs/replication_targets.md: TET (SPEAR's task loss) defines its O(t) as
+    # "pre-synaptic input I(t) of the output layer", so running it on spikes
+    # would put per-timestep cross-entropy on a binary {0,1} logit vector; and
+    # at SPEAR's T=4 a summed spike count takes only five values per class, so
+    # 10-way classification ties constantly and argmax breaks those ties
+    # toward the lowest class index. Both problems vanish with an analog
+    # readout.
+    #
+    # Provenance, because the distinction matters: TET *states* this
+    # ("We use O(t) to represent pre-synaptic input I(t) of the output
+    # layer", their Sec. 4.1), which is enough on its own since TET is the
+    # loss SPEAR trains with. SPEAR itself never states its readout, and
+    # SCA's was not checked. So this is [paper] for TET and [UNKNOWN] for
+    # SPEAR, not a documented choice of SPEAR's.
+    #
+    # Nothing downstream needs to change: the returned tensor keeps its
+    # [num_steps, batch, num_classes] shape, and both the accuracy helper and
+    # spike_rate_cross_entropy reduce it with sum(dim=0), which is
+    # argmax-identical on currents. SynOps counting is likewise unaffected --
+    # metrics.measure_synops hooks Conv2d/Linear inputs, and fc_out's input is
+    # the last spiking layer's output either way.
+    output_readout: str = "spikes"  # "spikes" | "current"
+
+    def __post_init__(self) -> None:
+        if self.output_readout not in ("spikes", "current"):
+            raise ValueError(
+                f"output_readout must be 'spikes' or 'current', got "
+                f"'{self.output_readout}'"
+            )
+        # Under "current" the output neuron is constructed but never called,
+        # which is harmless only while it owns no trainable parameter. With
+        # learn_beta it does: snnTorch registers `beta` as an nn.Parameter that
+        # would then sit in the optimizer receiving no gradient forever, still
+        # counted by count_parameters and still copied by transfer_leaky_state.
+        # A frozen ghost parameter is invisible until it corrupts a
+        # parameter-count comparison, so reject the combination.
+        if self.output_readout == "current" and self.learn_beta:
+            raise ValueError(
+                "output_readout='current' skips the output neuron entirely, but "
+                "learn_beta=True makes its decay a trainable parameter that would "
+                "then never receive a gradient. Use learn_beta=False with the "
+                "current readout, or the 'spikes' readout with learn_beta."
+            )
 
 
 @dataclass
@@ -69,36 +124,6 @@ class ArchConfig:
     # activation distribution rather than shared globally. None => use
     # SNNConfig.threshold for every layer.
     layer_thresholds: Optional[List[float]] = None
-    # What the network's per-timestep output is read from.
-    #   "spikes"  -- the output layer's spikes, summed over time to classify.
-    #                Every original experiment uses this; it is the default so
-    #                they stay bit-identical.
-    #   "current" -- the output layer's *pre-synaptic current*, i.e. fc_out's
-    #                analog output, recorded before any spiking neuron.
-    #
-    # "current" exists for the SPEAR replication. Two reasons, both in
-    # docs/replication_targets.md: TET (SPEAR's task loss) defines its O(t) as
-    # "pre-synaptic input I(t) of the output layer", so running it on spikes
-    # would put per-timestep cross-entropy on a binary {0,1} logit vector; and
-    # at SPEAR's T=4 a summed spike count takes only five values per class, so
-    # 10-way classification ties constantly and argmax breaks those ties
-    # toward the lowest class index. Both problems vanish with an analog
-    # readout.
-    #
-    # Provenance, because the distinction matters: TET *states* this
-    # ("We use O(t) to represent pre-synaptic input I(t) of the output
-    # layer", their Sec. 4.1), which is enough on its own since TET is the
-    # loss SPEAR trains with. SPEAR itself never states its readout, and
-    # SCA's was not checked. So this is [paper] for TET and [UNKNOWN] for
-    # SPEAR, not a documented choice of SPEAR's.
-    #
-    # Nothing downstream needs to change: the returned tensor keeps its
-    # [num_steps, batch, num_classes] shape, and both the accuracy helper and
-    # spike_rate_cross_entropy reduce it with sum(dim=0), which is
-    # argmax-identical on currents. SynOps counting is likewise unaffected --
-    # metrics.measure_synops hooks Conv2d/Linear inputs, and fc_out's input is
-    # the last spiking layer's output either way.
-    output_readout: str = "spikes"  # "spikes" | "current"
 
     def __post_init__(self) -> None:
         self.validate()
@@ -137,11 +162,6 @@ class ArchConfig:
             raise ValueError(
                 f"{self.num_pools()} pooling stages reduce a {self.input_size}px "
                 "input below 1px; remove a pooling stage or use a larger input"
-            )
-        if self.output_readout not in ("spikes", "current"):
-            raise ValueError(
-                f"output_readout must be 'spikes' or 'current', got "
-                f"'{self.output_readout}'"
             )
 
     def conv_channels(self) -> List[int]:
@@ -354,6 +374,29 @@ class BioPruningConfig:
     dpap_survival_decay: float = 0.02
     dpap_lr: float = 5e-4
     dpap_weight_decay: float = 5e-5
+
+    # -- Network Slimming (Liu et al., ICCV 2017, arXiv 1708.06519) --
+    # The only non-activity criterion in this file, and deliberately so: it
+    # is the structured-pruning baseline SPEAR reports alongside SCA on the
+    # same CIFAR-10 / VGG16 / T=4 setup, so running it here gives a
+    # reimplementation whose published counterpart is known (91.16% at 87.3%
+    # SynOps, 14.3% params). That makes it a check on the whole harness, not
+    # just another comparator: if our Network Slimming lands near their row,
+    # the SCA and DPAP reimplementations are more credible too.
+    #
+    # Criterion: an L1 penalty on the BatchNorm scale factors during a
+    # sparsity-training phase, then rank channels by |gamma|. Channels whose
+    # scale has been driven toward zero contribute almost nothing downstream,
+    # so gamma doubles as a learned importance score.
+    slim_train_epochs: int = 30
+    # Weight of the L1 penalty on the BN gammas. 1e-4 is the value Liu et al.
+    # use for CIFAR VGG; they note results are not sensitive across roughly
+    # 1e-5 to 1e-3. Check the logged gamma statistics before trusting a run:
+    # the signature of a working value is the gamma distribution developing a
+    # clear near-zero mode while accuracy holds.
+    slim_l1_lambda: float = 1e-4
+    slim_lr: float = 5e-4
+    slim_weight_decay: float = 5e-5
 
 
 @dataclass
@@ -716,12 +759,11 @@ def get_spear_repl_config() -> ExperimentConfig:
         norm_type="batch",
         pool_type="max",
         conv_bias=True,
-        # TET defines its per-timestep output as the output layer's
-        # pre-synaptic current, and at T=4 a summed spike count takes only
-        # five values per class. Both reasons are spelled out on
-        # ArchConfig.output_readout.
-        output_readout="current",
     )
+    # TET defines its per-timestep output as the output layer's pre-synaptic
+    # current, and at T=4 a summed spike count takes only five values per
+    # class. Both reasons are spelled out on SNNConfig.output_readout.
+    cfg.snn.output_readout = "current"
 
     # "We copy the images 4 times along the timeline to obtain input for 4
     # time steps" => T=4 with direct encoding (the ArchConfig default).
@@ -857,10 +899,107 @@ def get_spear_repl_config() -> ExperimentConfig:
     return cfg
 
 
+def get_spear_repl_resnet18_config() -> ExperimentConfig:
+    """
+    SPEAR's CIFAR-10 **ResNet18** setup (Xie et al., arXiv 2507.02945), the
+    second architecture in the head-to-head comparison.
+
+    Identical training recipe to `get_spear_repl_config` -- SPEAR states one
+    recipe for all static datasets and both architectures -- so only the
+    architecture and its target row differ. Read that function's docstring
+    first; the eight assumptions it lists apply here too, except assumption 1
+    (the VGG16 specification), which is replaced by this project's existing
+    `SpikingResNet18`.
+
+    **Target operating point: 39.2% SynOps, 30.3% params, 92.78% top-1.**
+    A tighter SynOps budget than the VGG16 row's 52.5%, so this is the harder
+    of the two and the one where the budget-in-the-loss result should show the
+    most, if the dpap_repl pattern holds (its margin widened as the budget
+    tightened: +2.3pp at 0.5 against +13.0pp at 0.3).
+
+    As with VGG16, **SPEAR publishes no unpruned ResNet18 baseline**, so there
+    is no go/no-go gate. Unlike VGG16 there is not even a SCA row to borrow as
+    a reference, since SPEAR's ResNet18 comparisons are against their own
+    ablations. Judge the pretrain against this project's own `resnet18`
+    experiment (89.26% at T=25) bearing in mind T=4 here, and against the
+    general expectation that a pruned 92.78% implies a dense baseline of
+    roughly 93%.
+
+    **Architecture caveat that must be stated in the write-up.** Only each
+    BasicBlock's internal `conv1` is structurally prunable here; `conv2`'s
+    output channels are tied to the residual addition and the stem is fixed
+    (see models.py's residual pruning caveat). SPEAR prunes ResNet18 to 30.3%
+    of parameters, which is almost certainly more than this constraint allows,
+    so the parameter-percentage axis is **not** directly comparable between us
+    on this architecture. The SynOps axis and the accuracy are.
+    """
+    cfg = ExperimentConfig(name="spear_repl_resnet18")
+    cfg.output_dir = "./outputs/spear_repl_resnet18"
+
+    # SpikingResNet18 is hard-coded and ignores ArchConfig entirely, so there
+    # is no arch to configure -- which is exactly why output_readout lives on
+    # SNNConfig rather than ArchConfig.
+    cfg.snn.num_steps = 4
+    cfg.snn.beta = 0.5  # tau=2.0, no input-current decay
+    cfg.snn.threshold = 1.0
+    cfg.snn.learn_beta = False
+    cfg.snn.reset_mechanism = "zero"  # hard reset
+    cfg.snn.spike_grad = "atan"
+    cfg.snn.output_readout = "current"  # TET reads the pre-synaptic current
+
+    cfg.loss_type = "tet"
+    cfg.pruning_loss_type = "spike_rate_ce"
+
+    cfg.train.epochs = 210
+    cfg.train.lr = 0.1
+    cfg.train.weight_decay = 5e-5
+    cfg.train.optimizer = "sgd"
+    cfg.train.lr_scheduler = "cosine_warmup"
+    cfg.train.lr_warmup_epochs = 10
+    cfg.train.min_lr = 0.0
+    cfg.train.batch_size = 128
+
+    # Standard crop+flip, for the reason established empirically on the VGG16
+    # run: the literal "no data augmentation" reading gave train_acc 1.0000
+    # and 86.09% test, 5pp under the published reference. See
+    # get_spear_repl_config and docs/replication_targets.md section 4.
+    cfg.data.random_crop_padding = 4
+    cfg.data.horizontal_flip_prob = 0.5
+    cfg.data.normalize_std = [0.2023, 0.1994, 0.2010]
+    cfg.data.val_fraction = 0.0
+    cfg.data.pruning_val_fraction = 0.1
+    cfg.data.num_workers = 8
+
+    cfg.finetune.epochs = 210
+    cfg.finetune.batch_size = 128
+    cfg.finetune.lr = 0.1
+    cfg.finetune.weight_decay = 5e-5
+    cfg.finetune.optimizer = "sgd"
+    cfg.finetune.lr_scheduler = "cosine_warmup"
+    cfg.finetune.lr_warmup_epochs = 10
+    cfg.finetune.min_lr = 0.0
+
+    # Placeholder, exactly as in the VGG16 config: beta_max does not transfer
+    # across architectures, and ResNet18's gate population differs more than
+    # most (half its gates sit on non-prunable layers and are excluded from
+    # the KL entirely -- Session 3 bug #2). Run
+    # `run_sparsity_curve.py --model spear_repl_resnet18 --diagnose-only`
+    # before spending gate-training hours.
+    cfg.bayesian.bayesian_train_epochs = 75
+    cfg.bayesian.kl_warmup_epochs = 10
+    cfg.bayesian.beta_max = 0.01
+    cfg.bayesian.bayesian_train_lr = 2e-4
+    cfg.bayesian.bayesian_train_weight_decay = 5e-5
+
+    cfg.reuse_pretrained = False  # no baseline trained yet
+    return cfg
+
+
 ALL_EXPERIMENTS = {
     "lenet": get_lenet_config,
     "vgg9": get_vgg9_config,
     "resnet18": get_resnet18_config,
     "dpap_repl": get_dpap_repl_config,
     "spear_repl": get_spear_repl_config,
+    "spear_repl_resnet18": get_spear_repl_resnet18_config,
 }
