@@ -755,13 +755,27 @@ def get_spear_repl_config() -> ExperimentConfig:
     # coupled here and this does not perturb the stated 0.1.
     cfg.train.batch_size = 128
 
-    # "For static datasets, no data augmentation is applied." Zeroing both
-    # turns the two transforms into no-ops rather than needing a branch:
-    # RandomCrop(32, padding=0) on a 32px image is the identity, and
-    # RandomHorizontalFlip(p=0.0) never fires. RandAugment / colour jitter /
-    # random erasing are already off by default.
-    cfg.data.random_crop_padding = 0
-    cfg.data.horizontal_flip_prob = 0.0
+    # DELIBERATE DEVIATION from the paper's literal text, decided on evidence
+    # 2026-08-12. SPEAR says "For static datasets, no data augmentation is
+    # applied", which was first implemented literally (padding 0, flip p=0).
+    # That run is recorded: 210 epochs, **train_acc 1.0000 against val_acc
+    # 0.8565**, validation loss flat-to-rising from epoch ~150, final test
+    # accuracy **86.09%**. The network memorised all 50k images, and 86% is
+    # exactly where VGG16 lands on CIFAR-10 with no augmentation.
+    #
+    # Their own table sits at 91.2-92.5% and SCA's baseline at 91.14%, which
+    # are not reachable from an 86% baseline by pruning. So the literal
+    # reading is inconsistent with their published numbers, and "no data
+    # augmentation" must mean no augmentation *beyond* the standard crop and
+    # flip -- the convention in most of this literature, where the term is
+    # reserved for RandAugment / Cutout / Mixup. RandAugment, colour jitter
+    # and random erasing therefore stay off (DataConfig defaults), and only
+    # the standard pair is restored.
+    #
+    # Record this as an assumption in the write-up, not as replication, and
+    # report the 86.09% no-augmentation run alongside it as the evidence.
+    cfg.data.random_crop_padding = 4
+    cfg.data.horizontal_flip_prob = 0.5
     # ASSUMPTION (4 of 8): normalisation. Not stated; these are the standard
     # CIFAR-10 values and the same std DPAP's code uses.
     cfg.data.normalize_std = [0.2023, 0.1994, 0.2010]

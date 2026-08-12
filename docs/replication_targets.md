@@ -319,9 +319,47 @@ reads as a decision rather than an oversight.
   `horizontal_flip_prob=0.0`; both transforms then become no-ops rather than
   needing a code path of their own.
 
+### First attempt: 86.09%, and what it settled
+
+Run 2026-08-12, 210 epochs, 25.3 s/epoch, ~1.5h on an A100. Implemented the
+augmentation line **literally** (`random_crop_padding=0`,
+`horizontal_flip_prob=0.0`). Result:
+
+| | |
+|---|---|
+| Final train accuracy | **1.0000** |
+| Final validation accuracy | 0.8565 |
+| Validation loss, epochs 208-210 | 1.0591 / 1.0508 / 1.0728 (flat, rising) |
+| **Test accuracy** | **86.09%** |
+
+Train accuracy pinned at 1.0 with a rising validation loss is memorisation of
+all 50k images, not undertraining, so more epochs would not have helped. 86%
+is also precisely where a 14.7M-parameter VGG16 lands on CIFAR-10 with no
+augmentation.
+
+**This is inconsistent with their own table.** SPEAR reports 91.2-92.5% for
+pruned VGG16 and SCA's baseline is 91.14%; none of those is reachable by
+pruning an 86% baseline. So `"For static datasets, no data augmentation is
+applied"` cannot mean literally none. Taken as the field's usual convention:
+no augmentation *beyond* `RandomCrop(32, padding=4)` and horizontal flip,
+with the term reserved for RandAugment / Cutout / Mixup. Only that pair is
+restored; RandAugment, colour jitter and random erasing stay off.
+
+Same class of problem as DPAP's first attempt (91.96% vs 94.54%, also an
+augmentation mismatch), and the same resolution: the paper's words
+under-describe what was run.
+
+**Write-up note:** report the 86.09% run as the evidence for this reading
+rather than silently using crop+flip. It is a real finding about the paper's
+reproducibility, and it is the kind of thing an examiner will ask about.
+
 ### Known deviations that remain
 
 Record these in the dissertation, as with DPAP's list in section 3.
+
+- **Standard crop and flip are used despite the paper saying no augmentation.**
+  Evidence and reasoning immediately above. This is an assumption, not a
+  replication.
 
 - **The pruning stages do not use TET.** `pruning_loss_type="spike_rate_ce"`,
   so gate training *and the fine-tune* run under cross-entropy while only the

@@ -114,6 +114,34 @@ Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
   `docs/replication_targets.md` conventions: record provenance for every value,
   and label anything assumed as an assumption rather than a replication.
 
+## SPEAR pretrain attempt 1 (2026-08-12): 86.09%, augmentation line disproven
+
+210 epochs, **25.3 s/epoch, ~1.5h on an A100**. Use that number for planning:
+it makes the 5-point curve's 210-epoch fine-tunes roughly 3-5h, not the ~40
+min that 30 epochs would have cost.
+
+**Result: 86.09% test, with train_acc = 1.0000 against val_acc = 0.8565 and
+validation loss flat-to-rising.** Memorisation of all 50k images, not
+undertraining. Do not "train longer".
+
+**Diagnosis, and it is a real finding.** SPEAR says "For static datasets, no
+data augmentation is applied", which was implemented literally. 86% is exactly
+where VGG16 lands on CIFAR-10 with no augmentation, and their own table
+(91.2-92.5%, SCA baseline 91.14%) is not reachable from an 86% baseline by
+pruning. So the sentence must mean no augmentation *beyond* the standard crop
+and flip. `get_spear_repl_config` now sets `random_crop_padding=4` and
+`horizontal_flip_prob=0.5`; RandAugment / jitter / erasing stay off. Recorded
+as an assumption with the 86.09% run as its evidence, in
+`docs/replication_targets.md` section 4.
+
+Same class of failure as DPAP's first attempt (91.96% vs 94.54%, also
+augmentation) and the same lesson: these papers under-describe what was run.
+
+**Next: re-run the pretrain.** ~1.5h. Expect ~90-92%. If it lands there the
+replication is good enough to prune on; if it is still near 86%, the next
+suspect is assumption 6 (max vs average pooling: TET's own VGGSNN uses
+average throughout).
+
 ## SPEAR replication: BUILT 2026-08-11, not yet run
 
 Config, loss, tests and submission script are in. Zero GPU spent so far.
