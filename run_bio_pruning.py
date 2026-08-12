@@ -242,6 +242,7 @@ def run_bio_experiments_for_model(
     total_experiments: int,
     criteria: "List[str] | None" = None,
     keep_fractions: "List[float] | None" = None,
+    finetune_epochs: "int | None" = None,
 ) -> List[Dict[str, Any]]:
     """Run every (criterion, keep_fraction) combination for one architecture.
 
@@ -256,6 +257,8 @@ def run_bio_experiments_for_model(
     criteria = list(CRITERIA if criteria is None else criteria)
     if keep_fractions is not None:
         cfg.bio.keep_fractions = list(keep_fractions)
+    if finetune_epochs is not None:
+        cfg.finetune.epochs = finetune_epochs
     set_seed(cfg.seed)
     device = get_device(cfg.device)
     ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, cfg.plot_dir)
@@ -377,6 +380,13 @@ def main() -> None:
              "(see CRITERIA_REQUIRING_BATCHNORM).",
     )
     parser.add_argument(
+        "--finetune-epochs", type=int, default=None,
+        help="override each config's finetune.epochs. The SPEAR configs set 210 "
+             "to match their published recipe; the internal matched-sparsity "
+             "comparison only needs every criterion on equal footing, so 30 "
+             "(this project's usual budget) costs a seventh of the GPU time.",
+    )
+    parser.add_argument(
         "--keep-fractions", type=float, nargs="+", default=None,
         help="override each config's bio.keep_fractions. For a matched-sparsity "
              "comparison, take these from `run_sparsity_curve.py --plan-only` at "
@@ -399,6 +409,7 @@ def main() -> None:
             run_bio_experiments_for_model(
                 model_name, i, len(args.models),
                 criteria=args.criteria, keep_fractions=args.keep_fractions,
+                finetune_epochs=args.finetune_epochs,
             )
         )
 

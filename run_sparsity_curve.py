@@ -83,6 +83,7 @@ from models import build_model
 from pruning import (
     KeepPlan,
     compute_uncertainty_report,
+    keep_fraction_for_param_target,
     param_target_plan,
     plan_synops_fraction,
     prune_model,
@@ -150,7 +151,33 @@ def plan_only(model_name: str, cfg: ExperimentConfig, targets: List[float], mode
         print()
 
 
-def diagnose_only(model_name: str, cfg: ExperimentConfig) -> None:
+def emit_keep_fractions(model_name: str, cfg: ExperimentConfig, targets: List[float]) -> None:
+    """
+    Print *only* the uniform keep_fractions for `targets`, space-separated.
+
+    Machine-readable counterpart to plan_only, so a driver script can pipe
+    these straight into `run_bio_pruning.py --keep-fractions` instead of a
+    human transcribing them from a table. That transcription step is the
+    documented cause of the current mismatch, where every bio run sits at
+    98.5% pruned and is compared against Bayesian runs at 27.7% and 90.6%.
+    Closing it by construction is the whole point.
+
+    No data, no GPU, no training -- purely the geometry of the architecture.
+    """
+    device = torch.device("cpu")
+    model = build_model(
+        model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
+    ).to(device)
+    fractions = [
+        keep_fraction_for_param_target(
+            model, model_name, cfg.snn, t, min_keep=cfg.bayesian.min_keep_per_layer
+        )[0]
+        for t in targets
+    ]
+    print(" ".join(f"{f:.6f}" for f in fractions))
+
+
+def diagnose_only(model_name: str, cfg: ExperimentConfig, fail_below: float = 0.0) -> None:
     """
     Pre-flight: on the real pretrained baseline, is the task loss able to
     push back against the KL at all?
@@ -196,6 +223,19 @@ def diagnose_only(model_name: str, cfg: ExperimentConfig) -> None:
         "unopposed there\nand no beta_max will help -- diagnose before spending a "
         "queue slot on the curve."
     )
+    # Non-zero exit so a driver script can *gate* on this rather than print it
+    # and carry on. Printing a warning nobody reads is exactly what happened on
+    # dpap_repl: the diagnostic reported 1.4e-4 before epoch 1, was ignored,
+    # and the run lost all accuracy by epoch 15.
+    if fail_below > 0.0 and worst < fail_below:
+        raise SystemExit(
+            f"\nFAIL: weakest gate-pressure ratio {worst:.3e} is below the "
+            f"--fail-below threshold of {fail_below:.3e}.\n"
+            "The KL is effectively unopposed in at least one layer, so its gates "
+            "will run to the clamp\nand the ranking will be ties broken by index "
+            "order. Lower beta_max (and/or the gate LR)\nand re-run this "
+            "diagnostic before submitting a curve."
+        )
 
 
 def run_curve(args: argparse.Namespace) -> None:
@@ -203,9 +243,14 @@ def run_curve(args: argparse.Namespace) -> None:
     if args.plan_only:
         plan_only(args.model, cfg, args.targets, args.mode)
         return
-    if args.diagnose_only:
-        diagnose_only(args.model, cfg)
+    if args.emit_keep_fractions:
+        emit_keep_fractions(args.model, cfg, args.targets)
         return
+    if args.diagnose_only:
+        diagnose_only(args.model, cfg, args.fail_below)
+        return
+    if args.finetune_epochs is not None:
+        cfg.finetune.epochs = args.finetune_epochs
 
     set_seed(cfg.seed)
     device = get_device(cfg.device)
@@ -592,6 +637,26 @@ def main() -> None:
              "baseline, then exit. One batch. Run this before submitting a curve.",
     )
     parser.add_argument(
+        "--fail-below", type=float, default=0.0,
+        help="with --diagnose-only, exit non-zero if the weakest layer's "
+             "task-vs-KL ratio falls below this (e.g. 1e-3). Lets a driver "
+             "script stop before spending a queue slot on gates that cannot "
+             "differentiate. 0 (default) only prints.",
+    )
+    parser.add_argument(
+        "--emit-keep-fractions", action="store_true",
+        help="print only the space-separated uniform keep_fractions for "
+             "--targets, then exit. Feed straight into `run_bio_pruning.py "
+             "--keep-fractions` for a matched-sparsity comparison. No GPU.",
+    )
+    parser.add_argument(
+        "--finetune-epochs", type=int, default=None,
+        help="override this config's finetune.epochs. The SPEAR configs set "
+             "210 to match their published recipe, which is ~7x this project's "
+             "usual budget and is only needed for the headline matched-SynOps "
+             "number; pass 30 for the internal comparison points.",
+    )
+    parser.add_argument(
         "--tag", default="",
         help="suffix for the output directory, e.g. --tag beta0.01. Keeps "
              "successive runs from overwriting each other.",
@@ -664,9 +729,17 @@ def main() -> None:
              "--gate-optimizer sgd). Overrides BayesianConfig.gate_lr.",
     )
     args = parser.parse_args()
-    if not args.targets and not args.synops_budgets and not args.diagnose_only:
+    if args.emit_keep_fractions and not args.targets:
+        parser.error("--emit-keep-fractions needs --targets")
+    if (
+        not args.targets
+        and not args.synops_budgets
+        and not args.diagnose_only
+        and not args.emit_keep_fractions
+    ):
         parser.error(
-            "--targets and/or --synops-budgets is required unless --diagnose-only is given"
+            "--targets and/or --synops-budgets is required unless --diagnose-only "
+            "or --emit-keep-fractions is given"
         )
     if args.gates_from:
         args.reuse_gates = True
