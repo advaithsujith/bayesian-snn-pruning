@@ -29,6 +29,7 @@ from activity_pruning import (
     prune_model_activity,
     run_dpap_pruning,
     run_naive_firing_rate_pruning,
+    run_network_slimming_pruning,
     run_sca_pruning,
 )
 from bayesian_layers import set_bayesian_mode

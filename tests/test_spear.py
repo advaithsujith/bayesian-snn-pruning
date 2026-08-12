@@ -285,6 +285,18 @@ def main():
     check("network_slimming is not a default criterion",
           "network_slimming" not in CRITERIA and "network_slimming" in ALL_CRITERIA)
 
+    # Every advertised criterion must actually RESOLVE inside run_bio_pruning.
+    # Its dispatch calls bare names, so a missing import is a NameError raised
+    # only when that branch is reached -- which for the last criterion in the
+    # list meant 13 hours of GPU completing three criteria and then dying at
+    # the final step. `import run_bio_pruning` does not catch it, and neither
+    # does importing the function from activity_pruning as the tests above do.
+    import run_bio_pruning as _rbp
+    for _crit in ALL_CRITERIA:
+        _fn = f"run_{_crit}_pruning"
+        check(f"run_bio_pruning resolves '{_crit}' -> {_fn}",
+              callable(getattr(_rbp, _fn, None)))
+
     nosnn = SNNConfig(num_steps=2)
     nobn = VGGStyleSNN(ArchConfig(conv_spec=[8, "M"], fc_hidden=[], norm_type="none",
                                   input_size=8), nosnn, BAY)
