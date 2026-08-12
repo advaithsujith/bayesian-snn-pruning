@@ -114,6 +114,68 @@ Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
   `docs/replication_targets.md` conventions: record provenance for every value,
   and label anything assumed as an assumption rather than a replication.
 
+## NOVELTY NARROWED AGAIN (2026-08-12): Chen et al. already do the Lagrangian
+
+Found in a proper literature pass, full text read, not inferred from an
+abstract. **This is the closest prior work to the project and it was not in
+this file before.**
+
+**Chen, Yuan, Tan, Chen, Song & Zhang, "Resource Constrained Model Compression
+via Minimax Optimization for Spiking Neural Networks", ACM MM 2023,
+arXiv 2308.04672.** Code: `github.com/chenjallen/Resource-Constrained-Compression-on-SNN`.
+
+Their Eq. 7 is a minimax (Lagrangian) reformulation with dual variables y, z
+and a hard resource budget; Algorithm 1 line 7 is
+`z <- max(0, z + eta*(R(s) - R_budget))`, i.e. **dual ascent on budget
+violation**, structurally identical to `BayesianConfig.synops_budget_fraction`'s
+`lambda <- max(0, lambda + lr*(E[SynOps]-budget)/budget)`. Solved end-to-end by
+gradient descent-ascent with a straight-through estimator, on SNNs, in
+SpikingJelly, on CIFAR-10 / VGG16 / ResNet19 / VGGSNN. Their CIFAR-10 6Conv2FC
+baseline is 92.88% and they report **+0.84%** accuracy at 75% sparsity.
+
+**So "a differentiable budget as a hard constraint via Lagrangian dual ascent
+for SNN compression" is dead as a novelty claim.** Third narrowing, after
+SPEAR killed "SynOps-aware SNN pruning" and Bayesian Bits killed
+"cost-weighted variational gates". Do not state it in the dissertation.
+
+**What survives, and it is sharper than the previous claim.** Two differences:
+
+1. **Their criterion is not Bayesian.** Difference-of-convex sparsity
+   reformulation plus STE on weight magnitudes. No stochastic gate, no
+   posterior.
+2. **Their resource function is spike-blind, and this is the better
+   argument.** Their Sec. 3.1: *"R(s) evaluates a general resource consumption
+   (e.g., Flops or latency) based on the number of (nonzero) weights for each
+   layer."* The budget is a function of surviving weight count only and cannot
+   see firing rates. SynOps = spikes x connections, so this project's budget
+   tracks a quantity that **moves as the network learns to fire less**, which
+   is why `synops_recount_every` re-measures during training. Chen et al. are
+   a concrete instance of exactly the failure Session 3 already argued
+   ("FLOPs is the wrong cost metric for an SNN ... never counts a spike").
+
+**Claim to make, stated this narrowly:** a Bayesian posterior-uncertainty
+criterion trained under a differentiable, *activity-dependent* SynOps budget.
+Chen et al. have the constrained-optimisation machinery with a static cost
+model; SPEAR has SynOps but a non-differentiable RL search over an
+already-trained network. The combination was not found.
+
+**Treat Chen et al. as a cited precedent and baseline**, the way
+`docs/replication_targets.md` treats Bayesian Bits, not as something to work
+around. They have public code, so their numbers are checkable.
+
+Also found, none of them threats:
+- **Criticality-Constrained Iterative Pruning** (arXiv 2606.30676, 2026):
+  unstructured, 3-layer FC on MNIST/FMNIST, importance = magnitude x
+  surrogate-gradient criticality, energy measured post-hoc only. Worth citing
+  because they **tried** a Lagrangian soft-penalty for sparsity and report it
+  failing (their "continuous-relaxation trap") -- useful contrast for why the
+  dual-ascent formulation here has to be argued rather than assumed.
+- **SLAMP** (arXiv 2603.14946): layer-adaptive magnitude, temporal
+  distortion-constrained. Different lineage.
+- **HAPQ** (MDPI Sensors 2026): hardware-aware pruning + quantisation,
+  event-based detection.
+- **Towards Energy Efficient SNNs** (ICLR 2024): unstructured framework.
+
 ## SPEAR baseline DONE (2026-08-12): 90.62%, and the gap that now matters
 
 Attempt 2, with standard crop+flip restored: **90.62% test**, train_acc 0.9973
