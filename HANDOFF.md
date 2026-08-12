@@ -114,6 +114,40 @@ Chosen over the cheaper alternative of citing SPEAR's numbers as context only.
   `docs/replication_targets.md` conventions: record provenance for every value,
   and label anything assumed as an assumption rather than a replication.
 
+## SPEAR baseline DONE (2026-08-12): 90.62%, and the gap that now matters
+
+Attempt 2, with standard crop+flip restored: **90.62% test**, train_acc 0.9973
+against val_acc 0.9003, val_loss 0.708 and flat. Saved at
+`outputs/spear_repl/trained_model.pt`; `reuse_pretrained` is now True so
+nothing retrains it. 210 epochs, 26 s/epoch, ~1.5h. The augmentation diagnosis
+below is confirmed: +4.53pp over the literal reading.
+
+**0.52pp under SCA's 91.14% reference**, inside the ~1% band DPAP used as its
+go/no-go. Good enough to prune on.
+
+**But the real problem is now visible, and it is not the baseline gate.**
+SPEAR's *pruned* row is **91.77%**, which is **higher than our unpruned
+90.62%**. They never published a dense baseline, but landing at 91.77-92.49%
+after pruning puts theirs at roughly 92-93%. So we start 1.5-2.5pp behind
+before the criterion does anything, and any accuracy cost from pruning drops
+us to ~89-90% against their 91.77%. The headline would read "SPEAR beats
+ours" when the truth is "their baseline was better than ours" -- exactly the
+confound the whole replication pivot exists to remove.
+
+Options, in the order they should be tried:
+1. **Test `pool_type="avg"`** (assumption 6). TET's own VGGSNN uses average
+   pooling throughout and this is a spiking net where max-pooling binary
+   spike trains loses information -- the argument Chowdhury makes and this
+   repo's `ArchConfig` docstring already records. One line, ~1.5h, and it
+   must set `reuse_pretrained=False` since it invalidates the checkpoint.
+2. **Report the drop from our own baseline as the primary metric**, noting
+   theirs is uncomparable because unpublished. Isolates the criterion, weaker
+   headline, and an examiner will ask why the drops cannot be compared.
+3. **Compare absolutes and declare the baseline gap** as a limitation.
+
+Do not start the ~5h curve before deciding this: every pruned number inherits
+whichever baseline is chosen.
+
 ## SPEAR pretrain attempt 1 (2026-08-12): 86.09%, augmentation line disproven
 
 210 epochs, **25.3 s/epoch, ~1.5h on an A100**. Use that number for planning:

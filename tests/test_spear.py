@@ -143,7 +143,7 @@ def main():
     check("finetune matches the training recipe (210 ep, warm-up, lr 0.1)",
           cfg.finetune.epochs == 210 and cfg.finetune.lr_warmup_epochs == 10
           and cfg.finetune.lr == 0.1 and cfg.finetune.optimizer == "sgd")
-    check("no pretrained checkpoint assumed yet", cfg.reuse_pretrained is False)
+    check("reuses the saved 90.62% baseline", cfg.reuse_pretrained is True)
 
     # Standard CIFAR VGG16: 13 convs, 5 pools, 32px -> 1px, flatten 512.
     check("13 conv layers", len(cfg.arch.conv_channels()) == 13)

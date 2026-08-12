@@ -843,10 +843,17 @@ def get_spear_repl_config() -> ExperimentConfig:
     cfg.bayesian.bayesian_train_lr = 2e-4
     cfg.bayesian.bayesian_train_weight_decay = 5e-5
 
-    # No pretrained checkpoint exists yet -- this replication needs a fresh
-    # ~210-epoch pretrain. Flip to True once outputs/spear_repl/trained_model.pt
-    # is saved, so the pruning runs all fork from one identical baseline.
-    cfg.reuse_pretrained = False
+    # The 90.62% baseline is saved (outputs/spear_repl/trained_model.pt, run
+    # 2026-08-12, 210 epochs at 26 s/epoch). None of the pruning
+    # hyperparameters affect it, so every pruning attempt reuses it instead of
+    # repeating ~1.5h, and all of them fork from one identical baseline, which
+    # is what makes successive runs comparable to each other.
+    #
+    # Set back to False after any change to the architecture or the data
+    # pipeline -- e.g. testing pool_type="avg", which would invalidate this
+    # checkpoint. A mismatched checkpoint raises with a message naming the
+    # cause rather than silently training on the wrong baseline.
+    cfg.reuse_pretrained = True
     return cfg
 
 
