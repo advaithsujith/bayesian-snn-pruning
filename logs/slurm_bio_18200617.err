@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 384, in <module>
+    main()
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 365, in main
+    run_bio_experiments_for_model(
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 256, in run_bio_experiments_for_model
+    probe_model = build_model(model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes)
+  File "/net/scratch/w36160as/bayesian-snn-pruning/models.py", line 680, in build_model
+    raise ValueError(
+ValueError: Unknown model name 'dpap_repl' and no arch_cfg given. Built-in options: ['lenet', 'vgg9', 'resnet18']; any other name requires an ArchConfig.

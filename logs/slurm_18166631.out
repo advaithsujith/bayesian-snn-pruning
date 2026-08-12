@@ -1,0 +1,91 @@
+====================================================
+Job started: Mon  3 Aug 02:11:26 BST 2026
+Node: node848.csf3.man.alces.network
+====================================================
+----------------------------------------------------
+Hardware information
+----------------------------------------------------
+Mon Aug  3 02:11:43 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:01:00.0 Off |                    0 |
+| N/A   37C    P0             66W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+CUDA available: True
+Device count: 1
+Device name: NVIDIA A100-SXM4-80GB
+----------------------------------------------------
+
+============================================================
+Running Experiment 1 / 1
+DPAP_REPL
+============================================================
+
+Building model...
+02:12:04 | INFO | Model built with 21362834 parameters (gates excluded from count).
+02:12:12 | INFO | Per-unit expected-FLOPs costs computed and set on every Bayesian layer.
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+
+Reusing pretrained baseline: ./outputs/dpap_repl/trained_model.pt
+02:12:15 | INFO | Reusing existing pretrained baseline, skipping pretrain: ./outputs/dpap_repl/trained_model.pt
+
+Validation...
+02:12:23 | INFO | Post-pretrain validation accuracy: 0.9435
+02:12:31 | INFO | Test accuracy before Bayesian conversion: 0.9435
+
+Converting to Bayesian...
+02:12:31 | INFO | Bayesian gates activated on every structurally-prunable layer.
+
+Training Bayesian gates...
+02:14:04 | INFO | [bayesian_train] epoch 1/75 train_task_loss=0.2957 train_kl=4876.09 beta=0.00000 train_cost=4982041185.79 gamma=0.000000 train_acc=0.9125 val_loss=0.3368 val_acc=0.9104 time=92.9s
+02:14:05 | INFO |     log_alpha: min=-3.05 median=-3.00 max=-2.95 frac_prunable=0.000
+02:15:27 | INFO | [bayesian_train] epoch 2/75 train_task_loss=0.2860 train_kl=4264.34 beta=0.00889 train_cost=4974288870.91 gamma=0.000000 train_acc=0.9079 val_loss=0.3373 val_acc=0.9053 time=82.3s
+02:15:27 | INFO |     log_alpha: min=-2.32 median=-2.19 max=-2.13 frac_prunable=0.000
+02:16:50 | INFO | [bayesian_train] epoch 3/75 train_task_loss=0.2980 train_kl=3256.12 beta=0.01778 train_cost=4953150273.02 gamma=0.000000 train_acc=0.9043 val_loss=0.2980 val_acc=0.9091 time=83.6s
+02:16:50 | INFO |     log_alpha: min=-1.61 median=-1.47 max=-1.41 frac_prunable=0.000
+02:18:13 | INFO | [bayesian_train] epoch 4/75 train_task_loss=0.3275 train_kl=2297.98 beta=0.02667 train_cost=4915292829.18 gamma=0.000000 train_acc=0.8946 val_loss=0.3148 val_acc=0.8765 time=82.7s
+02:18:13 | INFO |     log_alpha: min=-0.98 median=-0.84 max=-0.78 frac_prunable=0.000
+02:19:36 | INFO | [bayesian_train] epoch 5/75 train_task_loss=0.3652 train_kl=1543.18 beta=0.03556 train_cost=4854366700.03 gamma=0.000000 train_acc=0.8839 val_loss=0.4012 val_acc=0.8233 time=83.3s
+02:19:36 | INFO |     log_alpha: min=-0.42 median=-0.29 max=-0.23 frac_prunable=0.000
+02:20:59 | INFO | [bayesian_train] epoch 6/75 train_task_loss=0.4549 train_kl=1023.49 beta=0.04444 train_cost=4763746267.14 gamma=0.000000 train_acc=0.8590 val_loss=0.5157 val_acc=0.7424 time=82.4s
+02:20:59 | INFO |     log_alpha: min=0.03 median=0.21 max=0.26 frac_prunable=0.000
+02:22:21 | INFO | [bayesian_train] epoch 7/75 train_task_loss=0.6231 train_kl=684.85 beta=0.05333 train_cost=4636960712.19 gamma=0.000000 train_acc=0.8112 val_loss=0.7125 val_acc=0.6169 time=82.4s
+02:22:21 | INFO |     log_alpha: min=0.43 median=0.65 max=0.71 frac_prunable=0.000
+02:23:43 | INFO | [bayesian_train] epoch 8/75 train_task_loss=0.8274 train_kl=476.86 beta=0.06222 train_cost=4481794228.74 gamma=0.000000 train_acc=0.7465 val_loss=1.0104 val_acc=0.4054 time=82.4s
+02:23:43 | INFO |     log_alpha: min=0.75 median=1.02 max=1.10 frac_prunable=0.000
+02:25:06 | INFO | [bayesian_train] epoch 9/75 train_task_loss=1.0498 train_kl=347.52 beta=0.07111 train_cost=4307257268.22 gamma=0.000000 train_acc=0.6656 val_loss=1.2935 val_acc=0.2910 time=82.4s
+02:25:06 | INFO |     log_alpha: min=0.99 median=1.34 max=1.44 frac_prunable=0.000
+02:26:28 | INFO | [bayesian_train] epoch 10/75 train_task_loss=1.2765 train_kl=261.60 beta=0.08000 train_cost=4115811696.38 gamma=0.000000 train_acc=0.5815 val_loss=1.4884 val_acc=0.2378 time=82.4s
+02:26:28 | INFO |     log_alpha: min=1.21 median=1.62 max=1.74 frac_prunable=0.000
+02:27:51 | INFO | [bayesian_train] epoch 11/75 train_task_loss=1.4721 train_kl=202.86 beta=0.08889 train_cost=3916152337.92 gamma=0.000000 train_acc=0.4994 val_loss=1.7396 val_acc=0.1960 time=82.7s
+02:27:51 | INFO |     log_alpha: min=1.39 median=1.87 max=2.03 frac_prunable=0.000
+02:29:13 | INFO | [bayesian_train] epoch 12/75 train_task_loss=1.7001 train_kl=160.78 beta=0.09778 train_cost=3710361947.90 gamma=0.000000 train_acc=0.4055 val_loss=1.8788 val_acc=0.1700 time=82.0s
+02:29:13 | INFO |     log_alpha: min=1.59 median=2.10 max=2.31 frac_prunable=0.000
+02:30:35 | INFO | [bayesian_train] epoch 13/75 train_task_loss=1.8962 train_kl=129.86 beta=0.10667 train_cost=3503167785.73 gamma=0.000000 train_acc=0.3278 val_loss=2.3681 val_acc=0.1532 time=82.3s
+02:30:35 | INFO |     log_alpha: min=1.72 median=2.31 max=2.57 frac_prunable=0.000
+02:31:58 | INFO | [bayesian_train] epoch 14/75 train_task_loss=2.1139 train_kl=105.74 beta=0.11556 train_cost=3287910059.01 gamma=0.000000 train_acc=0.2443 val_loss=2.7948 val_acc=0.1323 time=82.3s
+02:31:58 | INFO |     log_alpha: min=1.83 median=2.52 max=2.85 frac_prunable=0.000
+02:33:20 | INFO | [bayesian_train] epoch 15/75 train_task_loss=2.2757 train_kl=84.82 beta=0.12444 train_cost=3041148066.05 gamma=0.000000 train_acc=0.1773 val_loss=3.4149 val_acc=0.1356 time=82.6s
+02:33:20 | INFO |     log_alpha: min=1.92 median=2.75 max=3.16 frac_prunable=0.041
+02:34:43 | INFO | [bayesian_train] epoch 16/75 train_task_loss=2.3251 train_kl=63.80 beta=0.13333 train_cost=2695803169.79 gamma=0.000000 train_acc=0.1224 val_loss=4.8267 val_acc=0.1230 time=82.9s
+02:34:43 | INFO |     log_alpha: min=2.17 median=3.15 max=3.65 frac_prunable=0.846
+02:36:06 | INFO | [bayesian_train] epoch 17/75 train_task_loss=2.3076 train_kl=42.23 beta=0.14222 train_cost=2189372927.74 gamma=0.000000 train_acc=0.1012 val_loss=5.2006 val_acc=0.1255 time=82.7s
+02:36:06 | INFO |     log_alpha: min=2.49 median=3.54 max=4.07 frac_prunable=0.961
+02:37:29 | INFO | [bayesian_train] epoch 18/75 train_task_loss=2.3034 train_kl=29.79 beta=0.15111 train_cost=1779352891.01 gamma=0.000000 train_acc=0.1006 val_loss=5.4390 val_acc=0.1245 time=82.8s
+02:37:29 | INFO |     log_alpha: min=2.81 median=3.88 max=4.42 frac_prunable=0.997

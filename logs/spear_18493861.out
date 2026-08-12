@@ -1,0 +1,344 @@
+====================================================
+Job started: Wed 12 Aug 00:18:03 BST 2026
+Node: node862.csf3.man.alces.network
+====================================================
+Wed Aug 12 00:18:03 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   26C    P0             56W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+torch 2.3.1+cu121 cuda True
+[PASS] output_readout defaults to 'spikes'
+[PASS] invalid output_readout is rejected
+[PASS] current readout keeps [T, B, C] shape
+[PASS] spike readout is binary
+[PASS] current readout is not binary
+[PASS] readout adds no parameters
+[PASS] pruned model keeps [T, B, C] shape
+[PASS] pruned model inherits the current readout
+[PASS] tet_loss == per-timestep reference
+[PASS] tet_loss registered as 'tet'
+[PASS] tet_loss at lam=0 is per-timestep CE
+[PASS] tet_loss at lam=1 is the MSE term
+[PASS] tet_loss differs from mean-then-CE
+[PASS] T = 4
+[PASS] beta = 0.5 (tau=2.0, no input decay)
+[PASS] threshold = 1.0
+[PASS] hard reset
+[PASS] fixed tau, not learned
+[PASS] arctan surrogate
+[PASS] TET task loss
+[PASS] pruning phases use cross-entropy
+[PASS] SGD optimizer
+[PASS] max lr 0.1
+[PASS] weight decay 5e-5
+[PASS] 210 epochs
+[PASS] 10 warm-up epochs then cosine
+[PASS] no augmentation
+[PASS] finetune matches the training recipe (210 ep, warm-up, lr 0.1)
+[PASS] no pretrained checkpoint assumed yet
+[PASS] 13 conv layers
+[PASS] 5 pooling stages
+[PASS] no hidden fc layers
+[PASS] flatten_dim = 512
+[PASS] BatchNorm present
+[PASS] current readout
+[PASS] every conv gate deferred past its BatchNorm
+[PASS] VGG16 forwards to [4, 2, 10]
+[PASS] VGG16 output is analog
+[PASS] summed spikes at T=4 take at most 5 levels (saw 5)
+[PASS] spike argmax ties on most examples (saw 52%)
+[PASS] current argmax does not tie (saw 0%)
+[PASS] model spike readout is integer-valued when summed
+[PASS] learn_beta + current readout is rejected
+[PASS] learn_beta + spikes readout still allowed
+[PASS] cosine_warmup without a warm-up is rejected
+[PASS] tet phi default still equals SPEAR's threshold
+[PASS] normalisation std assumption
+[PASS] normalisation mean assumption
+[PASS] batch size assumption
+[PASS] trains on all 50k, pruning stages hold out 10%
+[PASS] cosine floor 0.0
+[PASS] direct encoding
+[PASS] max pooling assumption pinned explicitly
+[PASS] conv bias assumption pinned explicitly
+[PASS] 14,728,266 parameters
+
+All SPEAR replication checks passed.
+
+============================================================
+Running Experiment 1 / 1
+SPEAR_REPL
+============================================================
+
+Building model...
+00:18:43 | INFO | Model built with 14728266 parameters (gates excluded from count).
+00:18:55 | INFO | Per-unit expected-FLOPs costs computed and set on every Bayesian layer.
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+00:19:02 | INFO | Pruning stages use a held-out validation split (val_fraction=0.1) rather than the pretrain recipe's test-set validation.
+
+Training...
+00:19:46 | INFO | [pretrain] epoch 1/210 train_task_loss=2.2554 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.1200 val_loss=2.2187 val_acc=0.1389 time=44.8s
+00:20:11 | INFO | [pretrain] epoch 2/210 train_task_loss=1.5674 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.4344 val_loss=1.4985 val_acc=0.5091 time=24.8s
+00:20:36 | INFO | [pretrain] epoch 3/210 train_task_loss=1.2551 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.5870 val_loss=1.2873 val_acc=0.6211 time=25.0s
+00:21:01 | INFO | [pretrain] epoch 4/210 train_task_loss=1.0512 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.6828 val_loss=1.0776 val_acc=0.7040 time=24.8s
+00:21:26 | INFO | [pretrain] epoch 5/210 train_task_loss=0.9267 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.7381 val_loss=0.9851 val_acc=0.7362 time=24.8s
+00:21:51 | INFO | [pretrain] epoch 6/210 train_task_loss=0.8295 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.7786 val_loss=0.9363 val_acc=0.7615 time=24.9s
+00:22:16 | INFO | [pretrain] epoch 7/210 train_task_loss=0.7602 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8085 val_loss=0.9076 val_acc=0.7731 time=24.9s
+00:22:41 | INFO | [pretrain] epoch 8/210 train_task_loss=0.6959 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8338 val_loss=0.8376 val_acc=0.7987 time=24.9s
+00:23:06 | INFO | [pretrain] epoch 9/210 train_task_loss=0.6466 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8508 val_loss=0.8211 val_acc=0.8085 time=24.7s
+00:23:30 | INFO | [pretrain] epoch 10/210 train_task_loss=0.6119 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8643 val_loss=0.8043 val_acc=0.8048 time=24.7s
+00:23:55 | INFO | [pretrain] epoch 11/210 train_task_loss=0.5740 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8782 val_loss=0.7933 val_acc=0.8201 time=25.0s
+00:24:20 | INFO | [pretrain] epoch 12/210 train_task_loss=0.5192 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.8970 val_loss=0.8374 val_acc=0.8097 time=24.9s
+00:24:45 | INFO | [pretrain] epoch 13/210 train_task_loss=0.4741 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9141 val_loss=0.8416 val_acc=0.8135 time=24.8s
+00:25:10 | INFO | [pretrain] epoch 14/210 train_task_loss=0.4496 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9234 val_loss=0.8751 val_acc=0.8054 time=24.9s
+00:25:35 | INFO | [pretrain] epoch 15/210 train_task_loss=0.4121 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9360 val_loss=0.8421 val_acc=0.8206 time=24.8s
+00:26:00 | INFO | [pretrain] epoch 16/210 train_task_loss=0.3978 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9401 val_loss=0.7845 val_acc=0.8309 time=24.8s
+00:26:25 | INFO | [pretrain] epoch 17/210 train_task_loss=0.3824 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9455 val_loss=0.7838 val_acc=0.8371 time=24.9s
+00:26:49 | INFO | [pretrain] epoch 18/210 train_task_loss=0.3561 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9539 val_loss=0.7935 val_acc=0.8370 time=24.8s
+00:27:14 | INFO | [pretrain] epoch 19/210 train_task_loss=0.3436 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9582 val_loss=0.8933 val_acc=0.8198 time=25.0s
+00:27:39 | INFO | [pretrain] epoch 20/210 train_task_loss=0.3355 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9617 val_loss=0.8372 val_acc=0.8301 time=24.9s
+00:28:04 | INFO | [pretrain] epoch 21/210 train_task_loss=0.3236 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9648 val_loss=0.8521 val_acc=0.8273 time=24.8s
+00:28:29 | INFO | [pretrain] epoch 22/210 train_task_loss=0.3109 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9691 val_loss=0.8736 val_acc=0.8212 time=24.9s
+00:28:54 | INFO | [pretrain] epoch 23/210 train_task_loss=0.3028 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9713 val_loss=0.8526 val_acc=0.8360 time=24.9s
+00:29:19 | INFO | [pretrain] epoch 24/210 train_task_loss=0.2960 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9726 val_loss=0.8681 val_acc=0.8327 time=24.8s
+00:29:43 | INFO | [pretrain] epoch 25/210 train_task_loss=0.2889 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9748 val_loss=0.8583 val_acc=0.8269 time=24.9s
+00:30:08 | INFO | [pretrain] epoch 26/210 train_task_loss=0.2839 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9760 val_loss=0.8488 val_acc=0.8401 time=24.8s
+00:30:33 | INFO | [pretrain] epoch 27/210 train_task_loss=0.2888 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9740 val_loss=0.8533 val_acc=0.8276 time=25.0s
+00:30:58 | INFO | [pretrain] epoch 28/210 train_task_loss=0.2763 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9777 val_loss=0.8660 val_acc=0.8340 time=24.9s
+00:31:23 | INFO | [pretrain] epoch 29/210 train_task_loss=0.2689 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9800 val_loss=0.9024 val_acc=0.8270 time=25.0s
+00:31:48 | INFO | [pretrain] epoch 30/210 train_task_loss=0.2715 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9792 val_loss=0.8938 val_acc=0.8307 time=24.8s
+00:32:13 | INFO | [pretrain] epoch 31/210 train_task_loss=0.2671 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9798 val_loss=0.8869 val_acc=0.8271 time=24.7s
+00:32:37 | INFO | [pretrain] epoch 32/210 train_task_loss=0.2637 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9807 val_loss=0.8986 val_acc=0.8221 time=24.8s
+00:33:02 | INFO | [pretrain] epoch 33/210 train_task_loss=0.2562 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9831 val_loss=0.9321 val_acc=0.8273 time=24.8s
+00:33:27 | INFO | [pretrain] epoch 34/210 train_task_loss=0.2591 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9821 val_loss=0.8815 val_acc=0.8339 time=25.0s
+00:33:52 | INFO | [pretrain] epoch 35/210 train_task_loss=0.2593 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9819 val_loss=0.8598 val_acc=0.8357 time=24.9s
+00:34:17 | INFO | [pretrain] epoch 36/210 train_task_loss=0.2489 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9849 val_loss=0.9183 val_acc=0.8292 time=24.9s
+00:34:42 | INFO | [pretrain] epoch 37/210 train_task_loss=0.2485 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9854 val_loss=0.9677 val_acc=0.8189 time=24.8s
+00:35:07 | INFO | [pretrain] epoch 38/210 train_task_loss=0.2500 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9848 val_loss=0.8783 val_acc=0.8290 time=24.8s
+00:35:31 | INFO | [pretrain] epoch 39/210 train_task_loss=0.2449 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9860 val_loss=0.8686 val_acc=0.8297 time=24.8s
+00:35:56 | INFO | [pretrain] epoch 40/210 train_task_loss=0.2486 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9848 val_loss=0.9016 val_acc=0.8304 time=24.9s
+00:36:21 | INFO | [pretrain] epoch 41/210 train_task_loss=0.2415 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9874 val_loss=0.8843 val_acc=0.8337 time=25.0s
+00:36:46 | INFO | [pretrain] epoch 42/210 train_task_loss=0.2485 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9851 val_loss=0.8680 val_acc=0.8303 time=24.8s
+00:37:11 | INFO | [pretrain] epoch 43/210 train_task_loss=0.2474 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9849 val_loss=0.8937 val_acc=0.8339 time=25.0s
+00:37:36 | INFO | [pretrain] epoch 44/210 train_task_loss=0.2486 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9848 val_loss=0.8854 val_acc=0.8321 time=24.8s
+00:38:01 | INFO | [pretrain] epoch 45/210 train_task_loss=0.2420 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9862 val_loss=0.8728 val_acc=0.8360 time=24.7s
+00:38:26 | INFO | [pretrain] epoch 46/210 train_task_loss=0.2383 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9869 val_loss=0.8677 val_acc=0.8370 time=24.9s
+00:38:51 | INFO | [pretrain] epoch 47/210 train_task_loss=0.2384 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9869 val_loss=0.8975 val_acc=0.8280 time=24.9s
+00:39:15 | INFO | [pretrain] epoch 48/210 train_task_loss=0.2479 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9852 val_loss=0.9186 val_acc=0.8234 time=24.9s
+00:39:40 | INFO | [pretrain] epoch 49/210 train_task_loss=0.2402 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9865 val_loss=0.8466 val_acc=0.8376 time=24.9s
+00:40:05 | INFO | [pretrain] epoch 50/210 train_task_loss=0.2401 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9864 val_loss=0.8701 val_acc=0.8333 time=24.8s
+00:40:30 | INFO | [pretrain] epoch 51/210 train_task_loss=0.2323 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9892 val_loss=0.8613 val_acc=0.8384 time=24.8s
+00:40:55 | INFO | [pretrain] epoch 52/210 train_task_loss=0.2295 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9892 val_loss=0.9497 val_acc=0.8149 time=24.8s
+00:41:20 | INFO | [pretrain] epoch 53/210 train_task_loss=0.2356 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9881 val_loss=0.8886 val_acc=0.8279 time=24.8s
+00:41:44 | INFO | [pretrain] epoch 54/210 train_task_loss=0.2363 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9881 val_loss=0.9251 val_acc=0.8206 time=24.8s
+00:42:09 | INFO | [pretrain] epoch 55/210 train_task_loss=0.2380 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9874 val_loss=0.8358 val_acc=0.8399 time=24.8s
+00:42:34 | INFO | [pretrain] epoch 56/210 train_task_loss=0.2285 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9897 val_loss=0.8716 val_acc=0.8334 time=24.8s
+00:42:59 | INFO | [pretrain] epoch 57/210 train_task_loss=0.2210 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9914 val_loss=0.8669 val_acc=0.8379 time=24.8s
+00:43:24 | INFO | [pretrain] epoch 58/210 train_task_loss=0.2209 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9914 val_loss=0.8848 val_acc=0.8321 time=24.9s
+00:43:49 | INFO | [pretrain] epoch 59/210 train_task_loss=0.2284 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9892 val_loss=0.8536 val_acc=0.8413 time=25.0s
+00:44:14 | INFO | [pretrain] epoch 60/210 train_task_loss=0.2295 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9893 val_loss=0.8634 val_acc=0.8379 time=24.9s
+00:44:39 | INFO | [pretrain] epoch 61/210 train_task_loss=0.2286 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9897 val_loss=0.9369 val_acc=0.8234 time=25.1s
+00:45:04 | INFO | [pretrain] epoch 62/210 train_task_loss=0.2330 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9873 val_loss=0.8697 val_acc=0.8242 time=25.0s
+00:45:29 | INFO | [pretrain] epoch 63/210 train_task_loss=0.2284 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9894 val_loss=0.9096 val_acc=0.8321 time=24.9s
+00:45:53 | INFO | [pretrain] epoch 64/210 train_task_loss=0.2243 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9905 val_loss=0.8490 val_acc=0.8367 time=24.8s
+00:46:18 | INFO | [pretrain] epoch 65/210 train_task_loss=0.2246 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9898 val_loss=0.8573 val_acc=0.8373 time=24.9s
+00:46:43 | INFO | [pretrain] epoch 66/210 train_task_loss=0.2186 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9919 val_loss=0.8829 val_acc=0.8348 time=24.8s
+00:47:08 | INFO | [pretrain] epoch 67/210 train_task_loss=0.2207 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9911 val_loss=0.8885 val_acc=0.8321 time=24.9s
+00:47:33 | INFO | [pretrain] epoch 68/210 train_task_loss=0.2175 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9918 val_loss=0.9016 val_acc=0.8335 time=25.0s
+00:47:58 | INFO | [pretrain] epoch 69/210 train_task_loss=0.2149 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9928 val_loss=0.8910 val_acc=0.8367 time=24.9s
+00:48:23 | INFO | [pretrain] epoch 70/210 train_task_loss=0.2139 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9926 val_loss=0.8820 val_acc=0.8346 time=24.9s
+00:48:48 | INFO | [pretrain] epoch 71/210 train_task_loss=0.2212 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9911 val_loss=0.9725 val_acc=0.8147 time=24.8s
+00:49:12 | INFO | [pretrain] epoch 72/210 train_task_loss=0.2221 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9905 val_loss=0.8897 val_acc=0.8354 time=24.9s
+00:49:37 | INFO | [pretrain] epoch 73/210 train_task_loss=0.2159 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9923 val_loss=0.8667 val_acc=0.8411 time=24.9s
+00:50:02 | INFO | [pretrain] epoch 74/210 train_task_loss=0.2086 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9941 val_loss=0.8894 val_acc=0.8382 time=25.0s
+00:50:28 | INFO | [pretrain] epoch 75/210 train_task_loss=0.2140 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9924 val_loss=0.9213 val_acc=0.8291 time=25.1s
+00:50:53 | INFO | [pretrain] epoch 76/210 train_task_loss=0.2103 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9937 val_loss=0.8841 val_acc=0.8435 time=25.0s
+00:51:17 | INFO | [pretrain] epoch 77/210 train_task_loss=0.2119 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9935 val_loss=0.8898 val_acc=0.8408 time=24.9s
+00:51:42 | INFO | [pretrain] epoch 78/210 train_task_loss=0.2128 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9930 val_loss=0.8733 val_acc=0.8393 time=24.9s
+00:52:07 | INFO | [pretrain] epoch 79/210 train_task_loss=0.2114 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9934 val_loss=0.8863 val_acc=0.8422 time=25.0s
+00:52:32 | INFO | [pretrain] epoch 80/210 train_task_loss=0.2109 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9930 val_loss=0.8833 val_acc=0.8396 time=24.8s
+00:52:57 | INFO | [pretrain] epoch 81/210 train_task_loss=0.2128 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9928 val_loss=0.9484 val_acc=0.8240 time=24.9s
+00:53:22 | INFO | [pretrain] epoch 82/210 train_task_loss=0.2175 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9915 val_loss=0.9112 val_acc=0.8361 time=25.2s
+00:53:47 | INFO | [pretrain] epoch 83/210 train_task_loss=0.2113 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9928 val_loss=0.8767 val_acc=0.8348 time=24.9s
+00:54:12 | INFO | [pretrain] epoch 84/210 train_task_loss=0.2104 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9935 val_loss=0.9272 val_acc=0.8311 time=24.9s
+00:54:37 | INFO | [pretrain] epoch 85/210 train_task_loss=0.2123 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9929 val_loss=0.9212 val_acc=0.8324 time=25.0s
+00:55:02 | INFO | [pretrain] epoch 86/210 train_task_loss=0.2032 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9951 val_loss=0.9478 val_acc=0.8343 time=24.8s
+00:55:26 | INFO | [pretrain] epoch 87/210 train_task_loss=0.2068 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9941 val_loss=0.8996 val_acc=0.8381 time=24.8s
+00:55:51 | INFO | [pretrain] epoch 88/210 train_task_loss=0.2073 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9941 val_loss=0.9008 val_acc=0.8405 time=24.8s
+00:56:16 | INFO | [pretrain] epoch 89/210 train_task_loss=0.2063 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9936 val_loss=0.8833 val_acc=0.8408 time=24.8s
+00:56:41 | INFO | [pretrain] epoch 90/210 train_task_loss=0.2083 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9935 val_loss=0.9171 val_acc=0.8340 time=24.8s
+00:57:06 | INFO | [pretrain] epoch 91/210 train_task_loss=0.2061 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9945 val_loss=0.9744 val_acc=0.8207 time=24.9s
+00:57:31 | INFO | [pretrain] epoch 92/210 train_task_loss=0.2105 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9930 val_loss=0.8724 val_acc=0.8400 time=24.9s
+00:57:56 | INFO | [pretrain] epoch 93/210 train_task_loss=0.2119 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9928 val_loss=0.8972 val_acc=0.8326 time=24.9s
+00:58:20 | INFO | [pretrain] epoch 94/210 train_task_loss=0.2046 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9947 val_loss=0.8621 val_acc=0.8440 time=24.9s
+00:58:45 | INFO | [pretrain] epoch 95/210 train_task_loss=0.2043 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9945 val_loss=0.8895 val_acc=0.8418 time=24.8s
+00:59:10 | INFO | [pretrain] epoch 96/210 train_task_loss=0.2037 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9945 val_loss=0.9316 val_acc=0.8378 time=24.8s
+00:59:35 | INFO | [pretrain] epoch 97/210 train_task_loss=0.1962 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9965 val_loss=0.9198 val_acc=0.8409 time=25.0s
+01:00:00 | INFO | [pretrain] epoch 98/210 train_task_loss=0.1960 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9965 val_loss=0.9016 val_acc=0.8439 time=24.9s
+01:00:25 | INFO | [pretrain] epoch 99/210 train_task_loss=0.1988 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9959 val_loss=0.9261 val_acc=0.8391 time=24.9s
+01:00:50 | INFO | [pretrain] epoch 100/210 train_task_loss=0.1940 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9968 val_loss=0.9698 val_acc=0.8321 time=24.8s
+01:01:15 | INFO | [pretrain] epoch 101/210 train_task_loss=0.1940 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9966 val_loss=0.9032 val_acc=0.8440 time=25.0s
+01:01:40 | INFO | [pretrain] epoch 102/210 train_task_loss=0.1952 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9963 val_loss=0.8900 val_acc=0.8459 time=25.0s
+01:02:05 | INFO | [pretrain] epoch 103/210 train_task_loss=0.1963 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9963 val_loss=0.9435 val_acc=0.8349 time=24.8s
+01:02:29 | INFO | [pretrain] epoch 104/210 train_task_loss=0.1952 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9965 val_loss=0.9229 val_acc=0.8384 time=24.8s
+01:02:54 | INFO | [pretrain] epoch 105/210 train_task_loss=0.1943 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9968 val_loss=0.9127 val_acc=0.8384 time=25.0s
+01:03:19 | INFO | [pretrain] epoch 106/210 train_task_loss=0.1940 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9967 val_loss=0.9266 val_acc=0.8404 time=24.9s
+01:03:44 | INFO | [pretrain] epoch 107/210 train_task_loss=0.1923 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9971 val_loss=0.9469 val_acc=0.8403 time=24.8s
+01:04:09 | INFO | [pretrain] epoch 108/210 train_task_loss=0.1943 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9967 val_loss=0.9509 val_acc=0.8391 time=24.9s
+01:04:34 | INFO | [pretrain] epoch 109/210 train_task_loss=0.1924 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9972 val_loss=0.9162 val_acc=0.8506 time=24.8s
+01:04:59 | INFO | [pretrain] epoch 110/210 train_task_loss=0.1935 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9967 val_loss=0.9497 val_acc=0.8362 time=24.9s
+01:05:23 | INFO | [pretrain] epoch 111/210 train_task_loss=0.1909 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9974 val_loss=0.8890 val_acc=0.8487 time=24.8s
+01:05:48 | INFO | [pretrain] epoch 112/210 train_task_loss=0.1907 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9974 val_loss=0.9199 val_acc=0.8450 time=24.8s
+01:06:13 | INFO | [pretrain] epoch 113/210 train_task_loss=0.1879 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9980 val_loss=0.9219 val_acc=0.8485 time=24.8s
+01:06:38 | INFO | [pretrain] epoch 114/210 train_task_loss=0.1889 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9975 val_loss=0.9914 val_acc=0.8313 time=24.8s
+01:07:03 | INFO | [pretrain] epoch 115/210 train_task_loss=0.1907 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9970 val_loss=0.9825 val_acc=0.8313 time=25.0s
+01:07:28 | INFO | [pretrain] epoch 116/210 train_task_loss=0.1886 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9979 val_loss=0.9143 val_acc=0.8528 time=24.8s
+01:07:52 | INFO | [pretrain] epoch 117/210 train_task_loss=0.1870 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9978 val_loss=0.9037 val_acc=0.8483 time=24.8s
+01:08:17 | INFO | [pretrain] epoch 118/210 train_task_loss=0.1911 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9969 val_loss=0.9652 val_acc=0.8375 time=24.8s
+01:08:42 | INFO | [pretrain] epoch 119/210 train_task_loss=0.1896 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9974 val_loss=0.9562 val_acc=0.8420 time=24.8s
+01:09:07 | INFO | [pretrain] epoch 120/210 train_task_loss=0.1897 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9977 val_loss=0.9302 val_acc=0.8486 time=25.0s
+01:09:32 | INFO | [pretrain] epoch 121/210 train_task_loss=0.1885 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9975 val_loss=0.9228 val_acc=0.8437 time=25.0s
+01:09:57 | INFO | [pretrain] epoch 122/210 train_task_loss=0.1881 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9977 val_loss=0.9655 val_acc=0.8392 time=25.0s
+01:10:22 | INFO | [pretrain] epoch 123/210 train_task_loss=0.1860 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9981 val_loss=0.9720 val_acc=0.8404 time=25.0s
+01:10:47 | INFO | [pretrain] epoch 124/210 train_task_loss=0.1864 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9980 val_loss=0.9588 val_acc=0.8415 time=25.0s
+01:11:12 | INFO | [pretrain] epoch 125/210 train_task_loss=0.1842 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9984 val_loss=0.9474 val_acc=0.8465 time=25.0s
+01:11:37 | INFO | [pretrain] epoch 126/210 train_task_loss=0.1853 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9981 val_loss=0.9386 val_acc=0.8467 time=25.0s
+01:12:02 | INFO | [pretrain] epoch 127/210 train_task_loss=0.1834 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9984 val_loss=0.9361 val_acc=0.8452 time=24.9s
+01:12:27 | INFO | [pretrain] epoch 128/210 train_task_loss=0.1828 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9986 val_loss=0.9395 val_acc=0.8479 time=25.0s
+01:12:52 | INFO | [pretrain] epoch 129/210 train_task_loss=0.1814 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9987 val_loss=1.0016 val_acc=0.8465 time=25.0s
+01:13:17 | INFO | [pretrain] epoch 130/210 train_task_loss=0.1828 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9985 val_loss=1.0120 val_acc=0.8419 time=24.9s
+01:13:42 | INFO | [pretrain] epoch 131/210 train_task_loss=0.1822 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9988 val_loss=0.9500 val_acc=0.8480 time=25.0s
+01:14:07 | INFO | [pretrain] epoch 132/210 train_task_loss=0.1818 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9987 val_loss=0.9802 val_acc=0.8475 time=24.9s
+01:14:32 | INFO | [pretrain] epoch 133/210 train_task_loss=0.1794 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9993 val_loss=0.9742 val_acc=0.8485 time=24.9s
+01:14:57 | INFO | [pretrain] epoch 134/210 train_task_loss=0.1819 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9985 val_loss=0.9724 val_acc=0.8449 time=25.0s
+01:15:22 | INFO | [pretrain] epoch 135/210 train_task_loss=0.1820 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9986 val_loss=0.9977 val_acc=0.8449 time=24.9s
+01:15:47 | INFO | [pretrain] epoch 136/210 train_task_loss=0.1839 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9981 val_loss=0.9713 val_acc=0.8450 time=25.3s
+01:16:12 | INFO | [pretrain] epoch 137/210 train_task_loss=0.1819 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9986 val_loss=0.9876 val_acc=0.8497 time=25.2s
+01:16:37 | INFO | [pretrain] epoch 138/210 train_task_loss=0.1791 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9992 val_loss=1.0033 val_acc=0.8479 time=25.3s
+01:17:02 | INFO | [pretrain] epoch 139/210 train_task_loss=0.1780 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9992 val_loss=0.9611 val_acc=0.8496 time=25.0s
+01:17:28 | INFO | [pretrain] epoch 140/210 train_task_loss=0.1778 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9993 val_loss=0.9920 val_acc=0.8441 time=25.3s
+01:17:53 | INFO | [pretrain] epoch 141/210 train_task_loss=0.1792 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9991 val_loss=0.9714 val_acc=0.8516 time=25.3s
+01:18:18 | INFO | [pretrain] epoch 142/210 train_task_loss=0.1779 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9993 val_loss=0.9991 val_acc=0.8534 time=25.3s
+01:18:43 | INFO | [pretrain] epoch 143/210 train_task_loss=0.1764 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9994 val_loss=0.9762 val_acc=0.8564 time=25.2s
+01:19:09 | INFO | [pretrain] epoch 144/210 train_task_loss=0.1775 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9993 val_loss=1.0030 val_acc=0.8527 time=25.1s
+01:19:34 | INFO | [pretrain] epoch 145/210 train_task_loss=0.1760 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9996 val_loss=0.9934 val_acc=0.8535 time=25.3s
+01:19:59 | INFO | [pretrain] epoch 146/210 train_task_loss=0.1760 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9995 val_loss=0.9626 val_acc=0.8601 time=25.1s
+01:20:24 | INFO | [pretrain] epoch 147/210 train_task_loss=0.1774 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9994 val_loss=1.0037 val_acc=0.8492 time=25.4s
+01:20:50 | INFO | [pretrain] epoch 148/210 train_task_loss=0.1756 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9997 val_loss=1.0155 val_acc=0.8504 time=25.4s
+01:21:15 | INFO | [pretrain] epoch 149/210 train_task_loss=0.1758 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9995 val_loss=1.0017 val_acc=0.8541 time=25.5s
+01:21:40 | INFO | [pretrain] epoch 150/210 train_task_loss=0.1746 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9996 val_loss=0.9655 val_acc=0.8609 time=25.2s
+01:22:06 | INFO | [pretrain] epoch 151/210 train_task_loss=0.1739 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=0.9981 val_acc=0.8511 time=25.1s
+01:22:31 | INFO | [pretrain] epoch 152/210 train_task_loss=0.1749 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9996 val_loss=0.9993 val_acc=0.8601 time=25.3s
+01:22:56 | INFO | [pretrain] epoch 153/210 train_task_loss=0.1741 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9997 val_loss=1.0163 val_acc=0.8483 time=25.2s
+01:23:21 | INFO | [pretrain] epoch 154/210 train_task_loss=0.1737 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0162 val_acc=0.8527 time=25.2s
+01:24:01 | INFO | [pretrain] epoch 155/210 train_task_loss=0.1732 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0248 val_acc=0.8506 time=39.9s
+01:24:28 | INFO | [pretrain] epoch 156/210 train_task_loss=0.1737 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9997 val_loss=1.0200 val_acc=0.8532 time=26.8s
+01:24:53 | INFO | [pretrain] epoch 157/210 train_task_loss=0.1734 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0180 val_acc=0.8571 time=25.1s
+01:25:18 | INFO | [pretrain] epoch 158/210 train_task_loss=0.1736 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0173 val_acc=0.8549 time=25.2s
+01:25:44 | INFO | [pretrain] epoch 159/210 train_task_loss=0.1736 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0215 val_acc=0.8557 time=25.3s
+01:26:09 | INFO | [pretrain] epoch 160/210 train_task_loss=0.1727 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0007 val_acc=0.8586 time=25.3s
+01:26:34 | INFO | [pretrain] epoch 161/210 train_task_loss=0.1728 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0278 val_acc=0.8540 time=25.2s
+01:26:59 | INFO | [pretrain] epoch 162/210 train_task_loss=0.1731 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0307 val_acc=0.8561 time=25.1s
+01:27:24 | INFO | [pretrain] epoch 163/210 train_task_loss=0.1727 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0366 val_acc=0.8550 time=25.1s
+01:27:49 | INFO | [pretrain] epoch 164/210 train_task_loss=0.1723 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0194 val_acc=0.8572 time=25.0s
+01:28:14 | INFO | [pretrain] epoch 165/210 train_task_loss=0.1725 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9998 val_loss=1.0283 val_acc=0.8543 time=25.1s
+01:28:40 | INFO | [pretrain] epoch 166/210 train_task_loss=0.1728 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0195 val_acc=0.8571 time=25.0s
+01:29:05 | INFO | [pretrain] epoch 167/210 train_task_loss=0.1726 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0341 val_acc=0.8544 time=25.2s
+01:29:30 | INFO | [pretrain] epoch 168/210 train_task_loss=0.1727 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0352 val_acc=0.8562 time=25.1s
+01:29:55 | INFO | [pretrain] epoch 169/210 train_task_loss=0.1723 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0334 val_acc=0.8545 time=25.1s
+01:30:20 | INFO | [pretrain] epoch 170/210 train_task_loss=0.1724 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0450 val_acc=0.8545 time=25.0s
+01:30:45 | INFO | [pretrain] epoch 171/210 train_task_loss=0.1725 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0343 val_acc=0.8586 time=25.3s
+01:31:10 | INFO | [pretrain] epoch 172/210 train_task_loss=0.1723 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0464 val_acc=0.8564 time=25.2s
+01:31:35 | INFO | [pretrain] epoch 173/210 train_task_loss=0.1717 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0561 val_acc=0.8552 time=25.0s
+01:32:00 | INFO | [pretrain] epoch 174/210 train_task_loss=0.1720 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0282 val_acc=0.8591 time=25.0s
+01:32:26 | INFO | [pretrain] epoch 175/210 train_task_loss=0.1720 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0452 val_acc=0.8542 time=25.2s
+01:32:51 | INFO | [pretrain] epoch 176/210 train_task_loss=0.1716 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0361 val_acc=0.8599 time=25.1s
+01:33:16 | INFO | [pretrain] epoch 177/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0562 val_acc=0.8550 time=25.2s
+01:33:41 | INFO | [pretrain] epoch 178/210 train_task_loss=0.1717 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0641 val_acc=0.8527 time=25.2s
+01:34:06 | INFO | [pretrain] epoch 179/210 train_task_loss=0.1715 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0423 val_acc=0.8597 time=25.0s
+01:34:31 | INFO | [pretrain] epoch 180/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0533 val_acc=0.8534 time=25.1s
+01:34:56 | INFO | [pretrain] epoch 181/210 train_task_loss=0.1715 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0492 val_acc=0.8556 time=25.1s
+01:35:21 | INFO | [pretrain] epoch 182/210 train_task_loss=0.1715 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0416 val_acc=0.8590 time=25.2s
+01:35:47 | INFO | [pretrain] epoch 183/210 train_task_loss=0.1716 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0539 val_acc=0.8554 time=25.2s
+01:36:12 | INFO | [pretrain] epoch 184/210 train_task_loss=0.1709 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0526 val_acc=0.8565 time=25.1s
+01:36:37 | INFO | [pretrain] epoch 185/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0373 val_acc=0.8562 time=25.3s
+01:37:02 | INFO | [pretrain] epoch 186/210 train_task_loss=0.1716 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0506 val_acc=0.8556 time=25.0s
+01:37:27 | INFO | [pretrain] epoch 187/210 train_task_loss=0.1715 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0551 val_acc=0.8559 time=25.0s
+01:37:52 | INFO | [pretrain] epoch 188/210 train_task_loss=0.1714 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0642 val_acc=0.8537 time=24.9s
+01:38:17 | INFO | [pretrain] epoch 189/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0549 val_acc=0.8554 time=25.0s
+01:38:42 | INFO | [pretrain] epoch 190/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0428 val_acc=0.8578 time=24.9s
+01:39:07 | INFO | [pretrain] epoch 191/210 train_task_loss=0.1717 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0512 val_acc=0.8560 time=25.0s
+01:39:32 | INFO | [pretrain] epoch 192/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0446 val_acc=0.8565 time=25.1s
+01:39:57 | INFO | [pretrain] epoch 193/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0566 val_acc=0.8542 time=25.2s
+01:40:22 | INFO | [pretrain] epoch 194/210 train_task_loss=0.1710 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0457 val_acc=0.8536 time=25.4s
+01:40:48 | INFO | [pretrain] epoch 195/210 train_task_loss=0.1709 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0634 val_acc=0.8536 time=25.3s
+01:41:13 | INFO | [pretrain] epoch 196/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0755 val_acc=0.8532 time=25.4s
+01:41:38 | INFO | [pretrain] epoch 197/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0565 val_acc=0.8557 time=25.2s
+01:42:04 | INFO | [pretrain] epoch 198/210 train_task_loss=0.1714 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0588 val_acc=0.8567 time=25.2s
+01:42:29 | INFO | [pretrain] epoch 199/210 train_task_loss=0.1708 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0407 val_acc=0.8592 time=25.1s
+01:42:54 | INFO | [pretrain] epoch 200/210 train_task_loss=0.1708 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0616 val_acc=0.8525 time=25.2s
+01:43:19 | INFO | [pretrain] epoch 201/210 train_task_loss=0.1714 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0518 val_acc=0.8575 time=25.1s
+01:43:44 | INFO | [pretrain] epoch 202/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0588 val_acc=0.8540 time=25.3s
+01:44:09 | INFO | [pretrain] epoch 203/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0579 val_acc=0.8571 time=25.1s
+01:44:35 | INFO | [pretrain] epoch 204/210 train_task_loss=0.1712 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0512 val_acc=0.8600 time=25.3s
+01:45:00 | INFO | [pretrain] epoch 205/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0483 val_acc=0.8593 time=25.7s
+01:45:25 | INFO | [pretrain] epoch 206/210 train_task_loss=0.1709 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0585 val_acc=0.8591 time=25.1s
+01:45:51 | INFO | [pretrain] epoch 207/210 train_task_loss=0.1711 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0656 val_acc=0.8556 time=25.3s
+01:46:16 | INFO | [pretrain] epoch 208/210 train_task_loss=0.1710 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0591 val_acc=0.8552 time=25.3s
+01:46:41 | INFO | [pretrain] epoch 209/210 train_task_loss=0.1713 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=0.9999 val_loss=1.0508 val_acc=0.8559 time=25.3s
+01:47:06 | INFO | [pretrain] epoch 210/210 train_task_loss=0.1707 train_kl=8936.25 beta=0.00000 train_cost=1249688448.00 gamma=0.000000 train_acc=1.0000 val_loss=1.0728 val_acc=0.8565 time=25.0s
+
+Validation...
+01:47:09 | INFO | Post-pretrain validation accuracy: 0.8609
+01:47:14 | INFO | Test accuracy before Bayesian conversion: 0.8609
+
+============================================================
+PRETRAIN COMPLETE: spear_repl
+============================================================
+Baseline test accuracy: 0.8609
+Baseline saved to: ./outputs/spear_repl/trained_model.pt
+
+Stopped before gate training, as requested. Next, on this exact baseline:
+  1. python measure_baseline_synops.py --model spear_repl --batches 8
+  2. read the gate-pressure diagnostic before trusting beta_max
+  3. set reuse_pretrained=True in this experiment's config
+
+01:47:15 | INFO | pretrain_only: stopped after saving baseline (test acc 0.8609)
+====================================================
+Job finished: Wed 12 Aug 01:47:38 BST 2026
+====================================================
+
+Baseline saved to outputs/spear_repl/trained_model.pt
+
+NOTE: SPEAR publishes no unpruned baseline accuracy, so there is no
+go/no-go gate here as there was for DPAP's 94.54%. The nearest
+published reference is SCA's 91.14% (SPEAR quotes SCA's pruned rows
+verbatim, and both use VGG16 at T=4). Landing far below that means
+diagnose before pruning; landing near it is the expected outcome.
+
+Next:
+  1. push outputs/spear_repl off scratch
+  2. sbatch slurm_synops.sh   (edit --model to spear_repl)
+  3. set reuse_pretrained=True in get_spear_repl_config()
+  4. measure gate pressure before trusting beta_max=0.01

@@ -1,0 +1,68 @@
+====================================================
+Job started: Wed 22 Jul 20:57:09 BST 2026
+Node: node851.csf3.man.alces.network
+====================================================
+----------------------------------------------------
+Hardware information
+----------------------------------------------------
+Wed Jul 22 20:57:28 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |                    0 |
+| N/A   25C    P0             56W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+CUDA available: True
+Device count: 1
+Device name: NVIDIA A100-SXM4-80GB
+----------------------------------------------------
+
+============================================================
+Running Experiment 1 / 3
+LENET
+============================================================
+
+Building model...
+20:59:30 | INFO | Model built with 62006 parameters (gates excluded from count).
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+
+Training...
+21:00:29 | INFO | [pretrain] epoch 1/60 train_task_loss=1.8506 train_kl=458.12 beta=0.00000 train_acc=0.3044 val_loss=1.5851 val_acc=0.3854 time=54.6s
+21:01:01 | INFO | [pretrain] epoch 2/60 train_task_loss=1.5556 train_kl=416.17 beta=0.00000 train_acc=0.4140 val_loss=1.4692 val_acc=0.4400 time=31.9s
+21:01:32 | INFO | [pretrain] epoch 3/60 train_task_loss=1.4673 train_kl=374.66 beta=0.00000 train_acc=0.4531 val_loss=1.3310 val_acc=0.5150 time=31.5s
+21:02:04 | INFO | [pretrain] epoch 4/60 train_task_loss=1.3967 train_kl=333.97 beta=0.00000 train_acc=0.4802 val_loss=1.2834 val_acc=0.5268 time=31.7s
+21:02:35 | INFO | [pretrain] epoch 5/60 train_task_loss=1.3433 train_kl=294.81 beta=0.00000 train_acc=0.5056 val_loss=1.2799 val_acc=0.5166 time=31.0s
+21:03:06 | INFO | [pretrain] epoch 6/60 train_task_loss=1.2995 train_kl=258.19 beta=0.00000 train_acc=0.5220 val_loss=1.1890 val_acc=0.5514 time=30.8s
+21:03:36 | INFO | [pretrain] epoch 7/60 train_task_loss=1.2633 train_kl=225.16 beta=0.00000 train_acc=0.5403 val_loss=1.1845 val_acc=0.5375 time=30.9s
+21:04:07 | INFO | [pretrain] epoch 8/60 train_task_loss=1.2421 train_kl=196.34 beta=0.00000 train_acc=0.5467 val_loss=1.1712 val_acc=0.5705 time=30.7s
+21:04:38 | INFO | [pretrain] epoch 9/60 train_task_loss=1.2080 train_kl=171.99 beta=0.00000 train_acc=0.5579 val_loss=1.1344 val_acc=0.5805 time=31.1s
+21:05:09 | INFO | [pretrain] epoch 10/60 train_task_loss=1.1952 train_kl=152.05 beta=0.00000 train_acc=0.5653 val_loss=1.1028 val_acc=0.5906 time=30.9s
+21:05:40 | INFO | [pretrain] epoch 11/60 train_task_loss=1.1729 train_kl=136.17 beta=0.00000 train_acc=0.5738 val_loss=1.0941 val_acc=0.5990 time=31.0s
+21:06:11 | INFO | [pretrain] epoch 12/60 train_task_loss=1.1439 train_kl=123.87 beta=0.00000 train_acc=0.5842 val_loss=1.0879 val_acc=0.5957 time=30.9s
+21:06:42 | INFO | [pretrain] epoch 13/60 train_task_loss=1.1416 train_kl=114.68 beta=0.00000 train_acc=0.5851 val_loss=1.0895 val_acc=0.6104 time=31.0s
+21:07:14 | INFO | [pretrain] epoch 14/60 train_task_loss=1.1235 train_kl=108.06 beta=0.00000 train_acc=0.5912 val_loss=1.0561 val_acc=0.6105 time=31.4s
+21:07:44 | INFO | [pretrain] epoch 15/60 train_task_loss=1.1178 train_kl=103.55 beta=0.00000 train_acc=0.5960 val_loss=1.0310 val_acc=0.6268 time=30.6s
+21:08:15 | INFO | [pretrain] epoch 16/60 train_task_loss=1.1041 train_kl=100.67 beta=0.00000 train_acc=0.6018 val_loss=1.0338 val_acc=0.6287 time=30.9s
+21:08:46 | INFO | [pretrain] epoch 17/60 train_task_loss=1.0857 train_kl=99.00 beta=0.00000 train_acc=0.6076 val_loss=1.0239 val_acc=0.6227 time=30.6s
+21:09:17 | INFO | [pretrain] epoch 18/60 train_task_loss=1.0800 train_kl=98.11 beta=0.00000 train_acc=0.6089 val_loss=1.0323 val_acc=0.6299 time=31.2s
+21:09:48 | INFO | [pretrain] epoch 19/60 train_task_loss=1.0675 train_kl=97.70 beta=0.00000 train_acc=0.6156 val_loss=1.0142 val_acc=0.6289 time=30.8s
+21:10:19 | INFO | [pretrain] epoch 20/60 train_task_loss=1.0529 train_kl=97.54 beta=0.00000 train_acc=0.6203 val_loss=1.0127 val_acc=0.6361 time=31.0s
+21:10:49 | INFO | [pretrain] epoch 21/60 train_task_loss=1.0481 train_kl=97.48 beta=0.00000 train_acc=0.6222 val_loss=0.9910 val_acc=0.6432 time=30.6s
+21:11:20 | INFO | [pretrain] epoch 22/60 train_task_loss=1.0447 train_kl=97.46 beta=0.00000 train_acc=0.6220 val_loss=0.9797 val_acc=0.6398 time=30.7s
+21:11:51 | INFO | [pretrain] epoch 23/60 train_task_loss=1.0305 train_kl=97.46 beta=0.00000 train_acc=0.6292 val_loss=0.9819 val_acc=0.6410 time=30.7s
+21:12:21 | INFO | [pretrain] epoch 24/60 train_task_loss=1.0307 train_kl=97.46 beta=0.00000 train_acc=0.6277 val_loss=0.9626 val_acc=0.6406 time=30.4s
