@@ -9,7 +9,85 @@ many hours of real HPC time to discover.
 
 ---
 
-# READ FIRST: state as of 2026-08-11
+# READ FIRST: state as of 2026-08-12
+
+## DATA RISK: RESOLVED. Nothing was ever lost.
+
+The files were on disk the whole time. **`.gitignore` was swallowing them**:
+it listed `outputs/**/*.csv`, `*.json`, `*.png`, `summary.txt`,
+`final_results.csv` and `logs/*.log`, so `git add outputs/...` reported
+nothing and added nothing. The commit titled "Add the beta_max=0.01 sparsity
+curve results" contained only two log files that happened to be forced in.
+Fixed 2026-08-12 (commit 158e7c3): only model weights are ignored now.
+Everything is committed and pushed (0018f8f).
+
+Weights are backed up outside git at `~/snn_checkpoints/` on CSF3 home, which
+is snapshotted and replicated, unlike scratch.
+
+## EVERY HEADLINE NUMBER IS NOW VERIFIED AGAINST ITS CSV
+
+Checked 2026-08-12, cell by cell. The prose in this file was accurate all
+along. Ignore the old "do not trust any number in this file" warning for the
+results below; they are now backed by committed files.
+
+**Bayesian vs random control** (`sparsity_curve_beta0.01/summary.csv` vs
+`sparsity_curve_RANDOM_CONTROL/summary.csv`): 93.28/93.38/93.34/92.46/89.39
+against 91.74/91.13/90.62/88.76/84.14, i.e. **+1.54 / +2.25 / +2.72 / +3.70 /
++5.25**. Gate health confirmed: std 0.3078, saturation 0.000, ranking usable,
+zero layers at min width. Control saturation 0.8889 as described.
+
+**SynOps budget in the loss** (`sparsity_curve_lagrangian0.5` vs
+`sparsity_curve_synops`): **+2.30pp with 9.4% fewer SynOps at budget 0.5,
++13.03pp with 12.5% fewer at 0.3.** The mechanism claim also holds in the
+data: the baseline drives a layer to minimum width at 0.3 while the
+budget-trained arm does not. Cost-blind kept 610/2304 units, cost-aware
+1836/2304, exactly as recorded.
+
+**Four-way comparison** (`outputs/bio_results_dpap_repl.csv`): Bayesian
+93.38/93.34, SCA 93.61/93.08, DPAP 93.09/92.95, naive 92.83/92.83. Crossover
+confirmed.
+
+## Two open items from this block: both CLOSED
+
+**naive_firing_rate's identical 0.9283 was not a keep-set bug.** Full
+precision reads 0.9282999780774116 and 0.9282999774813652 -- computed
+independently, and both genuinely 9283/10000 on the test set. Coincidence.
+
+**The "Bayesian criterion may be a wash" bug is explained.** The bug was
+Session 3's unstructured conv gate, which inflated VGG9's old "+19pp over the
+best bio criterion" headline (already listed below as "produced under a bug
+that flattered it"). The `dpap_repl` four-way table was run *after* that fix,
+at matched sparsity, and is the honest replacement. Nothing in it is invalid.
+
+## THE REAL CONSEQUENCE: the bio comparison is inconclusive at n=1
+
+A 0.23-0.26pp gap on a 10,000-image test set is inside seed noise. **Do not
+claim the Bayesian criterion beats SCA or DPAP on this evidence.** An examiner
+will not accept it and they will be right.
+
+What survives and should carry the dissertation:
+
+1. **The SynOps budget result.** +2.30pp and +13.03pp are *paired* comparisons
+   of the same criterion with and without the budget term, at margins 10-50x
+   the noise floor. This is the novelty claim and it is solid.
+2. **The degradation rate**, Bayesian -0.04 against SCA's -0.53 over the same
+   sparsity increase. A within-method paired change, less exposed to baseline
+   noise than the absolute gap.
+3. **Beating random by +1.54 to +5.25pp**, far outside noise, which
+   establishes the criterion is informative at all.
+
+Report the bio comparison as inconclusive with a suggestive crossover. Seeds
+are what would settle it, and they remain the top GPU priority.
+
+**Observation worth using:** at *identical* parameter sparsity the criteria
+produce quite different SynOps (SCA 458M, DPAP 508M, naive 563M at 33.35%
+pruned). Activity-based criteria naturally select lower-firing units. That
+strengthens the motivation for making SynOps an explicit objective rather than
+leaving it a byproduct.
+
+---
+
+# Superseded: state as of 2026-08-11
 
 ## DATA RISK, unresolved and blocking everything
 
