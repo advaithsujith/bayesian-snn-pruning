@@ -2,18 +2,31 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+.vscode/
 
 data/
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Model weights only. Nothing else under outputs/ is ignored, deliberately.
+#
+# This file previously ignored outputs/**/*.csv, *.json, *.png, summary.txt,
+# final_results.csv and logs/*.log as well -- i.e. every artifact the project
+# exists to produce. The consequence was silent and expensive: `git add
+# outputs/dpap_repl/sparsity_curve_beta0.01` reported nothing and added
+# nothing, so a commit titled "Add the beta_max=0.01 sparsity curve results"
+# actually contained only two log files that happened to be forced in. Months
+# of headline numbers ended up existing solely as prose in HANDOFF.md, and a
+# whole session was spent trying to work out where the files had gone. They
+# were never there.
+#
+# Results files are small (CSVs, JSONs, summaries, figures) and are the entire
+# evidence base for the dissertation. They belong in version control. Weights
+# are large, regenerable from a config plus GPU hours, and are backed up
+# outside git -- see HANDOFF.md.
+#
+# If you add an ignore rule here, check it does not swallow evidence.
+# ---------------------------------------------------------------------------
 checkpoints/*.pt
 outputs/**/*.pt
-outputs/**/*.csv
-outputs/**/*.png
-outputs/**/*.json
-outputs/**/summary.txt
-outputs/final_results.csv
-plots/*.png
-logs/*.log
-logs/slurm_*.out
-logs/slurm_*.err
-
-.DS_Store
+*.pth
