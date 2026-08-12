@@ -61,6 +61,10 @@ CRITERIA = ["naive_firing_rate", "sca", "dpap"]
 CRITERIA_REQUIRING_BATCHNORM = ["network_slimming"]
 ALL_CRITERIA = CRITERIA + CRITERIA_REQUIRING_BATCHNORM
 
+# The seed every existing result was produced at. Runs at this seed keep the
+# original unsuffixed output paths; any other seed is written alongside.
+DEFAULT_SEED = ExperimentConfig.seed
+
 
 def _ensure_pretrained_checkpoint(
     model_name: str, cfg: ExperimentConfig, device: torch.device, train_loader, val_loader, logger
@@ -136,7 +140,14 @@ def run_bio_experiment_point(
     set_bayesian_mode(model, False)
 
     tag = f"{criterion}_kf{keep_fraction:.3f}"
-    out_dir = os.path.join(cfg.output_dir, "bio", criterion, f"keep_{keep_fraction:.3f}")
+    # Seed-qualified so repeat runs at different seeds accumulate instead of
+    # overwriting each other. n=1 is the single biggest weakness in every
+    # result this project has, and the fix must not be one careless
+    # re-submission away from destroying the run it was meant to compare
+    # against. The default seed keeps the original "bio" path so existing
+    # results stay where they are.
+    bio_dir = "bio" if cfg.seed == DEFAULT_SEED else f"bio_s{cfg.seed}"
+    out_dir = os.path.join(cfg.output_dir, bio_dir, criterion, f"keep_{keep_fraction:.3f}")
     ensure_dirs(out_dir)
     csv_rows: List[Dict[str, Any]] = []
     # Kept in a separate list (mirroring hpo_search.py's _run_bio_pipeline)
@@ -243,6 +254,7 @@ def run_bio_experiments_for_model(
     criteria: "List[str] | None" = None,
     keep_fractions: "List[float] | None" = None,
     finetune_epochs: "int | None" = None,
+    seed: "int | None" = None,
 ) -> List[Dict[str, Any]]:
     """Run every (criterion, keep_fraction) combination for one architecture.
 
@@ -259,6 +271,8 @@ def run_bio_experiments_for_model(
         cfg.bio.keep_fractions = list(keep_fractions)
     if finetune_epochs is not None:
         cfg.finetune.epochs = finetune_epochs
+    if seed is not None:
+        cfg.seed = seed
     set_seed(cfg.seed)
     device = get_device(cfg.device)
     ensure_dirs(cfg.checkpoint_dir, cfg.output_dir, cfg.log_dir, cfg.plot_dir)
@@ -380,6 +394,13 @@ def main() -> None:
              "(see CRITERIA_REQUIRING_BATCHNORM).",
     )
     parser.add_argument(
+        "--seed", type=int, default=None,
+        help=f"override each config's seed (default {DEFAULT_SEED}). Results at "
+             "a non-default seed are written to outputs/<model>/bio_s<seed>/ so "
+             "repeats accumulate rather than overwrite. Every result in this "
+             "project is currently n=1, which is its biggest weakness.",
+    )
+    parser.add_argument(
         "--finetune-epochs", type=int, default=None,
         help="override each config's finetune.epochs. The SPEAR configs set 210 "
              "to match their published recipe; the internal matched-sparsity "
@@ -409,7 +430,7 @@ def main() -> None:
             run_bio_experiments_for_model(
                 model_name, i, len(args.models),
                 criteria=args.criteria, keep_fractions=args.keep_fractions,
-                finetune_epochs=args.finetune_epochs,
+                finetune_epochs=args.finetune_epochs, seed=args.seed,
             )
         )
 

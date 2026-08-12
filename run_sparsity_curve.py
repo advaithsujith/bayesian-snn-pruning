@@ -271,6 +271,13 @@ def diagnose_only(
 
 def run_curve(args: argparse.Namespace) -> None:
     cfg: ExperimentConfig = ALL_EXPERIMENTS[args.model]()
+    if args.seed is not None and args.seed != cfg.seed:
+        cfg.seed = args.seed
+        # Fold the seed into the tag so a repeat cannot overwrite the run it
+        # was meant to be compared against. Every output path below is derived
+        # from the tag, so doing it here covers the curve directory, the gate
+        # checkpoint and the per-target fine-tune checkpoints at once.
+        args.tag = f"{args.tag}_s{args.seed}" if args.tag else f"s{args.seed}"
     if args.plan_only:
         plan_only(args.model, cfg, args.targets, args.mode)
         return
@@ -686,6 +693,13 @@ def main() -> None:
         help="print only the space-separated uniform keep_fractions for "
              "--targets, then exit. Feed straight into `run_bio_pruning.py "
              "--keep-fractions` for a matched-sparsity comparison. No GPU.",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None,
+        help="override the config's seed. A non-default seed is appended to "
+             "--tag automatically, so the run lands in its own directory "
+             "instead of overwriting the one it is meant to be compared "
+             "against. Needed because every result here is n=1.",
     )
     parser.add_argument(
         "--finetune-epochs", type=int, default=None,
