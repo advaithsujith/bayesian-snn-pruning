@@ -26,23 +26,19 @@ import os
 import torch
 
 from bayesian_layers import set_bayesian_mode
-from config import (
-    get_dpap_repl_config,
-    get_lenet_config,
-    get_resnet18_config,
-    get_vgg9_config,
-)
+from config import ALL_EXPERIMENTS
 from datasets import get_cifar10_loaders
 from metrics import measure_synops
 from models import build_model
 from utils import set_seed
 
-CONFIGS = {
-    "lenet": get_lenet_config,
-    "vgg9": get_vgg9_config,
-    "resnet18": get_resnet18_config,
-    "dpap_repl": get_dpap_repl_config,
-}
+# Use config.ALL_EXPERIMENTS rather than a second registry maintained here.
+# This file used to keep its own dict of four configs, which then silently
+# fell behind: `--model spear_repl` and `--model spear_repl_resnet18` failed
+# argparse with exit code 2, so both SynOps measurement jobs died in two
+# minutes and the baseline_synops.json they were supposed to produce never
+# appeared. A duplicated registry is a registry that drifts.
+CONFIGS = ALL_EXPERIMENTS
 
 
 def measure_one(model_name: str, batches: int, device: torch.device) -> dict:
