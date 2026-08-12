@@ -1,0 +1,4 @@
+usage: measure_baseline_synops.py [-h]
+                                  [--model {dpap_repl,lenet,resnet18,vgg9}]
+                                  [--batches BATCHES] [--all]
+measure_baseline_synops.py: error: argument --model: invalid choice: 'spear_repl_resnet18' (choose from 'dpap_repl', 'lenet', 'resnet18', 'vgg9')

@@ -1,0 +1,10 @@
+Bio-inspired pruning: dpap_repl / naive_firing_rate / target keep_fraction=0.316406
+============================================================
+Original parameters: 21362834
+Remaining parameters: 2141097
+Pruning percentage: 89.98%
+Test accuracy after pruning + fine-tuning: 0.8858
+Estimated FLOPs (post-pruning): 502,312,608
+Measured SynOps per sample (post-pruning): 106,557,678
+Inference latency (post-pruning): 21.717 ms
+Fine-tuning time: 1502.1s (best val acc 0.9176)

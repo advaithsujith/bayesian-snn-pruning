@@ -326,3 +326,656 @@
 07:44:52 | INFO | [finetune] epoch 29/30 train_task_loss=0.1528 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9489 val_loss=0.1349 val_acc=0.9602 time=52.3s
 07:45:45 | INFO | [finetune] epoch 30/30 train_task_loss=0.1572 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9486 val_loss=0.1253 val_acc=0.9638 time=52.5s
 07:45:55 | INFO | [dpap_kf0.701] Final test accuracy: 0.9295
+12:34:33 | INFO | Reusing existing pretrained baseline: ./outputs/dpap_repl/trained_model.pt
+12:35:21 | INFO | [naive_firing_rate] activity pass 1/1 done
+12:35:22 | INFO | [naive_firing_rate_kf0.816] Parameters: 21362834 -> 14239017 (33.3% pruned)
+12:36:28 | INFO | [finetune] epoch 1/30 train_task_loss=0.2811 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9172 val_loss=0.0392 val_acc=0.9878 time=66.9s
+12:37:21 | INFO | [finetune] epoch 2/30 train_task_loss=0.2418 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9227 val_loss=0.0348 val_acc=0.9882 time=53.0s
+12:38:15 | INFO | [finetune] epoch 3/30 train_task_loss=0.2254 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9254 val_loss=0.0378 val_acc=0.9878 time=53.5s
+12:39:08 | INFO | [finetune] epoch 4/30 train_task_loss=0.2227 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9281 val_loss=0.0470 val_acc=0.9836 time=53.3s
+12:40:02 | INFO | [finetune] epoch 5/30 train_task_loss=0.2245 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9267 val_loss=0.0393 val_acc=0.9872 time=53.6s
+12:40:55 | INFO | [finetune] epoch 6/30 train_task_loss=0.2213 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9278 val_loss=0.0515 val_acc=0.9814 time=53.6s
+12:41:49 | INFO | [finetune] epoch 7/30 train_task_loss=0.2184 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9287 val_loss=0.0395 val_acc=0.9884 time=53.8s
+12:42:43 | INFO | [finetune] epoch 8/30 train_task_loss=0.2206 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9287 val_loss=0.0453 val_acc=0.9848 time=53.4s
+12:43:36 | INFO | [finetune] epoch 9/30 train_task_loss=0.2165 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9291 val_loss=0.0415 val_acc=0.9846 time=53.6s
+12:44:30 | INFO | [finetune] epoch 10/30 train_task_loss=0.2126 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9293 val_loss=0.0421 val_acc=0.9866 time=53.3s
+12:45:23 | INFO | [finetune] epoch 11/30 train_task_loss=0.2064 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9323 val_loss=0.0445 val_acc=0.9854 time=53.4s
+12:46:16 | INFO | [finetune] epoch 12/30 train_task_loss=0.1984 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9349 val_loss=0.0461 val_acc=0.9834 time=53.6s
+12:47:10 | INFO | [finetune] epoch 13/30 train_task_loss=0.1915 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9372 val_loss=0.0350 val_acc=0.9898 time=53.4s
+12:48:03 | INFO | [finetune] epoch 14/30 train_task_loss=0.1849 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9395 val_loss=0.0431 val_acc=0.9850 time=53.5s
+12:48:57 | INFO | [finetune] epoch 15/30 train_task_loss=0.1802 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9409 val_loss=0.0423 val_acc=0.9872 time=53.4s
+12:49:50 | INFO | [finetune] epoch 16/30 train_task_loss=0.1817 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9401 val_loss=0.0356 val_acc=0.9880 time=53.5s
+12:50:44 | INFO | [finetune] epoch 17/30 train_task_loss=0.1711 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9438 val_loss=0.0345 val_acc=0.9886 time=53.9s
+12:51:37 | INFO | [finetune] epoch 18/30 train_task_loss=0.1616 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9477 val_loss=0.0378 val_acc=0.9874 time=53.2s
+12:52:31 | INFO | [finetune] epoch 19/30 train_task_loss=0.1586 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9474 val_loss=0.0332 val_acc=0.9900 time=53.5s
+12:53:24 | INFO | [finetune] epoch 20/30 train_task_loss=0.1560 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9492 val_loss=0.0348 val_acc=0.9904 time=53.3s
+12:54:18 | INFO | [finetune] epoch 21/30 train_task_loss=0.1508 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9507 val_loss=0.0330 val_acc=0.9902 time=53.7s
+12:55:12 | INFO | [finetune] epoch 22/30 train_task_loss=0.1425 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9542 val_loss=0.0317 val_acc=0.9924 time=53.5s
+12:56:05 | INFO | [finetune] epoch 23/30 train_task_loss=0.1390 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9554 val_loss=0.0267 val_acc=0.9920 time=53.4s
+12:56:58 | INFO | [finetune] epoch 24/30 train_task_loss=0.1372 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9571 val_loss=0.0283 val_acc=0.9930 time=53.5s
+12:57:52 | INFO | [finetune] epoch 25/30 train_task_loss=0.1340 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9578 val_loss=0.0251 val_acc=0.9936 time=53.6s
+12:58:45 | INFO | [finetune] epoch 26/30 train_task_loss=0.1321 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9574 val_loss=0.0238 val_acc=0.9938 time=53.3s
+12:59:39 | INFO | [finetune] epoch 27/30 train_task_loss=0.1294 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9575 val_loss=0.0215 val_acc=0.9942 time=53.3s
+13:00:32 | INFO | [finetune] epoch 28/30 train_task_loss=0.1291 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9586 val_loss=0.0242 val_acc=0.9938 time=53.4s
+13:01:25 | INFO | [finetune] epoch 29/30 train_task_loss=0.1297 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9583 val_loss=0.0228 val_acc=0.9936 time=53.4s
+13:02:19 | INFO | [finetune] epoch 30/30 train_task_loss=0.1264 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9593 val_loss=0.0228 val_acc=0.9934 time=53.3s
+13:02:28 | INFO | [naive_firing_rate_kf0.816] Final test accuracy: 0.9283
+13:02:58 | INFO | [naive_firing_rate] activity pass 1/1 done
+13:02:58 | INFO | [naive_firing_rate_kf0.701] Parameters: 21362834 -> 10510364 (50.8% pruned)
+13:03:49 | INFO | [finetune] epoch 1/30 train_task_loss=0.3908 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8769 val_loss=0.0811 val_acc=0.9752 time=50.5s
+13:04:39 | INFO | [finetune] epoch 2/30 train_task_loss=0.3031 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9003 val_loss=0.0654 val_acc=0.9782 time=50.4s
+13:05:30 | INFO | [finetune] epoch 3/30 train_task_loss=0.2824 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9082 val_loss=0.0632 val_acc=0.9796 time=50.5s
+13:06:20 | INFO | [finetune] epoch 4/30 train_task_loss=0.2759 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9081 val_loss=0.0630 val_acc=0.9784 time=50.2s
+13:07:10 | INFO | [finetune] epoch 5/30 train_task_loss=0.2687 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9120 val_loss=0.0579 val_acc=0.9806 time=50.0s
+13:08:01 | INFO | [finetune] epoch 6/30 train_task_loss=0.2696 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9100 val_loss=0.0696 val_acc=0.9782 time=50.5s
+13:08:51 | INFO | [finetune] epoch 7/30 train_task_loss=0.2551 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9163 val_loss=0.0671 val_acc=0.9804 time=50.6s
+13:09:41 | INFO | [finetune] epoch 8/30 train_task_loss=0.2557 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9146 val_loss=0.0614 val_acc=0.9788 time=50.2s
+13:10:32 | INFO | [finetune] epoch 9/30 train_task_loss=0.2449 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9166 val_loss=0.0710 val_acc=0.9762 time=50.6s
+13:11:22 | INFO | [finetune] epoch 10/30 train_task_loss=0.2400 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9207 val_loss=0.0733 val_acc=0.9784 time=50.3s
+13:12:13 | INFO | [finetune] epoch 11/30 train_task_loss=0.2391 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9203 val_loss=0.0705 val_acc=0.9782 time=50.5s
+13:13:03 | INFO | [finetune] epoch 12/30 train_task_loss=0.2240 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9259 val_loss=0.0745 val_acc=0.9758 time=50.5s
+13:13:54 | INFO | [finetune] epoch 13/30 train_task_loss=0.2199 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9279 val_loss=0.0588 val_acc=0.9816 time=50.5s
+13:14:44 | INFO | [finetune] epoch 14/30 train_task_loss=0.2187 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9278 val_loss=0.0603 val_acc=0.9818 time=50.6s
+13:15:35 | INFO | [finetune] epoch 15/30 train_task_loss=0.2116 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9292 val_loss=0.0619 val_acc=0.9800 time=50.5s
+13:16:33 | INFO | [finetune] epoch 16/30 train_task_loss=0.2051 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9321 val_loss=0.0696 val_acc=0.9784 time=57.8s
+13:17:23 | INFO | [finetune] epoch 17/30 train_task_loss=0.2006 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9337 val_loss=0.0545 val_acc=0.9832 time=50.7s
+13:18:14 | INFO | [finetune] epoch 18/30 train_task_loss=0.1886 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9376 val_loss=0.0715 val_acc=0.9786 time=50.4s
+13:19:05 | INFO | [finetune] epoch 19/30 train_task_loss=0.1864 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9380 val_loss=0.0532 val_acc=0.9850 time=50.7s
+13:19:55 | INFO | [finetune] epoch 20/30 train_task_loss=0.1834 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9386 val_loss=0.0518 val_acc=0.9856 time=50.6s
+13:20:45 | INFO | [finetune] epoch 21/30 train_task_loss=0.1808 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9408 val_loss=0.0559 val_acc=0.9818 time=50.3s
+13:21:36 | INFO | [finetune] epoch 22/30 train_task_loss=0.1690 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9444 val_loss=0.0499 val_acc=0.9842 time=50.5s
+13:22:26 | INFO | [finetune] epoch 23/30 train_task_loss=0.1672 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9454 val_loss=0.0504 val_acc=0.9838 time=50.4s
+13:23:17 | INFO | [finetune] epoch 24/30 train_task_loss=0.1650 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9456 val_loss=0.0472 val_acc=0.9866 time=50.7s
+13:24:08 | INFO | [finetune] epoch 25/30 train_task_loss=0.1617 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9481 val_loss=0.0440 val_acc=0.9876 time=50.5s
+13:24:58 | INFO | [finetune] epoch 26/30 train_task_loss=0.1529 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9496 val_loss=0.0416 val_acc=0.9882 time=50.5s
+13:25:49 | INFO | [finetune] epoch 27/30 train_task_loss=0.1537 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9493 val_loss=0.0467 val_acc=0.9868 time=50.5s
+13:26:39 | INFO | [finetune] epoch 28/30 train_task_loss=0.1524 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9496 val_loss=0.0444 val_acc=0.9876 time=50.6s
+13:27:30 | INFO | [finetune] epoch 29/30 train_task_loss=0.1546 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9482 val_loss=0.0411 val_acc=0.9888 time=50.3s
+13:28:20 | INFO | [finetune] epoch 30/30 train_task_loss=0.1501 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9500 val_loss=0.0407 val_acc=0.9884 time=50.4s
+13:28:28 | INFO | [naive_firing_rate_kf0.701] Final test accuracy: 0.9283
+13:28:59 | INFO | [naive_firing_rate] activity pass 1/1 done
+13:28:59 | INFO | [naive_firing_rate_kf0.547] Parameters: 21362834 -> 6392628 (70.1% pruned)
+13:29:51 | INFO | [finetune] epoch 1/30 train_task_loss=0.6550 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7852 val_loss=0.2670 val_acc=0.9092 time=51.7s
+13:30:41 | INFO | [finetune] epoch 2/30 train_task_loss=0.4679 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8419 val_loss=0.1801 val_acc=0.9378 time=49.7s
+13:31:30 | INFO | [finetune] epoch 3/30 train_task_loss=0.4229 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8588 val_loss=0.1597 val_acc=0.9498 time=49.8s
+13:32:20 | INFO | [finetune] epoch 4/30 train_task_loss=0.3893 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8670 val_loss=0.1644 val_acc=0.9420 time=50.0s
+13:33:11 | INFO | [finetune] epoch 5/30 train_task_loss=0.3735 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8739 val_loss=0.1497 val_acc=0.9512 time=50.2s
+13:34:01 | INFO | [finetune] epoch 6/30 train_task_loss=0.3613 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8775 val_loss=0.1440 val_acc=0.9526 time=49.9s
+13:34:50 | INFO | [finetune] epoch 7/30 train_task_loss=0.3433 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8848 val_loss=0.1373 val_acc=0.9562 time=49.6s
+13:35:40 | INFO | [finetune] epoch 8/30 train_task_loss=0.3374 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8869 val_loss=0.1342 val_acc=0.9530 time=50.2s
+13:36:31 | INFO | [finetune] epoch 9/30 train_task_loss=0.3214 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8911 val_loss=0.1330 val_acc=0.9564 time=50.2s
+13:37:21 | INFO | [finetune] epoch 10/30 train_task_loss=0.3173 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8925 val_loss=0.1399 val_acc=0.9528 time=50.0s
+13:38:11 | INFO | [finetune] epoch 11/30 train_task_loss=0.3074 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8962 val_loss=0.1223 val_acc=0.9590 time=50.4s
+13:39:01 | INFO | [finetune] epoch 12/30 train_task_loss=0.3017 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8977 val_loss=0.1217 val_acc=0.9582 time=49.9s
+13:39:53 | INFO | [finetune] epoch 13/30 train_task_loss=0.2968 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8986 val_loss=0.1229 val_acc=0.9604 time=51.8s
+13:40:45 | INFO | [finetune] epoch 14/30 train_task_loss=0.2881 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9030 val_loss=0.1381 val_acc=0.9542 time=52.2s
+13:41:35 | INFO | [finetune] epoch 15/30 train_task_loss=0.2757 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9062 val_loss=0.1072 val_acc=0.9664 time=50.2s
+13:42:26 | INFO | [finetune] epoch 16/30 train_task_loss=0.2698 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9079 val_loss=0.1095 val_acc=0.9630 time=50.4s
+13:43:16 | INFO | [finetune] epoch 17/30 train_task_loss=0.2636 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9108 val_loss=0.1157 val_acc=0.9606 time=50.5s
+13:44:07 | INFO | [finetune] epoch 18/30 train_task_loss=0.2619 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9111 val_loss=0.1020 val_acc=0.9660 time=50.6s
+13:44:58 | INFO | [finetune] epoch 19/30 train_task_loss=0.2527 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9149 val_loss=0.1077 val_acc=0.9638 time=51.3s
+13:45:49 | INFO | [finetune] epoch 20/30 train_task_loss=0.2395 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9203 val_loss=0.0984 val_acc=0.9680 time=50.4s
+13:46:39 | INFO | [finetune] epoch 21/30 train_task_loss=0.2328 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9199 val_loss=0.1006 val_acc=0.9656 time=50.3s
+13:47:32 | INFO | [finetune] epoch 22/30 train_task_loss=0.2335 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9222 val_loss=0.0987 val_acc=0.9670 time=53.5s
+13:48:22 | INFO | [finetune] epoch 23/30 train_task_loss=0.2264 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9230 val_loss=0.0988 val_acc=0.9690 time=49.6s
+13:49:12 | INFO | [finetune] epoch 24/30 train_task_loss=0.2209 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9259 val_loss=0.0978 val_acc=0.9704 time=50.2s
+13:50:02 | INFO | [finetune] epoch 25/30 train_task_loss=0.2201 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9259 val_loss=0.0975 val_acc=0.9708 time=50.1s
+13:50:52 | INFO | [finetune] epoch 26/30 train_task_loss=0.2166 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9270 val_loss=0.0953 val_acc=0.9714 time=50.1s
+13:51:43 | INFO | [finetune] epoch 27/30 train_task_loss=0.2143 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9280 val_loss=0.0936 val_acc=0.9698 time=51.0s
+13:52:35 | INFO | [finetune] epoch 28/30 train_task_loss=0.2093 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9304 val_loss=0.0913 val_acc=0.9706 time=51.5s
+13:53:27 | INFO | [finetune] epoch 29/30 train_task_loss=0.2150 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9292 val_loss=0.0906 val_acc=0.9720 time=51.7s
+13:54:19 | INFO | [finetune] epoch 30/30 train_task_loss=0.2098 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9303 val_loss=0.0921 val_acc=0.9696 time=51.9s
+13:54:28 | INFO | [naive_firing_rate_kf0.547] Final test accuracy: 0.9214
+13:55:00 | INFO | [naive_firing_rate] activity pass 1/1 done
+13:55:00 | INFO | [naive_firing_rate_kf0.316] Parameters: 21362834 -> 2141097 (90.0% pruned)
+13:55:55 | INFO | [finetune] epoch 1/30 train_task_loss=1.1939 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.5850 val_loss=0.6592 val_acc=0.7762 time=54.7s
+13:56:46 | INFO | [finetune] epoch 2/30 train_task_loss=0.8536 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7048 val_loss=0.5413 val_acc=0.8116 time=51.3s
+13:57:36 | INFO | [finetune] epoch 3/30 train_task_loss=0.7484 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7413 val_loss=0.4642 val_acc=0.8458 time=49.3s
+13:58:25 | INFO | [finetune] epoch 4/30 train_task_loss=0.6953 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7587 val_loss=0.4486 val_acc=0.8456 time=49.4s
+13:59:14 | INFO | [finetune] epoch 5/30 train_task_loss=0.6562 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7738 val_loss=0.4100 val_acc=0.8654 time=49.4s
+14:00:04 | INFO | [finetune] epoch 6/30 train_task_loss=0.6218 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7840 val_loss=0.3837 val_acc=0.8688 time=49.6s
+14:00:54 | INFO | [finetune] epoch 7/30 train_task_loss=0.5963 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7926 val_loss=0.3949 val_acc=0.8714 time=49.7s
+14:01:44 | INFO | [finetune] epoch 8/30 train_task_loss=0.5761 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7998 val_loss=0.3432 val_acc=0.8812 time=49.9s
+14:02:33 | INFO | [finetune] epoch 9/30 train_task_loss=0.5597 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8051 val_loss=0.3481 val_acc=0.8814 time=49.6s
+14:03:23 | INFO | [finetune] epoch 10/30 train_task_loss=0.5398 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8124 val_loss=0.3231 val_acc=0.8922 time=49.7s
+14:04:13 | INFO | [finetune] epoch 11/30 train_task_loss=0.5311 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8160 val_loss=0.3170 val_acc=0.8954 time=49.6s
+14:05:02 | INFO | [finetune] epoch 12/30 train_task_loss=0.5142 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8218 val_loss=0.3146 val_acc=0.8948 time=49.5s
+14:05:52 | INFO | [finetune] epoch 13/30 train_task_loss=0.5073 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8236 val_loss=0.3081 val_acc=0.8946 time=49.5s
+14:06:41 | INFO | [finetune] epoch 14/30 train_task_loss=0.4989 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8264 val_loss=0.2968 val_acc=0.9038 time=49.6s
+14:07:33 | INFO | [finetune] epoch 15/30 train_task_loss=0.4804 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8338 val_loss=0.2821 val_acc=0.9016 time=51.6s
+14:08:24 | INFO | [finetune] epoch 16/30 train_task_loss=0.4692 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8374 val_loss=0.2822 val_acc=0.9084 time=51.0s
+14:09:14 | INFO | [finetune] epoch 17/30 train_task_loss=0.4753 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8351 val_loss=0.2684 val_acc=0.9078 time=49.9s
+14:10:04 | INFO | [finetune] epoch 18/30 train_task_loss=0.4566 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8412 val_loss=0.2694 val_acc=0.9116 time=50.3s
+14:10:54 | INFO | [finetune] epoch 19/30 train_task_loss=0.4512 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8433 val_loss=0.2731 val_acc=0.9100 time=49.7s
+14:11:44 | INFO | [finetune] epoch 20/30 train_task_loss=0.4407 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8447 val_loss=0.2634 val_acc=0.9076 time=49.7s
+14:12:33 | INFO | [finetune] epoch 21/30 train_task_loss=0.4390 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8454 val_loss=0.2695 val_acc=0.9128 time=49.4s
+14:13:22 | INFO | [finetune] epoch 22/30 train_task_loss=0.4272 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8518 val_loss=0.2579 val_acc=0.9130 time=49.5s
+14:14:12 | INFO | [finetune] epoch 23/30 train_task_loss=0.4208 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8528 val_loss=0.2545 val_acc=0.9152 time=49.5s
+14:15:03 | INFO | [finetune] epoch 24/30 train_task_loss=0.4225 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8534 val_loss=0.2552 val_acc=0.9130 time=50.6s
+14:15:52 | INFO | [finetune] epoch 25/30 train_task_loss=0.4156 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8553 val_loss=0.2541 val_acc=0.9132 time=49.8s
+14:16:42 | INFO | [finetune] epoch 26/30 train_task_loss=0.4175 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8558 val_loss=0.2482 val_acc=0.9132 time=49.9s
+14:17:32 | INFO | [finetune] epoch 27/30 train_task_loss=0.4143 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8571 val_loss=0.2572 val_acc=0.9138 time=50.1s
+14:18:23 | INFO | [finetune] epoch 28/30 train_task_loss=0.4021 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8591 val_loss=0.2478 val_acc=0.9166 time=50.3s
+14:19:12 | INFO | [finetune] epoch 29/30 train_task_loss=0.4149 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8556 val_loss=0.2559 val_acc=0.9134 time=49.9s
+14:20:02 | INFO | [finetune] epoch 30/30 train_task_loss=0.4118 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8574 val_loss=0.2496 val_acc=0.9176 time=49.9s
+14:20:13 | INFO | [naive_firing_rate_kf0.316] Final test accuracy: 0.8858
+14:21:30 | INFO | [sca_train] cycle 1/6 epoch 1/30 train_acc=0.9097 val_acc=0.9856 time=77.6s
+14:22:43 | INFO | [sca_train] cycle 1/6 epoch 2/30 train_acc=0.8977 val_acc=0.9658 time=72.4s
+14:23:55 | INFO | [sca_train] cycle 1/6 epoch 3/30 train_acc=0.8931 val_acc=0.9640 time=72.4s
+14:25:08 | INFO | [sca_train] cycle 1/6 epoch 4/30 train_acc=0.8909 val_acc=0.9668 time=72.4s
+14:26:20 | INFO | [sca_train] cycle 1/6 epoch 5/30 train_acc=0.8887 val_acc=0.9560 time=72.1s
+14:26:20 | INFO | [sca_train]   end of cycle 1: target_frac=0.969 alive=2232/2304 (96.9%)
+14:27:32 | INFO | [sca_train] cycle 2/6 epoch 6/30 train_acc=0.8841 val_acc=0.9466 time=72.1s
+14:28:44 | INFO | [sca_train] cycle 2/6 epoch 7/30 train_acc=0.8831 val_acc=0.9430 time=72.1s
+14:29:56 | INFO | [sca_train] cycle 2/6 epoch 8/30 train_acc=0.8841 val_acc=0.9538 time=72.2s
+14:31:09 | INFO | [sca_train] cycle 2/6 epoch 9/30 train_acc=0.8889 val_acc=0.9552 time=72.3s
+14:32:21 | INFO | [sca_train] cycle 2/6 epoch 10/30 train_acc=0.8937 val_acc=0.9534 time=72.5s
+14:32:21 | INFO | [sca_train]   end of cycle 2: target_frac=0.939 alive=2163/2304 (93.9%)
+14:33:34 | INFO | [sca_train] cycle 3/6 epoch 11/30 train_acc=0.8876 val_acc=0.9484 time=72.5s
+14:34:46 | INFO | [sca_train] cycle 3/6 epoch 12/30 train_acc=0.8964 val_acc=0.9402 time=72.4s
+14:35:58 | INFO | [sca_train] cycle 3/6 epoch 13/30 train_acc=0.8962 val_acc=0.9504 time=72.4s
+14:37:11 | INFO | [sca_train] cycle 3/6 epoch 14/30 train_acc=0.9057 val_acc=0.9520 time=72.4s
+14:38:23 | INFO | [sca_train] cycle 3/6 epoch 15/30 train_acc=0.9088 val_acc=0.9582 time=72.2s
+14:38:23 | INFO | [sca_train]   end of cycle 3: target_frac=0.908 alive=2091/2304 (90.8%)
+14:39:35 | INFO | [sca_train] cycle 4/6 epoch 16/30 train_acc=0.9085 val_acc=0.9488 time=72.3s
+14:40:48 | INFO | [sca_train] cycle 4/6 epoch 17/30 train_acc=0.9151 val_acc=0.9562 time=72.4s
+14:42:05 | INFO | [sca_train] cycle 4/6 epoch 18/30 train_acc=0.9185 val_acc=0.9588 time=77.4s
+14:43:21 | INFO | [sca_train] cycle 4/6 epoch 19/30 train_acc=0.9233 val_acc=0.9592 time=75.6s
+14:44:33 | INFO | [sca_train] cycle 4/6 epoch 20/30 train_acc=0.9257 val_acc=0.9628 time=72.3s
+14:44:33 | INFO | [sca_train]   end of cycle 4: target_frac=0.878 alive=2021/2304 (87.7%)
+14:45:49 | INFO | [sca_train] cycle 5/6 epoch 21/30 train_acc=0.9266 val_acc=0.9602 time=75.7s
+14:47:01 | INFO | [sca_train] cycle 5/6 epoch 22/30 train_acc=0.9316 val_acc=0.9624 time=72.3s
+14:48:13 | INFO | [sca_train] cycle 5/6 epoch 23/30 train_acc=0.9353 val_acc=0.9674 time=72.1s
+14:49:25 | INFO | [sca_train] cycle 5/6 epoch 24/30 train_acc=0.9381 val_acc=0.9700 time=72.4s
+14:50:39 | INFO | [sca_train] cycle 5/6 epoch 25/30 train_acc=0.9404 val_acc=0.9722 time=73.3s
+14:50:39 | INFO | [sca_train]   end of cycle 5: target_frac=0.847 alive=1952/2304 (84.7%)
+14:51:51 | INFO | [sca_train] cycle 6/6 epoch 26/30 train_acc=0.9361 val_acc=0.9680 time=72.6s
+14:53:03 | INFO | [sca_train] cycle 6/6 epoch 27/30 train_acc=0.9378 val_acc=0.9688 time=72.1s
+14:54:16 | INFO | [sca_train] cycle 6/6 epoch 28/30 train_acc=0.9401 val_acc=0.9700 time=72.3s
+14:55:28 | INFO | [sca_train] cycle 6/6 epoch 29/30 train_acc=0.9412 val_acc=0.9690 time=72.3s
+14:56:40 | INFO | [sca_train] cycle 6/6 epoch 30/30 train_acc=0.9414 val_acc=0.9714 time=72.2s
+14:56:40 | INFO | [sca_train]   end of cycle 6: target_frac=0.816 alive=1880/2304 (81.6%)
+14:56:41 | INFO | [sca_kf0.816] Parameters: 21362834 -> 14239017 (33.3% pruned)
+14:57:35 | INFO | [finetune] epoch 1/30 train_task_loss=0.2591 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9149 val_loss=0.1552 val_acc=0.9516 time=54.0s
+14:58:28 | INFO | [finetune] epoch 2/30 train_task_loss=0.2571 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9147 val_loss=0.1715 val_acc=0.9480 time=53.7s
+14:59:22 | INFO | [finetune] epoch 3/30 train_task_loss=0.2529 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9160 val_loss=0.1460 val_acc=0.9538 time=53.6s
+15:00:16 | INFO | [finetune] epoch 4/30 train_task_loss=0.2481 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9163 val_loss=0.1438 val_acc=0.9546 time=53.7s
+15:01:10 | INFO | [finetune] epoch 5/30 train_task_loss=0.2389 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9216 val_loss=0.1434 val_acc=0.9558 time=53.7s
+15:02:03 | INFO | [finetune] epoch 6/30 train_task_loss=0.2398 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9214 val_loss=0.1508 val_acc=0.9542 time=53.5s
+15:02:56 | INFO | [finetune] epoch 7/30 train_task_loss=0.2354 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9231 val_loss=0.1526 val_acc=0.9528 time=53.4s
+15:03:50 | INFO | [finetune] epoch 8/30 train_task_loss=0.2274 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9249 val_loss=0.1416 val_acc=0.9540 time=53.5s
+15:04:44 | INFO | [finetune] epoch 9/30 train_task_loss=0.2252 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9252 val_loss=0.1505 val_acc=0.9562 time=54.0s
+15:05:37 | INFO | [finetune] epoch 10/30 train_task_loss=0.2153 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9276 val_loss=0.1608 val_acc=0.9540 time=53.5s
+15:06:31 | INFO | [finetune] epoch 11/30 train_task_loss=0.2206 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9264 val_loss=0.1487 val_acc=0.9562 time=53.4s
+15:07:24 | INFO | [finetune] epoch 12/30 train_task_loss=0.2098 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9306 val_loss=0.1356 val_acc=0.9590 time=53.3s
+15:08:18 | INFO | [finetune] epoch 13/30 train_task_loss=0.2077 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9314 val_loss=0.1422 val_acc=0.9562 time=53.8s
+15:09:12 | INFO | [finetune] epoch 14/30 train_task_loss=0.1983 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9343 val_loss=0.1391 val_acc=0.9574 time=53.9s
+15:10:05 | INFO | [finetune] epoch 15/30 train_task_loss=0.1936 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9373 val_loss=0.1406 val_acc=0.9574 time=53.5s
+15:10:59 | INFO | [finetune] epoch 16/30 train_task_loss=0.1902 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9372 val_loss=0.1417 val_acc=0.9564 time=53.7s
+15:11:53 | INFO | [finetune] epoch 17/30 train_task_loss=0.1807 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9405 val_loss=0.1350 val_acc=0.9594 time=53.5s
+15:12:46 | INFO | [finetune] epoch 18/30 train_task_loss=0.1757 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9431 val_loss=0.1319 val_acc=0.9580 time=53.6s
+15:13:40 | INFO | [finetune] epoch 19/30 train_task_loss=0.1721 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9440 val_loss=0.1217 val_acc=0.9640 time=53.5s
+15:14:33 | INFO | [finetune] epoch 20/30 train_task_loss=0.1673 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9453 val_loss=0.1299 val_acc=0.9612 time=53.6s
+15:15:27 | INFO | [finetune] epoch 21/30 train_task_loss=0.1619 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9468 val_loss=0.1296 val_acc=0.9606 time=53.8s
+15:16:20 | INFO | [finetune] epoch 22/30 train_task_loss=0.1562 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9488 val_loss=0.1265 val_acc=0.9640 time=53.2s
+15:17:14 | INFO | [finetune] epoch 23/30 train_task_loss=0.1607 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9476 val_loss=0.1227 val_acc=0.9630 time=53.5s
+15:18:07 | INFO | [finetune] epoch 24/30 train_task_loss=0.1573 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9484 val_loss=0.1153 val_acc=0.9656 time=53.4s
+15:19:01 | INFO | [finetune] epoch 25/30 train_task_loss=0.1520 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9506 val_loss=0.1188 val_acc=0.9666 time=53.3s
+15:19:54 | INFO | [finetune] epoch 26/30 train_task_loss=0.1444 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9529 val_loss=0.1207 val_acc=0.9644 time=53.1s
+15:20:47 | INFO | [finetune] epoch 27/30 train_task_loss=0.1443 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9534 val_loss=0.1160 val_acc=0.9638 time=53.2s
+15:21:40 | INFO | [finetune] epoch 28/30 train_task_loss=0.1436 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9528 val_loss=0.1150 val_acc=0.9662 time=53.5s
+15:22:34 | INFO | [finetune] epoch 29/30 train_task_loss=0.1436 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9528 val_loss=0.1144 val_acc=0.9654 time=53.2s
+15:23:27 | INFO | [finetune] epoch 30/30 train_task_loss=0.1408 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9543 val_loss=0.1093 val_acc=0.9668 time=53.3s
+15:23:37 | INFO | [sca_kf0.816] Final test accuracy: 0.9361
+15:24:51 | INFO | [sca_train] cycle 1/6 epoch 1/30 train_acc=0.9097 val_acc=0.9856 time=72.7s
+15:26:03 | INFO | [sca_train] cycle 1/6 epoch 2/30 train_acc=0.8977 val_acc=0.9658 time=71.9s
+15:27:15 | INFO | [sca_train] cycle 1/6 epoch 3/30 train_acc=0.8931 val_acc=0.9640 time=72.0s
+15:28:27 | INFO | [sca_train] cycle 1/6 epoch 4/30 train_acc=0.8909 val_acc=0.9668 time=71.9s
+15:29:39 | INFO | [sca_train] cycle 1/6 epoch 5/30 train_acc=0.8887 val_acc=0.9560 time=72.0s
+15:29:39 | INFO | [sca_train]   end of cycle 1: target_frac=0.950 alive=2191/2304 (95.1%)
+15:30:51 | INFO | [sca_train] cycle 2/6 epoch 6/30 train_acc=0.8827 val_acc=0.9466 time=72.2s
+15:32:04 | INFO | [sca_train] cycle 2/6 epoch 7/30 train_acc=0.8826 val_acc=0.9418 time=72.3s
+15:33:16 | INFO | [sca_train] cycle 2/6 epoch 8/30 train_acc=0.8830 val_acc=0.9424 time=72.0s
+15:34:28 | INFO | [sca_train] cycle 2/6 epoch 9/30 train_acc=0.8865 val_acc=0.9456 time=72.2s
+15:35:40 | INFO | [sca_train] cycle 2/6 epoch 10/30 train_acc=0.8909 val_acc=0.9478 time=71.9s
+15:35:40 | INFO | [sca_train]   end of cycle 2: target_frac=0.900 alive=2075/2304 (90.1%)
+15:36:52 | INFO | [sca_train] cycle 3/6 epoch 11/30 train_acc=0.8839 val_acc=0.9438 time=71.9s
+15:38:04 | INFO | [sca_train] cycle 3/6 epoch 12/30 train_acc=0.8909 val_acc=0.9444 time=72.0s
+15:39:16 | INFO | [sca_train] cycle 3/6 epoch 13/30 train_acc=0.8950 val_acc=0.9548 time=72.4s
+15:40:28 | INFO | [sca_train] cycle 3/6 epoch 14/30 train_acc=0.9018 val_acc=0.9532 time=72.1s
+15:41:40 | INFO | [sca_train] cycle 3/6 epoch 15/30 train_acc=0.9083 val_acc=0.9572 time=72.1s
+15:41:40 | INFO | [sca_train]   end of cycle 3: target_frac=0.851 alive=1962/2304 (85.2%)
+15:42:52 | INFO | [sca_train] cycle 4/6 epoch 16/30 train_acc=0.9010 val_acc=0.9518 time=72.2s
+15:44:05 | INFO | [sca_train] cycle 4/6 epoch 17/30 train_acc=0.9115 val_acc=0.9578 time=72.3s
+15:45:24 | INFO | [sca_train] cycle 4/6 epoch 18/30 train_acc=0.9164 val_acc=0.9588 time=79.2s
+15:46:37 | INFO | [sca_train] cycle 4/6 epoch 19/30 train_acc=0.9148 val_acc=0.9618 time=73.2s
+15:47:51 | INFO | [sca_train] cycle 4/6 epoch 20/30 train_acc=0.9204 val_acc=0.9636 time=73.9s
+15:47:52 | INFO | [sca_train]   end of cycle 4: target_frac=0.801 alive=1846/2304 (80.1%)
+15:49:05 | INFO | [sca_train] cycle 5/6 epoch 21/30 train_acc=0.9156 val_acc=0.9610 time=72.9s
+15:50:17 | INFO | [sca_train] cycle 5/6 epoch 22/30 train_acc=0.9227 val_acc=0.9600 time=72.0s
+15:51:31 | INFO | [sca_train] cycle 5/6 epoch 23/30 train_acc=0.9258 val_acc=0.9662 time=73.8s
+15:52:43 | INFO | [sca_train] cycle 5/6 epoch 24/30 train_acc=0.9309 val_acc=0.9636 time=72.1s
+15:53:55 | INFO | [sca_train] cycle 5/6 epoch 25/30 train_acc=0.9342 val_acc=0.9658 time=72.2s
+15:53:55 | INFO | [sca_train]   end of cycle 5: target_frac=0.751 alive=1731/2304 (75.1%)
+15:55:08 | INFO | [sca_train] cycle 6/6 epoch 26/30 train_acc=0.9207 val_acc=0.9572 time=73.2s
+15:56:20 | INFO | [sca_train] cycle 6/6 epoch 27/30 train_acc=0.9261 val_acc=0.9598 time=72.2s
+15:57:33 | INFO | [sca_train] cycle 6/6 epoch 28/30 train_acc=0.9259 val_acc=0.9632 time=72.5s
+15:58:45 | INFO | [sca_train] cycle 6/6 epoch 29/30 train_acc=0.9297 val_acc=0.9626 time=72.0s
+15:59:57 | INFO | [sca_train] cycle 6/6 epoch 30/30 train_acc=0.9293 val_acc=0.9644 time=71.9s
+15:59:57 | INFO | [sca_train]   end of cycle 6: target_frac=0.701 alive=1617/2304 (70.2%)
+15:59:58 | INFO | [sca_kf0.701] Parameters: 21362834 -> 10510364 (50.8% pruned)
+16:00:49 | INFO | [finetune] epoch 1/30 train_task_loss=0.3140 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8954 val_loss=0.1808 val_acc=0.9428 time=51.2s
+16:01:39 | INFO | [finetune] epoch 2/30 train_task_loss=0.2934 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9038 val_loss=0.1837 val_acc=0.9446 time=50.3s
+16:02:30 | INFO | [finetune] epoch 3/30 train_task_loss=0.2965 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9013 val_loss=0.1693 val_acc=0.9460 time=50.4s
+16:03:21 | INFO | [finetune] epoch 4/30 train_task_loss=0.2847 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9046 val_loss=0.1812 val_acc=0.9428 time=50.9s
+16:04:11 | INFO | [finetune] epoch 5/30 train_task_loss=0.2747 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9079 val_loss=0.1817 val_acc=0.9410 time=50.2s
+16:05:01 | INFO | [finetune] epoch 6/30 train_task_loss=0.2761 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9094 val_loss=0.1676 val_acc=0.9456 time=50.3s
+16:05:51 | INFO | [finetune] epoch 7/30 train_task_loss=0.2680 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9124 val_loss=0.1850 val_acc=0.9462 time=50.5s
+16:06:42 | INFO | [finetune] epoch 8/30 train_task_loss=0.2650 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9119 val_loss=0.1902 val_acc=0.9412 time=50.5s
+16:07:32 | INFO | [finetune] epoch 9/30 train_task_loss=0.2549 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9150 val_loss=0.1573 val_acc=0.9510 time=50.3s
+16:08:23 | INFO | [finetune] epoch 10/30 train_task_loss=0.2490 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9172 val_loss=0.1588 val_acc=0.9486 time=50.5s
+16:09:13 | INFO | [finetune] epoch 11/30 train_task_loss=0.2407 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9208 val_loss=0.1558 val_acc=0.9542 time=50.5s
+16:10:04 | INFO | [finetune] epoch 12/30 train_task_loss=0.2389 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9211 val_loss=0.1520 val_acc=0.9560 time=50.4s
+16:10:55 | INFO | [finetune] epoch 13/30 train_task_loss=0.2341 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9216 val_loss=0.1555 val_acc=0.9514 time=50.7s
+16:11:45 | INFO | [finetune] epoch 14/30 train_task_loss=0.2207 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9259 val_loss=0.1437 val_acc=0.9542 time=50.4s
+16:12:35 | INFO | [finetune] epoch 15/30 train_task_loss=0.2243 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9244 val_loss=0.1545 val_acc=0.9528 time=50.5s
+16:13:26 | INFO | [finetune] epoch 16/30 train_task_loss=0.2128 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9298 val_loss=0.1532 val_acc=0.9536 time=50.5s
+16:14:16 | INFO | [finetune] epoch 17/30 train_task_loss=0.2068 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9338 val_loss=0.1513 val_acc=0.9558 time=50.4s
+16:15:07 | INFO | [finetune] epoch 18/30 train_task_loss=0.2029 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9327 val_loss=0.1429 val_acc=0.9578 time=50.6s
+16:15:57 | INFO | [finetune] epoch 19/30 train_task_loss=0.1964 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9337 val_loss=0.1441 val_acc=0.9590 time=50.1s
+16:16:47 | INFO | [finetune] epoch 20/30 train_task_loss=0.1877 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9381 val_loss=0.1476 val_acc=0.9580 time=50.2s
+16:17:38 | INFO | [finetune] epoch 21/30 train_task_loss=0.1803 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9402 val_loss=0.1484 val_acc=0.9584 time=50.3s
+16:18:28 | INFO | [finetune] epoch 22/30 train_task_loss=0.1852 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9393 val_loss=0.1413 val_acc=0.9604 time=50.5s
+16:19:18 | INFO | [finetune] epoch 23/30 train_task_loss=0.1779 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9408 val_loss=0.1351 val_acc=0.9596 time=50.4s
+16:20:09 | INFO | [finetune] epoch 24/30 train_task_loss=0.1731 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9425 val_loss=0.1387 val_acc=0.9612 time=50.7s
+16:21:00 | INFO | [finetune] epoch 25/30 train_task_loss=0.1706 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9441 val_loss=0.1302 val_acc=0.9618 time=50.5s
+16:21:50 | INFO | [finetune] epoch 26/30 train_task_loss=0.1726 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9437 val_loss=0.1316 val_acc=0.9628 time=50.4s
+16:22:41 | INFO | [finetune] epoch 27/30 train_task_loss=0.1619 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9470 val_loss=0.1409 val_acc=0.9594 time=50.5s
+16:23:31 | INFO | [finetune] epoch 28/30 train_task_loss=0.1606 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9470 val_loss=0.1326 val_acc=0.9626 time=50.4s
+16:24:22 | INFO | [finetune] epoch 29/30 train_task_loss=0.1588 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9472 val_loss=0.1325 val_acc=0.9606 time=50.5s
+16:25:12 | INFO | [finetune] epoch 30/30 train_task_loss=0.1644 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9461 val_loss=0.1354 val_acc=0.9630 time=50.5s
+16:25:22 | INFO | [sca_kf0.701] Final test accuracy: 0.9308
+16:26:36 | INFO | [sca_train] cycle 1/6 epoch 1/30 train_acc=0.9097 val_acc=0.9856 time=72.2s
+16:27:48 | INFO | [sca_train] cycle 1/6 epoch 2/30 train_acc=0.8977 val_acc=0.9658 time=72.0s
+16:29:00 | INFO | [sca_train] cycle 1/6 epoch 3/30 train_acc=0.8931 val_acc=0.9640 time=72.1s
+16:30:12 | INFO | [sca_train] cycle 1/6 epoch 4/30 train_acc=0.8909 val_acc=0.9668 time=72.4s
+16:31:25 | INFO | [sca_train] cycle 1/6 epoch 5/30 train_acc=0.8887 val_acc=0.9560 time=72.3s
+16:31:25 | INFO | [sca_train]   end of cycle 1: target_frac=0.924 alive=2129/2304 (92.4%)
+16:32:37 | INFO | [sca_train] cycle 2/6 epoch 6/30 train_acc=0.8734 val_acc=0.9444 time=72.1s
+16:33:49 | INFO | [sca_train] cycle 2/6 epoch 7/30 train_acc=0.8794 val_acc=0.9446 time=72.4s
+16:35:01 | INFO | [sca_train] cycle 2/6 epoch 8/30 train_acc=0.8824 val_acc=0.9480 time=72.1s
+16:36:14 | INFO | [sca_train] cycle 2/6 epoch 9/30 train_acc=0.8866 val_acc=0.9462 time=72.4s
+16:37:26 | INFO | [sca_train] cycle 2/6 epoch 10/30 train_acc=0.8910 val_acc=0.9494 time=72.4s
+16:37:26 | INFO | [sca_train]   end of cycle 2: target_frac=0.849 alive=1957/2304 (84.9%)
+16:38:38 | INFO | [sca_train] cycle 3/6 epoch 11/30 train_acc=0.8786 val_acc=0.9468 time=72.2s
+16:39:51 | INFO | [sca_train] cycle 3/6 epoch 12/30 train_acc=0.8852 val_acc=0.9414 time=72.3s
+16:41:03 | INFO | [sca_train] cycle 3/6 epoch 13/30 train_acc=0.8908 val_acc=0.9466 time=72.4s
+16:42:15 | INFO | [sca_train] cycle 3/6 epoch 14/30 train_acc=0.8958 val_acc=0.9540 time=72.0s
+16:43:27 | INFO | [sca_train] cycle 3/6 epoch 15/30 train_acc=0.9040 val_acc=0.9550 time=72.2s
+16:43:27 | INFO | [sca_train]   end of cycle 3: target_frac=0.773 alive=1782/2304 (77.3%)
+16:44:39 | INFO | [sca_train] cycle 4/6 epoch 16/30 train_acc=0.8898 val_acc=0.9458 time=72.1s
+16:45:52 | INFO | [sca_train] cycle 4/6 epoch 17/30 train_acc=0.9018 val_acc=0.9516 time=72.3s
+16:47:04 | INFO | [sca_train] cycle 4/6 epoch 18/30 train_acc=0.9064 val_acc=0.9494 time=72.1s
+16:48:16 | INFO | [sca_train] cycle 4/6 epoch 19/30 train_acc=0.9124 val_acc=0.9542 time=72.2s
+16:49:28 | INFO | [sca_train] cycle 4/6 epoch 20/30 train_acc=0.9150 val_acc=0.9580 time=72.1s
+16:49:28 | INFO | [sca_train]   end of cycle 4: target_frac=0.698 alive=1607/2304 (69.7%)
+16:50:43 | INFO | [sca_train] cycle 5/6 epoch 21/30 train_acc=0.8964 val_acc=0.9438 time=75.2s
+16:51:56 | INFO | [sca_train] cycle 5/6 epoch 22/30 train_acc=0.9079 val_acc=0.9450 time=72.6s
+16:53:10 | INFO | [sca_train] cycle 5/6 epoch 23/30 train_acc=0.9133 val_acc=0.9520 time=74.0s
+16:54:23 | INFO | [sca_train] cycle 5/6 epoch 24/30 train_acc=0.9175 val_acc=0.9510 time=73.4s
+16:55:36 | INFO | [sca_train] cycle 5/6 epoch 25/30 train_acc=0.9184 val_acc=0.9536 time=72.4s
+16:55:36 | INFO | [sca_train]   end of cycle 5: target_frac=0.622 alive=1435/2304 (62.3%)
+16:56:51 | INFO | [sca_train] cycle 6/6 epoch 26/30 train_acc=0.8836 val_acc=0.9352 time=74.8s
+16:58:03 | INFO | [sca_train] cycle 6/6 epoch 27/30 train_acc=0.8921 val_acc=0.9398 time=72.1s
+16:59:15 | INFO | [sca_train] cycle 6/6 epoch 28/30 train_acc=0.8965 val_acc=0.9390 time=72.1s
+17:00:28 | INFO | [sca_train] cycle 6/6 epoch 29/30 train_acc=0.9017 val_acc=0.9388 time=72.7s
+17:01:40 | INFO | [sca_train] cycle 6/6 epoch 30/30 train_acc=0.8999 val_acc=0.9436 time=72.1s
+17:01:40 | INFO | [sca_train]   end of cycle 6: target_frac=0.547 alive=1260/2304 (54.7%)
+17:01:40 | INFO | [sca_kf0.547] Parameters: 21362834 -> 6392628 (70.1% pruned)
+17:02:31 | INFO | [finetune] epoch 1/30 train_task_loss=0.4526 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8475 val_loss=0.2601 val_acc=0.9140 time=51.0s
+17:03:21 | INFO | [finetune] epoch 2/30 train_task_loss=0.3989 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8672 val_loss=0.2347 val_acc=0.9198 time=50.1s
+17:04:11 | INFO | [finetune] epoch 3/30 train_task_loss=0.3821 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8714 val_loss=0.2276 val_acc=0.9242 time=50.1s
+17:05:01 | INFO | [finetune] epoch 4/30 train_task_loss=0.3678 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8777 val_loss=0.2351 val_acc=0.9230 time=49.8s
+17:05:51 | INFO | [finetune] epoch 5/30 train_task_loss=0.3553 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8818 val_loss=0.2277 val_acc=0.9238 time=49.7s
+17:06:40 | INFO | [finetune] epoch 6/30 train_task_loss=0.3450 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8832 val_loss=0.2143 val_acc=0.9320 time=49.8s
+17:07:30 | INFO | [finetune] epoch 7/30 train_task_loss=0.3373 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8866 val_loss=0.2237 val_acc=0.9272 time=49.9s
+17:08:21 | INFO | [finetune] epoch 8/30 train_task_loss=0.3320 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8868 val_loss=0.2295 val_acc=0.9270 time=50.3s
+17:09:11 | INFO | [finetune] epoch 9/30 train_task_loss=0.3278 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8897 val_loss=0.2120 val_acc=0.9310 time=50.0s
+17:10:00 | INFO | [finetune] epoch 10/30 train_task_loss=0.3147 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8936 val_loss=0.2063 val_acc=0.9340 time=49.8s
+17:10:55 | INFO | [finetune] epoch 11/30 train_task_loss=0.3058 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8970 val_loss=0.2337 val_acc=0.9302 time=54.9s
+17:11:45 | INFO | [finetune] epoch 12/30 train_task_loss=0.3008 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8979 val_loss=0.2132 val_acc=0.9328 time=49.9s
+17:12:36 | INFO | [finetune] epoch 13/30 train_task_loss=0.2890 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9020 val_loss=0.1942 val_acc=0.9392 time=50.4s
+17:13:26 | INFO | [finetune] epoch 14/30 train_task_loss=0.2847 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9043 val_loss=0.1981 val_acc=0.9372 time=50.6s
+17:14:16 | INFO | [finetune] epoch 15/30 train_task_loss=0.2783 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9052 val_loss=0.1875 val_acc=0.9398 time=49.9s
+17:15:06 | INFO | [finetune] epoch 16/30 train_task_loss=0.2719 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9085 val_loss=0.2014 val_acc=0.9354 time=49.7s
+17:15:56 | INFO | [finetune] epoch 17/30 train_task_loss=0.2614 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9120 val_loss=0.1878 val_acc=0.9410 time=50.4s
+17:16:46 | INFO | [finetune] epoch 18/30 train_task_loss=0.2551 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9148 val_loss=0.1937 val_acc=0.9400 time=50.0s
+17:17:36 | INFO | [finetune] epoch 19/30 train_task_loss=0.2534 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9150 val_loss=0.1966 val_acc=0.9408 time=49.5s
+17:18:26 | INFO | [finetune] epoch 20/30 train_task_loss=0.2420 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9193 val_loss=0.1938 val_acc=0.9432 time=49.8s
+17:19:16 | INFO | [finetune] epoch 21/30 train_task_loss=0.2391 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9198 val_loss=0.1910 val_acc=0.9410 time=50.2s
+17:20:06 | INFO | [finetune] epoch 22/30 train_task_loss=0.2351 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9212 val_loss=0.1801 val_acc=0.9460 time=50.2s
+17:20:56 | INFO | [finetune] epoch 23/30 train_task_loss=0.2256 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9244 val_loss=0.1857 val_acc=0.9434 time=49.9s
+17:21:46 | INFO | [finetune] epoch 24/30 train_task_loss=0.2265 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9253 val_loss=0.1812 val_acc=0.9444 time=50.0s
+17:22:36 | INFO | [finetune] epoch 25/30 train_task_loss=0.2240 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9258 val_loss=0.1777 val_acc=0.9456 time=49.8s
+17:23:26 | INFO | [finetune] epoch 26/30 train_task_loss=0.2185 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9270 val_loss=0.1740 val_acc=0.9460 time=50.1s
+17:24:17 | INFO | [finetune] epoch 27/30 train_task_loss=0.2191 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9258 val_loss=0.1886 val_acc=0.9468 time=51.3s
+17:25:07 | INFO | [finetune] epoch 28/30 train_task_loss=0.2172 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9266 val_loss=0.1810 val_acc=0.9448 time=49.9s
+17:25:57 | INFO | [finetune] epoch 29/30 train_task_loss=0.2156 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9274 val_loss=0.1785 val_acc=0.9464 time=49.7s
+17:26:47 | INFO | [finetune] epoch 30/30 train_task_loss=0.2183 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9271 val_loss=0.1831 val_acc=0.9452 time=49.8s
+17:26:56 | INFO | [sca_kf0.547] Final test accuracy: 0.9178
+17:28:11 | INFO | [sca_train] cycle 1/6 epoch 1/30 train_acc=0.9097 val_acc=0.9856 time=72.5s
+17:29:23 | INFO | [sca_train] cycle 1/6 epoch 2/30 train_acc=0.8977 val_acc=0.9658 time=72.0s
+17:30:35 | INFO | [sca_train] cycle 1/6 epoch 3/30 train_acc=0.8931 val_acc=0.9640 time=72.2s
+17:31:47 | INFO | [sca_train] cycle 1/6 epoch 4/30 train_acc=0.8909 val_acc=0.9668 time=71.9s
+17:32:59 | INFO | [sca_train] cycle 1/6 epoch 5/30 train_acc=0.8887 val_acc=0.9560 time=72.0s
+17:32:59 | INFO | [sca_train]   end of cycle 1: target_frac=0.886 alive=2042/2304 (88.6%)
+17:34:11 | INFO | [sca_train] cycle 2/6 epoch 6/30 train_acc=0.8696 val_acc=0.9430 time=71.9s
+17:35:24 | INFO | [sca_train] cycle 2/6 epoch 7/30 train_acc=0.8731 val_acc=0.9370 time=72.3s
+17:36:36 | INFO | [sca_train] cycle 2/6 epoch 8/30 train_acc=0.8769 val_acc=0.9406 time=72.2s
+17:37:48 | INFO | [sca_train] cycle 2/6 epoch 9/30 train_acc=0.8808 val_acc=0.9370 time=72.0s
+17:39:00 | INFO | [sca_train] cycle 2/6 epoch 10/30 train_acc=0.8852 val_acc=0.9450 time=72.3s
+17:39:00 | INFO | [sca_train]   end of cycle 2: target_frac=0.772 alive=1779/2304 (77.2%)
+17:40:12 | INFO | [sca_train] cycle 3/6 epoch 11/30 train_acc=0.8639 val_acc=0.9268 time=72.0s
+17:41:24 | INFO | [sca_train] cycle 3/6 epoch 12/30 train_acc=0.8764 val_acc=0.9414 time=72.1s
+17:42:37 | INFO | [sca_train] cycle 3/6 epoch 13/30 train_acc=0.8845 val_acc=0.9398 time=72.3s
+17:43:49 | INFO | [sca_train] cycle 3/6 epoch 14/30 train_acc=0.8910 val_acc=0.9450 time=72.1s
+17:45:01 | INFO | [sca_train] cycle 3/6 epoch 15/30 train_acc=0.8969 val_acc=0.9502 time=71.9s
+17:45:01 | INFO | [sca_train]   end of cycle 3: target_frac=0.658 alive=1515/2304 (65.8%)
+17:46:13 | INFO | [sca_train] cycle 4/6 epoch 16/30 train_acc=0.8619 val_acc=0.9326 time=72.3s
+17:47:25 | INFO | [sca_train] cycle 4/6 epoch 17/30 train_acc=0.8813 val_acc=0.9366 time=71.9s
+17:48:37 | INFO | [sca_train] cycle 4/6 epoch 18/30 train_acc=0.8908 val_acc=0.9430 time=72.3s
+17:49:49 | INFO | [sca_train] cycle 4/6 epoch 19/30 train_acc=0.8958 val_acc=0.9440 time=72.1s
+17:51:01 | INFO | [sca_train] cycle 4/6 epoch 20/30 train_acc=0.9016 val_acc=0.9478 time=72.2s
+17:51:01 | INFO | [sca_train]   end of cycle 4: target_frac=0.544 alive=1255/2304 (54.5%)
+17:52:14 | INFO | [sca_train] cycle 5/6 epoch 21/30 train_acc=0.8539 val_acc=0.9232 time=72.4s
+17:53:26 | INFO | [sca_train] cycle 5/6 epoch 22/30 train_acc=0.8756 val_acc=0.9276 time=72.0s
+17:54:38 | INFO | [sca_train] cycle 5/6 epoch 23/30 train_acc=0.8823 val_acc=0.9326 time=72.4s
+17:55:57 | INFO | [sca_train] cycle 5/6 epoch 24/30 train_acc=0.8882 val_acc=0.9342 time=78.6s
+17:57:10 | INFO | [sca_train] cycle 5/6 epoch 25/30 train_acc=0.8934 val_acc=0.9336 time=73.1s
+17:57:10 | INFO | [sca_train]   end of cycle 5: target_frac=0.430 alive=990/2304 (43.0%)
+17:58:23 | INFO | [sca_train] cycle 6/6 epoch 26/30 train_acc=0.7790 val_acc=0.8800 time=73.3s
+17:59:36 | INFO | [sca_train] cycle 6/6 epoch 27/30 train_acc=0.8095 val_acc=0.8848 time=72.5s
+18:00:48 | INFO | [sca_train] cycle 6/6 epoch 28/30 train_acc=0.8185 val_acc=0.8964 time=72.0s
+18:02:01 | INFO | [sca_train] cycle 6/6 epoch 29/30 train_acc=0.8242 val_acc=0.8910 time=73.1s
+18:03:13 | INFO | [sca_train] cycle 6/6 epoch 30/30 train_acc=0.8262 val_acc=0.8958 time=72.3s
+18:03:13 | INFO | [sca_train]   end of cycle 6: target_frac=0.316 alive=728/2304 (31.6%)
+18:03:14 | INFO | [sca_kf0.316] Parameters: 21362834 -> 2141097 (90.0% pruned)
+18:04:06 | INFO | [finetune] epoch 1/30 train_task_loss=0.8732 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7044 val_loss=0.4947 val_acc=0.8306 time=52.0s
+18:04:57 | INFO | [finetune] epoch 2/30 train_task_loss=0.7002 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7636 val_loss=0.4477 val_acc=0.8452 time=50.8s
+18:05:47 | INFO | [finetune] epoch 3/30 train_task_loss=0.6435 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7826 val_loss=0.4474 val_acc=0.8498 time=50.2s
+18:06:37 | INFO | [finetune] epoch 4/30 train_task_loss=0.6148 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7924 val_loss=0.3892 val_acc=0.8630 time=50.0s
+18:07:27 | INFO | [finetune] epoch 5/30 train_task_loss=0.5840 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8012 val_loss=0.4333 val_acc=0.8488 time=50.4s
+18:08:17 | INFO | [finetune] epoch 6/30 train_task_loss=0.5668 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8080 val_loss=0.3684 val_acc=0.8748 time=50.0s
+18:09:08 | INFO | [finetune] epoch 7/30 train_task_loss=0.5445 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8146 val_loss=0.3652 val_acc=0.8744 time=50.4s
+18:09:58 | INFO | [finetune] epoch 8/30 train_task_loss=0.5326 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8195 val_loss=0.3523 val_acc=0.8796 time=50.1s
+18:10:48 | INFO | [finetune] epoch 9/30 train_task_loss=0.5103 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8274 val_loss=0.3523 val_acc=0.8842 time=50.4s
+18:11:38 | INFO | [finetune] epoch 10/30 train_task_loss=0.4999 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8306 val_loss=0.3345 val_acc=0.8854 time=50.3s
+18:12:29 | INFO | [finetune] epoch 11/30 train_task_loss=0.4934 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8314 val_loss=0.3316 val_acc=0.8896 time=50.5s
+18:13:19 | INFO | [finetune] epoch 12/30 train_task_loss=0.4821 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8345 val_loss=0.3269 val_acc=0.8864 time=50.2s
+18:14:10 | INFO | [finetune] epoch 13/30 train_task_loss=0.4825 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8345 val_loss=0.3111 val_acc=0.8916 time=50.4s
+18:15:00 | INFO | [finetune] epoch 14/30 train_task_loss=0.4664 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8415 val_loss=0.3243 val_acc=0.8902 time=50.5s
+18:15:54 | INFO | [finetune] epoch 15/30 train_task_loss=0.4578 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8431 val_loss=0.3102 val_acc=0.8910 time=53.6s
+18:16:44 | INFO | [finetune] epoch 16/30 train_task_loss=0.4529 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8446 val_loss=0.3061 val_acc=0.8952 time=50.0s
+18:17:34 | INFO | [finetune] epoch 17/30 train_task_loss=0.4367 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8479 val_loss=0.3038 val_acc=0.8932 time=50.3s
+18:18:24 | INFO | [finetune] epoch 18/30 train_task_loss=0.4345 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8513 val_loss=0.2904 val_acc=0.8994 time=50.3s
+18:19:14 | INFO | [finetune] epoch 19/30 train_task_loss=0.4221 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8547 val_loss=0.2874 val_acc=0.9000 time=50.0s
+18:20:04 | INFO | [finetune] epoch 20/30 train_task_loss=0.4189 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8550 val_loss=0.2825 val_acc=0.9040 time=50.0s
+18:20:55 | INFO | [finetune] epoch 21/30 train_task_loss=0.4064 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8604 val_loss=0.2837 val_acc=0.9012 time=50.6s
+18:21:44 | INFO | [finetune] epoch 22/30 train_task_loss=0.4042 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8617 val_loss=0.2743 val_acc=0.9088 time=49.7s
+18:22:35 | INFO | [finetune] epoch 23/30 train_task_loss=0.4030 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8628 val_loss=0.2791 val_acc=0.9106 time=50.0s
+18:23:26 | INFO | [finetune] epoch 24/30 train_task_loss=0.4043 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8619 val_loss=0.2906 val_acc=0.9048 time=51.2s
+18:24:16 | INFO | [finetune] epoch 25/30 train_task_loss=0.3978 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8645 val_loss=0.2789 val_acc=0.9058 time=50.3s
+18:25:06 | INFO | [finetune] epoch 26/30 train_task_loss=0.3916 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8641 val_loss=0.2839 val_acc=0.9016 time=50.3s
+18:25:56 | INFO | [finetune] epoch 27/30 train_task_loss=0.3848 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8674 val_loss=0.2856 val_acc=0.9000 time=50.1s
+18:26:47 | INFO | [finetune] epoch 28/30 train_task_loss=0.3864 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8663 val_loss=0.2724 val_acc=0.9068 time=50.2s
+18:27:37 | INFO | [finetune] epoch 29/30 train_task_loss=0.3915 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8653 val_loss=0.2850 val_acc=0.9028 time=50.1s
+18:28:26 | INFO | [finetune] epoch 30/30 train_task_loss=0.3860 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8675 val_loss=0.2703 val_acc=0.9070 time=49.8s
+18:28:36 | INFO | [sca_kf0.316] Final test accuracy: 0.8942
+18:29:53 | INFO | [dpap_train] epoch 1/30 train_acc=0.9097 val_acc=0.9808 alive=2289/2304 (99.3%) time=74.4s
+18:31:06 | INFO | [dpap_train] epoch 2/30 train_acc=0.8969 val_acc=0.9648 alive=2276/2304 (98.8%) time=72.2s
+18:32:18 | INFO | [dpap_train] epoch 3/30 train_acc=0.8915 val_acc=0.9534 alive=2263/2304 (98.2%) time=72.1s
+18:33:30 | INFO | [dpap_train] epoch 4/30 train_acc=0.8875 val_acc=0.9636 alive=2247/2304 (97.5%) time=72.2s
+18:34:42 | INFO | [dpap_train] epoch 5/30 train_acc=0.8839 val_acc=0.9520 alive=2232/2304 (96.9%) time=71.8s
+18:35:54 | INFO | [dpap_train] epoch 6/30 train_acc=0.8851 val_acc=0.9496 alive=2219/2304 (96.3%) time=72.2s
+18:37:06 | INFO | [dpap_train] epoch 7/30 train_acc=0.8844 val_acc=0.9388 alive=2206/2304 (95.7%) time=72.1s
+18:38:18 | INFO | [dpap_train] epoch 8/30 train_acc=0.8839 val_acc=0.9432 alive=2191/2304 (95.1%) time=72.1s
+18:39:30 | INFO | [dpap_train] epoch 9/30 train_acc=0.8856 val_acc=0.9470 alive=2178/2304 (94.5%) time=72.1s
+18:40:42 | INFO | [dpap_train] epoch 10/30 train_acc=0.8918 val_acc=0.9416 alive=2163/2304 (93.9%) time=72.3s
+18:41:54 | INFO | [dpap_train] epoch 11/30 train_acc=0.8922 val_acc=0.9574 alive=2150/2304 (93.3%) time=71.8s
+18:43:06 | INFO | [dpap_train] epoch 12/30 train_acc=0.8968 val_acc=0.9464 alive=2134/2304 (92.6%) time=72.0s
+18:44:19 | INFO | [dpap_train] epoch 13/30 train_acc=0.8996 val_acc=0.9452 alive=2121/2304 (92.1%) time=72.2s
+18:45:31 | INFO | [dpap_train] epoch 14/30 train_acc=0.9041 val_acc=0.9460 alive=2106/2304 (91.4%) time=72.1s
+18:46:43 | INFO | [dpap_train] epoch 15/30 train_acc=0.9068 val_acc=0.9482 alive=2091/2304 (90.8%) time=72.1s
+18:47:55 | INFO | [dpap_train] epoch 16/30 train_acc=0.9110 val_acc=0.9532 alive=2078/2304 (90.2%) time=72.1s
+18:49:07 | INFO | [dpap_train] epoch 17/30 train_acc=0.9155 val_acc=0.9550 alive=2065/2304 (89.6%) time=72.2s
+18:50:19 | INFO | [dpap_train] epoch 18/30 train_acc=0.9184 val_acc=0.9582 alive=2052/2304 (89.1%) time=72.2s
+18:51:31 | INFO | [dpap_train] epoch 19/30 train_acc=0.9222 val_acc=0.9584 alive=2034/2304 (88.3%) time=72.0s
+18:52:43 | INFO | [dpap_train] epoch 20/30 train_acc=0.9233 val_acc=0.9626 alive=2021/2304 (87.7%) time=72.2s
+18:53:56 | INFO | [dpap_train] epoch 21/30 train_acc=0.9310 val_acc=0.9574 alive=2008/2304 (87.2%) time=72.3s
+18:55:08 | INFO | [dpap_train] epoch 22/30 train_acc=0.9322 val_acc=0.9576 alive=1995/2304 (86.6%) time=71.9s
+18:56:20 | INFO | [dpap_train] epoch 23/30 train_acc=0.9362 val_acc=0.9630 alive=1980/2304 (85.9%) time=72.2s
+18:57:32 | INFO | [dpap_train] epoch 24/30 train_acc=0.9364 val_acc=0.9658 alive=1965/2304 (85.3%) time=72.2s
+18:58:44 | INFO | [dpap_train] epoch 25/30 train_acc=0.9394 val_acc=0.9664 alive=1952/2304 (84.7%) time=72.3s
+18:59:59 | INFO | [dpap_train] epoch 26/30 train_acc=0.9408 val_acc=0.9652 alive=1939/2304 (84.2%) time=74.5s
+19:01:13 | INFO | [dpap_train] epoch 27/30 train_acc=0.9414 val_acc=0.9674 alive=1923/2304 (83.5%) time=73.9s
+19:02:27 | INFO | [dpap_train] epoch 28/30 train_acc=0.9415 val_acc=0.9604 alive=1908/2304 (82.8%) time=73.8s
+19:03:40 | INFO | [dpap_train] epoch 29/30 train_acc=0.9397 val_acc=0.9650 alive=1895/2304 (82.2%) time=73.4s
+19:04:52 | INFO | [dpap_train] epoch 30/30 train_acc=0.9385 val_acc=0.9636 alive=1880/2304 (81.6%) time=72.3s
+19:04:53 | INFO | [dpap_kf0.816] Parameters: 21362834 -> 14239017 (33.3% pruned)
+19:05:47 | INFO | [finetune] epoch 1/30 train_task_loss=0.2378 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9219 val_loss=0.1466 val_acc=0.9566 time=54.2s
+19:06:42 | INFO | [finetune] epoch 2/30 train_task_loss=0.2377 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9221 val_loss=0.1456 val_acc=0.9546 time=54.9s
+19:07:36 | INFO | [finetune] epoch 3/30 train_task_loss=0.2403 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9210 val_loss=0.1538 val_acc=0.9518 time=53.7s
+19:08:29 | INFO | [finetune] epoch 4/30 train_task_loss=0.2377 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9208 val_loss=0.1545 val_acc=0.9550 time=53.7s
+19:09:23 | INFO | [finetune] epoch 5/30 train_task_loss=0.2375 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9216 val_loss=0.1556 val_acc=0.9524 time=53.8s
+19:10:18 | INFO | [finetune] epoch 6/30 train_task_loss=0.2305 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9233 val_loss=0.1482 val_acc=0.9554 time=54.8s
+19:11:11 | INFO | [finetune] epoch 7/30 train_task_loss=0.2250 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9245 val_loss=0.1495 val_acc=0.9512 time=53.5s
+19:12:05 | INFO | [finetune] epoch 8/30 train_task_loss=0.2203 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9265 val_loss=0.1422 val_acc=0.9544 time=53.4s
+19:12:58 | INFO | [finetune] epoch 9/30 train_task_loss=0.2155 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9280 val_loss=0.1504 val_acc=0.9548 time=53.6s
+19:13:52 | INFO | [finetune] epoch 10/30 train_task_loss=0.2125 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9296 val_loss=0.1453 val_acc=0.9542 time=53.9s
+19:14:46 | INFO | [finetune] epoch 11/30 train_task_loss=0.2124 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9298 val_loss=0.1381 val_acc=0.9586 time=53.7s
+19:15:40 | INFO | [finetune] epoch 12/30 train_task_loss=0.2038 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9344 val_loss=0.1379 val_acc=0.9580 time=53.6s
+19:16:33 | INFO | [finetune] epoch 13/30 train_task_loss=0.1960 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9358 val_loss=0.1325 val_acc=0.9592 time=53.3s
+19:17:27 | INFO | [finetune] epoch 14/30 train_task_loss=0.1921 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9366 val_loss=0.1386 val_acc=0.9574 time=53.8s
+19:18:20 | INFO | [finetune] epoch 15/30 train_task_loss=0.1912 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9371 val_loss=0.1318 val_acc=0.9588 time=53.7s
+19:19:14 | INFO | [finetune] epoch 16/30 train_task_loss=0.1812 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9406 val_loss=0.1256 val_acc=0.9606 time=53.8s
+19:20:08 | INFO | [finetune] epoch 17/30 train_task_loss=0.1814 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9405 val_loss=0.1332 val_acc=0.9572 time=53.5s
+19:21:06 | INFO | [finetune] epoch 18/30 train_task_loss=0.1689 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9452 val_loss=0.1167 val_acc=0.9628 time=57.8s
+19:21:59 | INFO | [finetune] epoch 19/30 train_task_loss=0.1659 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9451 val_loss=0.1242 val_acc=0.9634 time=53.9s
+19:22:53 | INFO | [finetune] epoch 20/30 train_task_loss=0.1604 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9472 val_loss=0.1256 val_acc=0.9614 time=53.7s
+19:23:47 | INFO | [finetune] epoch 21/30 train_task_loss=0.1569 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9491 val_loss=0.1230 val_acc=0.9644 time=53.6s
+19:24:40 | INFO | [finetune] epoch 22/30 train_task_loss=0.1529 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9506 val_loss=0.1199 val_acc=0.9636 time=53.5s
+19:25:34 | INFO | [finetune] epoch 23/30 train_task_loss=0.1511 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9500 val_loss=0.1131 val_acc=0.9654 time=53.6s
+19:26:28 | INFO | [finetune] epoch 24/30 train_task_loss=0.1507 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9505 val_loss=0.1120 val_acc=0.9658 time=53.6s
+19:27:21 | INFO | [finetune] epoch 25/30 train_task_loss=0.1442 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9517 val_loss=0.1135 val_acc=0.9682 time=53.3s
+19:28:15 | INFO | [finetune] epoch 26/30 train_task_loss=0.1423 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9531 val_loss=0.1201 val_acc=0.9652 time=53.6s
+19:29:09 | INFO | [finetune] epoch 27/30 train_task_loss=0.1399 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9529 val_loss=0.1111 val_acc=0.9672 time=54.0s
+19:30:02 | INFO | [finetune] epoch 28/30 train_task_loss=0.1353 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9552 val_loss=0.1132 val_acc=0.9680 time=53.8s
+19:30:56 | INFO | [finetune] epoch 29/30 train_task_loss=0.1360 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9555 val_loss=0.1084 val_acc=0.9694 time=53.7s
+19:31:50 | INFO | [finetune] epoch 30/30 train_task_loss=0.1367 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9547 val_loss=0.1081 val_acc=0.9692 time=53.6s
+19:31:59 | INFO | [dpap_kf0.816] Final test accuracy: 0.9309
+19:33:15 | INFO | [dpap_train] epoch 1/30 train_acc=0.9097 val_acc=0.9804 alive=2281/2304 (99.0%) time=73.6s
+19:34:27 | INFO | [dpap_train] epoch 2/30 train_acc=0.8970 val_acc=0.9710 alive=2258/2304 (98.0%) time=72.3s
+19:35:39 | INFO | [dpap_train] epoch 3/30 train_acc=0.8918 val_acc=0.9612 alive=2235/2304 (97.0%) time=72.2s
+19:36:52 | INFO | [dpap_train] epoch 4/30 train_acc=0.8862 val_acc=0.9566 alive=2214/2304 (96.1%) time=72.5s
+19:38:04 | INFO | [dpap_train] epoch 5/30 train_acc=0.8837 val_acc=0.9398 alive=2191/2304 (95.1%) time=72.1s
+19:39:16 | INFO | [dpap_train] epoch 6/30 train_acc=0.8841 val_acc=0.9434 alive=2165/2304 (94.0%) time=71.9s
+19:40:28 | INFO | [dpap_train] epoch 7/30 train_acc=0.8791 val_acc=0.9340 alive=2142/2304 (93.0%) time=72.2s
+19:41:40 | INFO | [dpap_train] epoch 8/30 train_acc=0.8816 val_acc=0.9398 alive=2121/2304 (92.1%) time=71.8s
+19:42:52 | INFO | [dpap_train] epoch 9/30 train_acc=0.8820 val_acc=0.9420 alive=2098/2304 (91.1%) time=72.0s
+19:44:04 | INFO | [dpap_train] epoch 10/30 train_acc=0.8868 val_acc=0.9452 alive=2075/2304 (90.1%) time=72.0s
+19:45:16 | INFO | [dpap_train] epoch 11/30 train_acc=0.8888 val_acc=0.9352 alive=2052/2304 (89.1%) time=72.1s
+19:46:28 | INFO | [dpap_train] epoch 12/30 train_acc=0.8899 val_acc=0.9460 alive=2029/2304 (88.1%) time=72.1s
+19:47:40 | INFO | [dpap_train] epoch 13/30 train_acc=0.8953 val_acc=0.9448 alive=2006/2304 (87.1%) time=71.9s
+19:48:52 | INFO | [dpap_train] epoch 14/30 train_acc=0.8991 val_acc=0.9500 alive=1983/2304 (86.1%) time=71.7s
+19:50:03 | INFO | [dpap_train] epoch 15/30 train_acc=0.9036 val_acc=0.9494 alive=1962/2304 (85.2%) time=71.9s
+19:51:15 | INFO | [dpap_train] epoch 16/30 train_acc=0.9072 val_acc=0.9504 alive=1936/2304 (84.0%) time=71.8s
+19:52:28 | INFO | [dpap_train] epoch 17/30 train_acc=0.9116 val_acc=0.9486 alive=1913/2304 (83.0%) time=72.4s
+19:53:40 | INFO | [dpap_train] epoch 18/30 train_acc=0.9142 val_acc=0.9474 alive=1890/2304 (82.0%) time=72.1s
+19:54:52 | INFO | [dpap_train] epoch 19/30 train_acc=0.9162 val_acc=0.9538 alive=1869/2304 (81.1%) time=72.2s
+19:56:04 | INFO | [dpap_train] epoch 20/30 train_acc=0.9197 val_acc=0.9534 alive=1846/2304 (80.1%) time=72.1s
+19:57:16 | INFO | [dpap_train] epoch 21/30 train_acc=0.9233 val_acc=0.9506 alive=1821/2304 (79.0%) time=72.1s
+19:58:28 | INFO | [dpap_train] epoch 22/30 train_acc=0.9253 val_acc=0.9560 alive=1800/2304 (78.1%) time=72.2s
+19:59:41 | INFO | [dpap_train] epoch 23/30 train_acc=0.9278 val_acc=0.9554 alive=1777/2304 (77.1%) time=72.2s
+20:00:53 | INFO | [dpap_train] epoch 24/30 train_acc=0.9306 val_acc=0.9556 alive=1754/2304 (76.1%) time=72.1s
+20:02:05 | INFO | [dpap_train] epoch 25/30 train_acc=0.9311 val_acc=0.9544 alive=1731/2304 (75.1%) time=72.2s
+20:03:17 | INFO | [dpap_train] epoch 26/30 train_acc=0.9319 val_acc=0.9548 alive=1707/2304 (74.1%) time=72.2s
+20:04:29 | INFO | [dpap_train] epoch 27/30 train_acc=0.9314 val_acc=0.9578 alive=1684/2304 (73.1%) time=72.3s
+20:05:45 | INFO | [dpap_train] epoch 28/30 train_acc=0.9286 val_acc=0.9514 alive=1661/2304 (72.1%) time=75.4s
+20:06:57 | INFO | [dpap_train] epoch 29/30 train_acc=0.9277 val_acc=0.9514 alive=1638/2304 (71.1%) time=72.6s
+20:08:13 | INFO | [dpap_train] epoch 30/30 train_acc=0.9238 val_acc=0.9458 alive=1617/2304 (70.2%) time=76.0s
+20:08:14 | INFO | [dpap_kf0.701] Parameters: 21362834 -> 10510364 (50.8% pruned)
+20:09:05 | INFO | [finetune] epoch 1/30 train_task_loss=0.2809 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9070 val_loss=0.1745 val_acc=0.9448 time=51.6s
+20:09:56 | INFO | [finetune] epoch 2/30 train_task_loss=0.2757 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9087 val_loss=0.1860 val_acc=0.9430 time=50.8s
+20:10:47 | INFO | [finetune] epoch 3/30 train_task_loss=0.2739 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9084 val_loss=0.1657 val_acc=0.9454 time=50.8s
+20:11:39 | INFO | [finetune] epoch 4/30 train_task_loss=0.2698 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9102 val_loss=0.1833 val_acc=0.9420 time=51.7s
+20:12:30 | INFO | [finetune] epoch 5/30 train_task_loss=0.2627 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9133 val_loss=0.1662 val_acc=0.9490 time=50.9s
+20:13:20 | INFO | [finetune] epoch 6/30 train_task_loss=0.2613 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9133 val_loss=0.1706 val_acc=0.9468 time=50.7s
+20:14:11 | INFO | [finetune] epoch 7/30 train_task_loss=0.2495 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9175 val_loss=0.1582 val_acc=0.9500 time=50.4s
+20:15:03 | INFO | [finetune] epoch 8/30 train_task_loss=0.2513 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9162 val_loss=0.1719 val_acc=0.9484 time=51.8s
+20:15:53 | INFO | [finetune] epoch 9/30 train_task_loss=0.2453 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9188 val_loss=0.1493 val_acc=0.9516 time=50.3s
+20:16:44 | INFO | [finetune] epoch 10/30 train_task_loss=0.2378 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9218 val_loss=0.1554 val_acc=0.9522 time=50.9s
+20:17:35 | INFO | [finetune] epoch 11/30 train_task_loss=0.2316 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9237 val_loss=0.1673 val_acc=0.9476 time=51.0s
+20:18:25 | INFO | [finetune] epoch 12/30 train_task_loss=0.2311 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9235 val_loss=0.1620 val_acc=0.9462 time=50.6s
+20:19:16 | INFO | [finetune] epoch 13/30 train_task_loss=0.2240 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9254 val_loss=0.1634 val_acc=0.9488 time=50.8s
+20:20:07 | INFO | [finetune] epoch 14/30 train_task_loss=0.2160 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9282 val_loss=0.1518 val_acc=0.9540 time=51.0s
+20:20:58 | INFO | [finetune] epoch 15/30 train_task_loss=0.2105 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9306 val_loss=0.1446 val_acc=0.9528 time=50.4s
+20:21:48 | INFO | [finetune] epoch 16/30 train_task_loss=0.2024 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9328 val_loss=0.1514 val_acc=0.9534 time=50.9s
+20:22:39 | INFO | [finetune] epoch 17/30 train_task_loss=0.2016 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9326 val_loss=0.1478 val_acc=0.9546 time=50.7s
+20:23:30 | INFO | [finetune] epoch 18/30 train_task_loss=0.1955 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9355 val_loss=0.1410 val_acc=0.9590 time=50.4s
+20:24:20 | INFO | [finetune] epoch 19/30 train_task_loss=0.1908 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9365 val_loss=0.1382 val_acc=0.9562 time=50.8s
+20:25:11 | INFO | [finetune] epoch 20/30 train_task_loss=0.1823 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9396 val_loss=0.1398 val_acc=0.9582 time=51.0s
+20:26:06 | INFO | [finetune] epoch 21/30 train_task_loss=0.1735 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9423 val_loss=0.1319 val_acc=0.9594 time=54.4s
+20:26:57 | INFO | [finetune] epoch 22/30 train_task_loss=0.1748 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9428 val_loss=0.1317 val_acc=0.9606 time=51.2s
+20:27:48 | INFO | [finetune] epoch 23/30 train_task_loss=0.1702 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9437 val_loss=0.1324 val_acc=0.9618 time=51.1s
+20:28:39 | INFO | [finetune] epoch 24/30 train_task_loss=0.1614 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9477 val_loss=0.1358 val_acc=0.9604 time=50.8s
+20:29:30 | INFO | [finetune] epoch 25/30 train_task_loss=0.1586 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9466 val_loss=0.1299 val_acc=0.9610 time=50.8s
+20:30:21 | INFO | [finetune] epoch 26/30 train_task_loss=0.1621 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9472 val_loss=0.1340 val_acc=0.9610 time=50.8s
+20:31:12 | INFO | [finetune] epoch 27/30 train_task_loss=0.1539 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9496 val_loss=0.1365 val_acc=0.9592 time=51.3s
+20:32:02 | INFO | [finetune] epoch 28/30 train_task_loss=0.1551 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9475 val_loss=0.1215 val_acc=0.9644 time=50.0s
+20:32:53 | INFO | [finetune] epoch 29/30 train_task_loss=0.1528 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9489 val_loss=0.1349 val_acc=0.9602 time=50.8s
+20:33:44 | INFO | [finetune] epoch 30/30 train_task_loss=0.1572 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9486 val_loss=0.1253 val_acc=0.9638 time=50.8s
+20:33:54 | INFO | [dpap_kf0.701] Final test accuracy: 0.9295
+20:35:11 | INFO | [dpap_train] epoch 1/30 train_acc=0.9097 val_acc=0.9764 alive=2268/2304 (98.4%) time=75.2s
+20:36:23 | INFO | [dpap_train] epoch 2/30 train_acc=0.8950 val_acc=0.9566 alive=2235/2304 (97.0%) time=72.3s
+20:37:35 | INFO | [dpap_train] epoch 3/30 train_acc=0.8878 val_acc=0.9634 alive=2199/2304 (95.4%) time=72.0s
+20:38:48 | INFO | [dpap_train] epoch 4/30 train_acc=0.8864 val_acc=0.9588 alive=2165/2304 (94.0%) time=72.3s
+20:40:00 | INFO | [dpap_train] epoch 5/30 train_acc=0.8808 val_acc=0.9470 alive=2129/2304 (92.4%) time=72.8s
+20:41:12 | INFO | [dpap_train] epoch 6/30 train_acc=0.8798 val_acc=0.9460 alive=2096/2304 (91.0%) time=72.0s
+20:42:24 | INFO | [dpap_train] epoch 7/30 train_acc=0.8797 val_acc=0.9330 alive=2060/2304 (89.4%) time=71.9s
+20:43:36 | INFO | [dpap_train] epoch 8/30 train_acc=0.8772 val_acc=0.9266 alive=2026/2304 (87.9%) time=71.7s
+20:44:48 | INFO | [dpap_train] epoch 9/30 train_acc=0.8812 val_acc=0.9396 alive=1990/2304 (86.4%) time=72.3s
+20:46:00 | INFO | [dpap_train] epoch 10/30 train_acc=0.8837 val_acc=0.9394 alive=1957/2304 (84.9%) time=72.0s
+20:47:13 | INFO | [dpap_train] epoch 11/30 train_acc=0.8851 val_acc=0.9320 alive=1921/2304 (83.4%) time=72.2s
+20:48:25 | INFO | [dpap_train] epoch 12/30 train_acc=0.8861 val_acc=0.9398 alive=1887/2304 (81.9%) time=72.4s
+20:49:37 | INFO | [dpap_train] epoch 13/30 train_acc=0.8896 val_acc=0.9410 alive=1851/2304 (80.3%) time=72.0s
+20:50:49 | INFO | [dpap_train] epoch 14/30 train_acc=0.8952 val_acc=0.9356 alive=1818/2304 (78.9%) time=71.9s
+20:52:01 | INFO | [dpap_train] epoch 15/30 train_acc=0.8974 val_acc=0.9378 alive=1782/2304 (77.3%) time=71.9s
+20:53:13 | INFO | [dpap_train] epoch 16/30 train_acc=0.9010 val_acc=0.9442 alive=1746/2304 (75.8%) time=72.0s
+20:54:25 | INFO | [dpap_train] epoch 17/30 train_acc=0.9037 val_acc=0.9402 alive=1713/2304 (74.3%) time=71.9s
+20:55:36 | INFO | [dpap_train] epoch 18/30 train_acc=0.9056 val_acc=0.9366 alive=1677/2304 (72.8%) time=71.9s
+20:56:49 | INFO | [dpap_train] epoch 19/30 train_acc=0.9059 val_acc=0.9386 alive=1643/2304 (71.3%) time=72.0s
+20:58:00 | INFO | [dpap_train] epoch 20/30 train_acc=0.9080 val_acc=0.9462 alive=1607/2304 (69.7%) time=71.9s
+20:59:13 | INFO | [dpap_train] epoch 21/30 train_acc=0.9118 val_acc=0.9428 alive=1574/2304 (68.3%) time=72.1s
+21:00:25 | INFO | [dpap_train] epoch 22/30 train_acc=0.9124 val_acc=0.9340 alive=1538/2304 (66.8%) time=72.2s
+21:01:37 | INFO | [dpap_train] epoch 23/30 train_acc=0.9128 val_acc=0.9428 alive=1504/2304 (65.3%) time=72.0s
+21:02:49 | INFO | [dpap_train] epoch 24/30 train_acc=0.9141 val_acc=0.9342 alive=1468/2304 (63.7%) time=72.0s
+21:04:01 | INFO | [dpap_train] epoch 25/30 train_acc=0.9138 val_acc=0.9228 alive=1435/2304 (62.3%) time=72.2s
+21:05:13 | INFO | [dpap_train] epoch 26/30 train_acc=0.9104 val_acc=0.9232 alive=1399/2304 (60.7%) time=72.0s
+21:06:25 | INFO | [dpap_train] epoch 27/30 train_acc=0.9030 val_acc=0.9238 alive=1365/2304 (59.2%) time=72.5s
+21:07:37 | INFO | [dpap_train] epoch 28/30 train_acc=0.9015 val_acc=0.9284 alive=1329/2304 (57.7%) time=71.9s
+21:08:49 | INFO | [dpap_train] epoch 29/30 train_acc=0.8930 val_acc=0.9078 alive=1296/2304 (56.2%) time=71.9s
+21:10:04 | INFO | [dpap_train] epoch 30/30 train_acc=0.8825 val_acc=0.9048 alive=1260/2304 (54.7%) time=75.1s
+21:10:05 | INFO | [dpap_kf0.547] Parameters: 21362834 -> 6392628 (70.1% pruned)
+21:10:56 | INFO | [finetune] epoch 1/30 train_task_loss=0.3876 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8676 val_loss=0.2393 val_acc=0.9246 time=51.5s
+21:11:46 | INFO | [finetune] epoch 2/30 train_task_loss=0.3612 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8784 val_loss=0.2318 val_acc=0.9240 time=50.1s
+21:12:38 | INFO | [finetune] epoch 3/30 train_task_loss=0.3487 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8824 val_loss=0.2200 val_acc=0.9320 time=51.9s
+21:13:29 | INFO | [finetune] epoch 4/30 train_task_loss=0.3421 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8856 val_loss=0.2219 val_acc=0.9288 time=50.8s
+21:14:20 | INFO | [finetune] epoch 5/30 train_task_loss=0.3366 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8861 val_loss=0.2253 val_acc=0.9270 time=50.5s
+21:15:10 | INFO | [finetune] epoch 6/30 train_task_loss=0.3244 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8898 val_loss=0.2088 val_acc=0.9294 time=50.5s
+21:16:00 | INFO | [finetune] epoch 7/30 train_task_loss=0.3108 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8940 val_loss=0.2210 val_acc=0.9286 time=50.0s
+21:16:57 | INFO | [finetune] epoch 8/30 train_task_loss=0.3091 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8958 val_loss=0.2226 val_acc=0.9286 time=57.1s
+21:17:48 | INFO | [finetune] epoch 9/30 train_task_loss=0.3061 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8975 val_loss=0.1976 val_acc=0.9376 time=50.2s
+21:18:38 | INFO | [finetune] epoch 10/30 train_task_loss=0.2928 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9004 val_loss=0.2155 val_acc=0.9308 time=50.5s
+21:19:28 | INFO | [finetune] epoch 11/30 train_task_loss=0.2907 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9019 val_loss=0.2123 val_acc=0.9316 time=50.4s
+21:20:20 | INFO | [finetune] epoch 12/30 train_task_loss=0.2824 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9039 val_loss=0.1989 val_acc=0.9360 time=51.7s
+21:21:11 | INFO | [finetune] epoch 13/30 train_task_loss=0.2763 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9064 val_loss=0.1853 val_acc=0.9416 time=50.3s
+21:22:01 | INFO | [finetune] epoch 14/30 train_task_loss=0.2698 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9081 val_loss=0.2000 val_acc=0.9378 time=50.1s
+21:22:51 | INFO | [finetune] epoch 15/30 train_task_loss=0.2611 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9122 val_loss=0.1919 val_acc=0.9388 time=50.3s
+21:23:41 | INFO | [finetune] epoch 16/30 train_task_loss=0.2534 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9140 val_loss=0.2001 val_acc=0.9356 time=50.5s
+21:24:32 | INFO | [finetune] epoch 17/30 train_task_loss=0.2458 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9159 val_loss=0.1813 val_acc=0.9452 time=50.6s
+21:25:22 | INFO | [finetune] epoch 18/30 train_task_loss=0.2388 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9196 val_loss=0.1865 val_acc=0.9424 time=50.1s
+21:26:13 | INFO | [finetune] epoch 19/30 train_task_loss=0.2353 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9200 val_loss=0.1914 val_acc=0.9420 time=50.6s
+21:27:03 | INFO | [finetune] epoch 20/30 train_task_loss=0.2259 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9236 val_loss=0.1844 val_acc=0.9452 time=50.5s
+21:27:54 | INFO | [finetune] epoch 21/30 train_task_loss=0.2269 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9223 val_loss=0.1929 val_acc=0.9422 time=50.5s
+21:28:44 | INFO | [finetune] epoch 22/30 train_task_loss=0.2191 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9262 val_loss=0.1856 val_acc=0.9434 time=50.4s
+21:29:34 | INFO | [finetune] epoch 23/30 train_task_loss=0.2127 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9283 val_loss=0.1842 val_acc=0.9440 time=50.3s
+21:30:27 | INFO | [finetune] epoch 24/30 train_task_loss=0.2138 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9287 val_loss=0.1844 val_acc=0.9480 time=52.2s
+21:31:23 | INFO | [finetune] epoch 25/30 train_task_loss=0.2083 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9308 val_loss=0.1828 val_acc=0.9446 time=56.2s
+21:32:13 | INFO | [finetune] epoch 26/30 train_task_loss=0.2026 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9326 val_loss=0.1756 val_acc=0.9472 time=50.3s
+21:33:03 | INFO | [finetune] epoch 27/30 train_task_loss=0.2024 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9322 val_loss=0.1807 val_acc=0.9458 time=50.3s
+21:33:53 | INFO | [finetune] epoch 28/30 train_task_loss=0.2035 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9328 val_loss=0.1754 val_acc=0.9494 time=50.0s
+21:34:44 | INFO | [finetune] epoch 29/30 train_task_loss=0.2015 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9330 val_loss=0.1816 val_acc=0.9442 time=50.2s
+21:35:34 | INFO | [finetune] epoch 30/30 train_task_loss=0.2004 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9316 val_loss=0.1854 val_acc=0.9464 time=50.0s
+21:35:47 | INFO | [dpap_kf0.547] Final test accuracy: 0.9243
+21:37:04 | INFO | [dpap_train] epoch 1/30 train_acc=0.9097 val_acc=0.9708 alive=2250/2304 (97.7%) time=74.7s
+21:38:16 | INFO | [dpap_train] epoch 2/30 train_acc=0.8947 val_acc=0.9686 alive=2199/2304 (95.4%) time=72.0s
+21:39:28 | INFO | [dpap_train] epoch 3/30 train_acc=0.8849 val_acc=0.9554 alive=2145/2304 (93.1%) time=71.9s
+21:40:39 | INFO | [dpap_train] epoch 4/30 train_acc=0.8790 val_acc=0.9468 alive=2093/2304 (90.8%) time=71.9s
+21:41:51 | INFO | [dpap_train] epoch 5/30 train_acc=0.8767 val_acc=0.9398 alive=2042/2304 (88.6%) time=71.9s
+21:43:03 | INFO | [dpap_train] epoch 6/30 train_acc=0.8739 val_acc=0.9272 alive=1988/2304 (86.3%) time=72.0s
+21:44:16 | INFO | [dpap_train] epoch 7/30 train_acc=0.8739 val_acc=0.9286 alive=1936/2304 (84.0%) time=72.3s
+21:45:28 | INFO | [dpap_train] epoch 8/30 train_acc=0.8733 val_acc=0.9304 alive=1885/2304 (81.8%) time=72.2s
+21:46:40 | INFO | [dpap_train] epoch 9/30 train_acc=0.8719 val_acc=0.9264 alive=1831/2304 (79.5%) time=72.0s
+21:47:52 | INFO | [dpap_train] epoch 10/30 train_acc=0.8773 val_acc=0.9260 alive=1779/2304 (77.2%) time=71.9s
+21:49:04 | INFO | [dpap_train] epoch 11/30 train_acc=0.8744 val_acc=0.9120 alive=1728/2304 (75.0%) time=71.8s
+21:50:15 | INFO | [dpap_train] epoch 12/30 train_acc=0.8799 val_acc=0.9138 alive=1674/2304 (72.7%) time=71.9s
+21:51:28 | INFO | [dpap_train] epoch 13/30 train_acc=0.8796 val_acc=0.9230 alive=1620/2304 (70.3%) time=72.5s
+21:52:40 | INFO | [dpap_train] epoch 14/30 train_acc=0.8816 val_acc=0.9314 alive=1569/2304 (68.1%) time=72.0s
+21:53:52 | INFO | [dpap_train] epoch 15/30 train_acc=0.8849 val_acc=0.9190 alive=1515/2304 (65.8%) time=71.8s
+21:55:04 | INFO | [dpap_train] epoch 16/30 train_acc=0.8845 val_acc=0.9106 alive=1463/2304 (63.5%) time=71.9s
+21:56:16 | INFO | [dpap_train] epoch 17/30 train_acc=0.8874 val_acc=0.9226 alive=1412/2304 (61.3%) time=72.1s
+21:57:28 | INFO | [dpap_train] epoch 18/30 train_acc=0.8855 val_acc=0.9018 alive=1358/2304 (58.9%) time=72.2s
+21:58:40 | INFO | [dpap_train] epoch 19/30 train_acc=0.8810 val_acc=0.9038 alive=1306/2304 (56.7%) time=72.1s
+21:59:52 | INFO | [dpap_train] epoch 20/30 train_acc=0.8833 val_acc=0.8956 alive=1255/2304 (54.5%) time=72.2s
+22:01:04 | INFO | [dpap_train] epoch 21/30 train_acc=0.8817 val_acc=0.9018 alive=1201/2304 (52.1%) time=71.9s
+22:02:16 | INFO | [dpap_train] epoch 22/30 train_acc=0.8812 val_acc=0.8934 alive=1149/2304 (49.9%) time=72.1s
+22:03:28 | INFO | [dpap_train] epoch 23/30 train_acc=0.8766 val_acc=0.8812 alive=1098/2304 (47.7%) time=71.8s
+22:04:40 | INFO | [dpap_train] epoch 24/30 train_acc=0.8686 val_acc=0.8846 alive=1044/2304 (45.3%) time=71.8s
+22:05:52 | INFO | [dpap_train] epoch 25/30 train_acc=0.8565 val_acc=0.8468 alive=990/2304 (43.0%) time=72.2s
+22:07:04 | INFO | [dpap_train] epoch 26/30 train_acc=0.8444 val_acc=0.8348 alive=939/2304 (40.8%) time=72.2s
+22:08:16 | INFO | [dpap_train] epoch 27/30 train_acc=0.8263 val_acc=0.8126 alive=885/2304 (38.4%) time=71.8s
+22:09:28 | INFO | [dpap_train] epoch 28/30 train_acc=0.8078 val_acc=0.7046 alive=833/2304 (36.2%) time=71.8s
+22:10:40 | INFO | [dpap_train] epoch 29/30 train_acc=0.7669 val_acc=0.7284 alive=782/2304 (33.9%) time=71.8s
+22:11:52 | INFO | [dpap_train] epoch 30/30 train_acc=0.7113 val_acc=0.6846 alive=728/2304 (31.6%) time=72.4s
+22:11:52 | INFO | [dpap_kf0.316] Parameters: 21362834 -> 2141097 (90.0% pruned)
+22:12:44 | INFO | [finetune] epoch 1/30 train_task_loss=0.7389 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7439 val_loss=0.4441 val_acc=0.8532 time=51.9s
+22:13:34 | INFO | [finetune] epoch 2/30 train_task_loss=0.6316 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7818 val_loss=0.4157 val_acc=0.8650 time=50.2s
+22:14:24 | INFO | [finetune] epoch 3/30 train_task_loss=0.5887 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7976 val_loss=0.3698 val_acc=0.8754 time=50.1s
+22:15:19 | INFO | [finetune] epoch 4/30 train_task_loss=0.5700 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8033 val_loss=0.3687 val_acc=0.8718 time=54.7s
+22:16:09 | INFO | [finetune] epoch 5/30 train_task_loss=0.5380 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8141 val_loss=0.3655 val_acc=0.8754 time=50.1s
+22:17:00 | INFO | [finetune] epoch 6/30 train_task_loss=0.5199 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8219 val_loss=0.3598 val_acc=0.8832 time=50.4s
+22:17:50 | INFO | [finetune] epoch 7/30 train_task_loss=0.5051 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8262 val_loss=0.3597 val_acc=0.8768 time=50.9s
+22:18:41 | INFO | [finetune] epoch 8/30 train_task_loss=0.5058 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8269 val_loss=0.3540 val_acc=0.8766 time=50.8s
+22:19:32 | INFO | [finetune] epoch 9/30 train_task_loss=0.4832 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8339 val_loss=0.3265 val_acc=0.8928 time=50.6s
+22:20:22 | INFO | [finetune] epoch 10/30 train_task_loss=0.4742 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8366 val_loss=0.3187 val_acc=0.8936 time=50.2s
+22:21:12 | INFO | [finetune] epoch 11/30 train_task_loss=0.4675 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8396 val_loss=0.3048 val_acc=0.8984 time=49.9s
+22:22:04 | INFO | [finetune] epoch 12/30 train_task_loss=0.4572 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8414 val_loss=0.3068 val_acc=0.8928 time=51.6s
+22:22:54 | INFO | [finetune] epoch 13/30 train_task_loss=0.4525 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8423 val_loss=0.3026 val_acc=0.8988 time=50.5s
+22:23:44 | INFO | [finetune] epoch 14/30 train_task_loss=0.4411 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8468 val_loss=0.3048 val_acc=0.8962 time=50.2s
+22:24:34 | INFO | [finetune] epoch 15/30 train_task_loss=0.4299 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8519 val_loss=0.2995 val_acc=0.8972 time=49.8s
+22:25:26 | INFO | [finetune] epoch 16/30 train_task_loss=0.4208 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8550 val_loss=0.2948 val_acc=0.9014 time=51.5s
+22:26:16 | INFO | [finetune] epoch 17/30 train_task_loss=0.4159 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8560 val_loss=0.2833 val_acc=0.9030 time=50.8s
+22:27:06 | INFO | [finetune] epoch 18/30 train_task_loss=0.4047 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8605 val_loss=0.2871 val_acc=0.9040 time=50.0s
+22:27:56 | INFO | [finetune] epoch 19/30 train_task_loss=0.4000 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8603 val_loss=0.2749 val_acc=0.9060 time=50.0s
+22:28:46 | INFO | [finetune] epoch 20/30 train_task_loss=0.3959 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8613 val_loss=0.2838 val_acc=0.9060 time=49.9s
+22:29:36 | INFO | [finetune] epoch 21/30 train_task_loss=0.3866 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8667 val_loss=0.2708 val_acc=0.9096 time=49.9s
+22:30:26 | INFO | [finetune] epoch 22/30 train_task_loss=0.3833 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8673 val_loss=0.2784 val_acc=0.9104 time=49.7s
+22:31:16 | INFO | [finetune] epoch 23/30 train_task_loss=0.3787 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8698 val_loss=0.2639 val_acc=0.9118 time=50.2s
+22:32:06 | INFO | [finetune] epoch 24/30 train_task_loss=0.3807 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8684 val_loss=0.2815 val_acc=0.9072 time=49.7s
+22:32:56 | INFO | [finetune] epoch 25/30 train_task_loss=0.3730 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8712 val_loss=0.2655 val_acc=0.9108 time=49.7s
+22:33:46 | INFO | [finetune] epoch 26/30 train_task_loss=0.3647 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8747 val_loss=0.2712 val_acc=0.9102 time=50.2s
+22:34:36 | INFO | [finetune] epoch 27/30 train_task_loss=0.3609 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8751 val_loss=0.2717 val_acc=0.9082 time=50.2s
+22:35:26 | INFO | [finetune] epoch 28/30 train_task_loss=0.3637 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8750 val_loss=0.2646 val_acc=0.9132 time=49.8s
+22:36:19 | INFO | [finetune] epoch 29/30 train_task_loss=0.3637 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8712 val_loss=0.2715 val_acc=0.9106 time=53.0s
+22:37:09 | INFO | [finetune] epoch 30/30 train_task_loss=0.3619 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8752 val_loss=0.2648 val_acc=0.9120 time=50.1s
+22:37:18 | INFO | [dpap_kf0.316] Final test accuracy: 0.9001

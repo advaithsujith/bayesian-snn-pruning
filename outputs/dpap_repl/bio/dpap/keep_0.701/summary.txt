@@ -1,4 +1,4 @@
-Bio-inspired pruning: dpap_repl / dpap / target keep_fraction=0.7012
+Bio-inspired pruning: dpap_repl / dpap / target keep_fraction=0.701172
 ============================================================
 Original parameters: 21362834
 Remaining parameters: 10510364
@@ -6,5 +6,5 @@ Pruning percentage: 50.80%
 Test accuracy after pruning + fine-tuning: 0.9295
 Estimated FLOPs (post-pruning): 2,470,566,960
 Measured SynOps per sample (post-pruning): 405,853,069
-Inference latency (post-pruning): 22.227 ms
-Fine-tuning time: 1581.3s (best val acc 0.9644)
+Inference latency (post-pruning): 21.759 ms
+Fine-tuning time: 1529.7s (best val acc 0.9644)

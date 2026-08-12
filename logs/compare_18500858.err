@@ -1,3 +1,13 @@
 [network_slimming] 1 prunable layer(s) have no BatchNorm and will be scored by weight L1 instead of |gamma|, which is a deviation from Liu et al.: ['conv_layers.0']
 /net/scratch/w36160as/bayesian-snn-pruning/venv/lib64/python3.9/site-packages/torch/optim/lr_scheduler.py:156: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
   warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+Traceback (most recent call last):
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 429, in <module>
+    main()
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 409, in main
+    run_bio_experiments_for_model(
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 299, in run_bio_experiments_for_model
+    result = run_bio_experiment_point(
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_bio_pruning.py", line 165, in run_bio_experiment_point
+    keep_masks = run_network_slimming_pruning(
+NameError: name 'run_network_slimming_pruning' is not defined
