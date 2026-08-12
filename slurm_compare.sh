@@ -111,9 +111,14 @@ python tests/test_spear.py
 # --- 1. gate pressure, hard gate -------------------------------------------
 echo ""
 echo "--- Stage 1/4: gate-pressure diagnostic ---"
-# --fail-below makes this exit non-zero when the KL is effectively unopposed,
-# so `set -e` aborts the job here rather than four hours later.
-python run_sparsity_curve.py --model "${MODEL}" --diagnose-only --fail-below 1e-3
+# A BAND, not a floor. Both edges have been hit for real:
+#   1.4e-4  dpap_repl at beta 0.4  -> KL unopposed, gates ran to the clamp
+#   5.46e-3 dpap_repl at beta 0.01 -> WORKS (log_alpha std 0.308)
+#   2.62e-2 spear_repl at beta 0.01 -> gates never differentiated at all
+#                                      (std 0.002), 32 min wasted
+# A floor alone passed that last one, which is why --fail-above is here.
+python run_sparsity_curve.py --model "${MODEL}" --diagnose-only \
+    --fail-below 1e-3 --fail-above 2e-2
 
 # --- 2. Bayesian curve ------------------------------------------------------
 echo ""

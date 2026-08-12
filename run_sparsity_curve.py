@@ -177,7 +177,12 @@ def emit_keep_fractions(model_name: str, cfg: ExperimentConfig, targets: List[fl
     print(" ".join(f"{f:.6f}" for f in fractions))
 
 
-def diagnose_only(model_name: str, cfg: ExperimentConfig, fail_below: float = 0.0) -> None:
+def diagnose_only(
+    model_name: str,
+    cfg: ExperimentConfig,
+    fail_below: float = 0.0,
+    fail_above: float = 0.0,
+) -> None:
     """
     Pre-flight: on the real pretrained baseline, is the task loss able to
     push back against the KL at all?
@@ -227,14 +232,40 @@ def diagnose_only(model_name: str, cfg: ExperimentConfig, fail_below: float = 0.
     # and carry on. Printing a warning nobody reads is exactly what happened on
     # dpap_repl: the diagnostic reported 1.4e-4 before epoch 1, was ignored,
     # and the run lost all accuracy by epoch 15.
+    #
+    # The usable region is a BAND, not a floor. Both edges have now been hit:
+    #
+    #   too low   dpap_repl at beta_max=0.4, ratio 1.4e-4: the KL is unopposed,
+    #             gates march to the clamp, ranking is ties broken by index.
+    #   good      dpap_repl at beta_max=0.01, ratio 5.46e-3: std 0.308, zero
+    #             saturation, the project's one working gate run.
+    #   too high  spear_repl at beta_max=0.01, ratio 2.62e-2: gates settle
+    #             almost on their initialisation and never differentiate at
+    #             all (std 0.002 across 4224 gates). No collapse, no
+    #             saturation, network perfectly healthy -- and a useless
+    #             ranking. Cost 32 minutes before ranking_is_usable caught it.
+    #
+    # A floor alone would have passed that second failure, which is why
+    # --fail-above exists.
     if fail_below > 0.0 and worst < fail_below:
         raise SystemExit(
             f"\nFAIL: weakest gate-pressure ratio {worst:.3e} is below the "
             f"--fail-below threshold of {fail_below:.3e}.\n"
             "The KL is effectively unopposed in at least one layer, so its gates "
             "will run to the clamp\nand the ranking will be ties broken by index "
-            "order. Lower beta_max (and/or the gate LR)\nand re-run this "
+            "order. LOWER beta_max (and/or the gate LR)\nand re-run this "
             "diagnostic before submitting a curve."
+        )
+    if fail_above > 0.0 and worst > fail_above:
+        raise SystemExit(
+            f"\nFAIL: weakest gate-pressure ratio {worst:.3e} is above the "
+            f"--fail-above threshold of {fail_above:.3e}.\n"
+            "The task loss dominates, so the gates settle almost on their "
+            "initialisation and never\ndifferentiate from each other -- a "
+            "healthy-looking run whose ranking is arbitrary.\nRAISE beta_max "
+            "and re-run this diagnostic. The empirically working value on this "
+            "project\nis ~5.5e-3 (dpap_repl at beta_max=0.01, which gave "
+            "log_alpha std 0.308)."
         )
 
 
@@ -247,7 +278,7 @@ def run_curve(args: argparse.Namespace) -> None:
         emit_keep_fractions(args.model, cfg, args.targets)
         return
     if args.diagnose_only:
-        diagnose_only(args.model, cfg, args.fail_below)
+        diagnose_only(args.model, cfg, args.fail_below, args.fail_above)
         return
     if args.finetune_epochs is not None:
         cfg.finetune.epochs = args.finetune_epochs
@@ -642,6 +673,13 @@ def main() -> None:
              "task-vs-KL ratio falls below this (e.g. 1e-3). Lets a driver "
              "script stop before spending a queue slot on gates that cannot "
              "differentiate. 0 (default) only prints.",
+    )
+    parser.add_argument(
+        "--fail-above", type=float, default=0.0,
+        help="with --diagnose-only, exit non-zero if the weakest layer's ratio "
+             "rises above this (e.g. 2e-2). Catches the opposite failure: the "
+             "task loss dominating, gates settling on their initialisation and "
+             "never differentiating. 0 (default) only prints.",
     )
     parser.add_argument(
         "--emit-keep-fractions", action="store_true",

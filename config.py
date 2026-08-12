@@ -879,9 +879,40 @@ def get_spear_repl_config() -> ExperimentConfig:
     # trusting this number. Target a ratio near 1. It prints before epoch 1;
     # on the DPAP run it read 1.4e-4 to 3.2e-3 and was ignored, and the run
     # died by epoch 15.
+    # beta_max: 0.01 -> 0.05, measured on this baseline rather than guessed.
+    #
+    # The 0.01 carried over from dpap_repl failed here, and in the *opposite*
+    # direction to every previous failure in this project. Run 18500857
+    # (2026-08-12) trained all 75 epochs with the network intact -- val_acc
+    # 0.99, no collapse, frac_saturated 0.000 -- and produced
+    # log_alpha min=-2.89 / median=-2.87 / max=-2.87, **std 0.002 across 4224
+    # gates**. The gates never differentiated, so the ranking was arbitrary and
+    # `KeepPlan.ranking_is_usable` correctly refused it. train_kl was
+    # byte-identical for the last four epochs, so they had reached equilibrium
+    # rather than run out of epochs: this is a *where* problem, not a *speed*
+    # problem, which makes beta_max the lever and not the gate LR.
+    #
+    # Why 0.05 specifically. train.gate_pressure_diagnostic reads the weakest
+    # layer's |d task/d log_alpha| / (beta * |d KL/d log_alpha|) at **2.62e-2**
+    # here, against **5.46e-3** on dpap_repl -- and dpap_repl's 5.46e-3 is the
+    # value that produced the project's one working gate run (std 0.308, zero
+    # saturation). VGG16 therefore gives the task loss ~5x more pull relative
+    # to the KL, so the gates settle almost on top of their initialisation,
+    # where the injected noise is small enough that every gate is equally
+    # tolerable and nothing separates them. Scaling beta by that same 5x puts
+    # the ratio at ~5.2e-3, on the known-good point.
+    #
+    # The per-layer task gradients already vary 12x (5.5e-4 at conv_layers.3
+    # down to 4.5e-5 at conv_layers.12), so the signal to rank on exists. The
+    # gates simply never travel far enough for it to express itself.
+    #
+    # Success signature to check in the log, per HANDOFF.md: log_alpha stops
+    # rising somewhere around -1 to 0 with **std climbing past ~0.25**, while
+    # val_acc holds. Failure now has two directions -- std near zero means
+    # beta is still too low, frac_saturated climbing means it is too high.
     cfg.bayesian.bayesian_train_epochs = 75
     cfg.bayesian.kl_warmup_epochs = 10
-    cfg.bayesian.beta_max = 0.01
+    cfg.bayesian.beta_max = 0.05
     cfg.bayesian.bayesian_train_lr = 2e-4
     cfg.bayesian.bayesian_train_weight_decay = 5e-5
 
