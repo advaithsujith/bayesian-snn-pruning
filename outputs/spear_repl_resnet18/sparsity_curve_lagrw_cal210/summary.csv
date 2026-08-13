@@ -1,0 +1,2 @@
+Point,Selection,Achieved Pruned %,SynOps Budget,Kept SynOps Fraction,Keep Plan,Original Parameters,Remaining Parameters,Accuracy After,Fine Tune Best Val,SynOps After,Dense MACs After,Gate Saturation,Log Alpha Std,Ranking Usable,Layers At Min Width,FLOPs,Latency
+synops 0.44,importance,79.80965239697811,0.44,0.4383719279140032,"synops_budget(budget=0.44 of measured SynOps, rank_by=importance, achieved=0.4384, kept 600/1920 units)",11177866,2256850,0.9214794303797469,0.943359375,102978460.2625,1062539264.0,0.0,0.08127352595329285,False,2,1062539264,26.102463323622942
