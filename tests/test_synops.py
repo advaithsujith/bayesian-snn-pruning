@@ -184,6 +184,60 @@ def main():
     )
 
     # ------------------------------------------------------------------
+    # 3c. SpikingResNet18: unit costs exist for exactly the prunable set
+    #     (each block's conv1, whose sole consumer is that block's conv2;
+    #     the residual addition happens on conv2's output, so it never
+    #     touches the spikes conv1's units are billed for). Hand numbers,
+    #     all-fire, T=2, 32x32 RGB input; stride-1 blocks keep their
+    #     stage's spatial size, stride-2 stage openers halve it:
+    #       stage1 conv1 (64 in, 32x32 out):
+    #         compute 9*64*1024*2 = 1179648
+    #         downstream 32*32*2 events * 9*64 = 1179648   -> 2359296
+    #       stage2.0 conv1 (64 in, 16x16 out, stride 2):
+    #         compute 9*64*256*2 = 294912
+    #         downstream 16*16*2 events * 9*128 = 589824   ->  884736
+    #       stage2.1 conv1 (128 in, 16x16 out):
+    #         compute 9*128*256*2 = 589824; downstream 589824 -> 1179648
+    #       stage4.1 conv1 (512 in, 4x4 out):
+    #         compute 9*512*16*2 = 147456
+    #         downstream 4*4*2 events * 9*512 = 147456     ->  294912
+    # ------------------------------------------------------------------
+    rn = build_model("resnet18", SNNConfig(num_steps=2, threshold=0.01), BAY)
+    with torch.no_grad():
+        for mod in rn.modules():
+            if isinstance(mod, (nn.Conv2d, nn.Linear)):
+                mod.weight.copy_(mod.weight.abs() + 0.05)
+                if mod.bias is not None:
+                    mod.bias.fill_(0.1)
+    rdata = loader_of(torch.ones(2, 3, 32, 32), batch_size=2)
+    rcosts = measure_synops_unit_costs(rn, "resnet18", rdata, CPU, max_batches=1)
+    check(
+        "resnet18 costs cover exactly the prunable set",
+        set(rcosts.keys()) == set(collect_prunable_bayesian_layers(rn)),
+    )
+    check(
+        "resnet18 stage1 conv1 unit cost = 2359296",
+        all(close(float(v), 2359296.0) for v in rcosts[rn.stage1[0].conv1]),
+    )
+    check(
+        "resnet18 stage2.0 conv1 unit cost = 884736",
+        all(close(float(v), 884736.0) for v in rcosts[rn.stage2[0].conv1]),
+    )
+    check(
+        "resnet18 stage2.1 conv1 unit cost = 1179648",
+        all(close(float(v), 1179648.0) for v in rcosts[rn.stage2[1].conv1]),
+    )
+    check(
+        "resnet18 stage4.1 conv1 unit cost = 294912",
+        all(close(float(v), 294912.0) for v in rcosts[rn.stage4[1].conv1]),
+    )
+    rr = measure_synops(rn, rdata, CPU, max_batches=1)
+    check(
+        "resnet18 all-fire SynOps = dense MACs (pricing consistency)",
+        close(rr["synops_per_sample"], rr["dense_macs_per_sample"]),
+    )
+
+    # ------------------------------------------------------------------
     # 4. synops_budget_plan: the two ranking rules differ exactly as
     #    designed. Layer A: log_alpha [-5,-4,0,1], costs [1,1000,1,1];
     #    layers B/C: log_alpha -3, cost 1 each (4 units each).

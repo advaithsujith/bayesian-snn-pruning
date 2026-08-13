@@ -317,16 +317,23 @@ def measure_synops(
 
 def _synops_chain(model: nn.Module, model_name: str) -> List["tuple[Any, nn.Module, nn.Module]"]:
     """(gated_layer, its inner Conv2d/Linear, consumer inner Conv2d/Linear)
-    for every gated layer, in depth order. The consumer is the module that
-    reads the gated layer's output, which is where that layer's spikes cost
-    downstream work.
+    for every *structurally prunable* gated layer, in depth order. The
+    consumer is the module that reads the gated layer's output, which is
+    where that layer's spikes cost downstream work.
 
-    Supports the sequential families only. SpikingResNet18 is rejected:
-    a block's conv1 output feeds conv2, but the residual addition means a
-    channel's downstream cost is not attributable to one consumer, and
-    ResNet18 is demoted to a documented negative result anyway (HANDOFF.md).
+    SpikingResNet18 is covered by its prunable set only: each BasicBlock's
+    conv1, whose output (bn1 -> gate -> lif1) is read by exactly one module,
+    that same block's conv2 -- the residual addition happens on conv2's
+    *output*, after the spikes conv1 pays for have already been consumed.
+    The genuinely non-attributable outputs (the stem's and every conv2's,
+    which feed both the next block and its identity/downsample path) belong
+    to gates that are structurally_prunable=False, are excluded from every
+    cost sum (see bayesian_layers.collect_prunable_bayesian_layers), and so
+    never need a unit cost. The sequential families list every gated layer
+    because every gated layer is prunable there; the invariant in both
+    cases is chain coverage == prunable set.
     """
-    from models import LeNetSNN, VGG9SNN, VGGStyleSNN  # local: avoid an import cycle
+    from models import LeNetSNN, SpikingResNet18, VGG9SNN, VGGStyleSNN  # local: avoid an import cycle
 
     if isinstance(model, VGGStyleSNN):
         convs = list(model.conv_layers)
@@ -362,11 +369,17 @@ def _synops_chain(model: nn.Module, model_name: str) -> List["tuple[Any, nn.Modu
         chain.append((model.fc1, model.fc1.linear, model.fc_out))
         return chain
 
+    if isinstance(model, SpikingResNet18):
+        return [
+            (block.conv1, block.conv1.conv, block.conv2.conv)
+            for stage in model._all_stages()
+            for block in stage
+        ]
+
     raise ValueError(
         f"per-unit SynOps costs are not defined for '{model_name}' "
-        f"({type(model).__name__}); supported: LeNetSNN, VGG9SNN, and any "
-        "VGGStyleSNN. ResNet18's residual additions make per-channel "
-        "downstream cost non-attributable."
+        f"({type(model).__name__}); supported: LeNetSNN, VGG9SNN, "
+        "SpikingResNet18, and any VGGStyleSNN."
     )
 
 
