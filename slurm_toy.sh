@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=snn_gate_toy
+#SBATCH --partition=multicore
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=8G
 #SBATCH --time=00:40:00
@@ -9,11 +10,13 @@
 # ---------------------------------------------------------------------------
 # CPU-only diagnostic study: diagnose_gate_toy.py.
 #
-# Deliberately requests no GPU and no partition: the study is a miniature of
-# the gate-training pipeline on 8x8 synthetic data, sized for minutes of CPU,
-# and asking for a gpuA slot would queue it behind real training runs for no
-# benefit. If this cluster rejects partitionless submissions, add the CPU
-# partition explicitly: `sbatch -p multicore slurm_toy.sh`.
+# Deliberately requests no GPU: the study is a miniature of the gate-training
+# pipeline on 8x8 synthetic data, sized for minutes of CPU, and asking for a
+# gpuA slot would queue it behind real training runs for no benefit. CSF3
+# requires an explicit partition; `multicore` is its general-access CPU
+# partition. If this cluster rejects that name, list what exists with
+# `sinfo -s` and override on the command line: `sbatch -p <name> slurm_toy.sh`
+# (a command-line -p takes precedence over the line above).
 #
 # What it answers, and why it is worth a job at all: whether the gate
 # machinery recovers a ground-truth (ablation-measured) channel ranking
