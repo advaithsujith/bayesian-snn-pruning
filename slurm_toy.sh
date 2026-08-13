@@ -3,7 +3,7 @@
 #SBATCH --partition=multicore
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=8G
-#SBATCH --time=00:40:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/slurm_%j.out
 #SBATCH --error=logs/slurm_%j.err
 

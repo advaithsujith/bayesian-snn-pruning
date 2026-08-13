@@ -202,6 +202,9 @@ def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05,
 
 
 def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build):
+    import time
+
+    t0 = time.time()
     print(f"[running] {name} ...", flush=True)
     tr, va = make_data()
     m = builder(snn_cfg)
@@ -223,7 +226,8 @@ def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build)
     print(
         f"{name:34s} acc={acc:.3f} gate_median={med:+.2f} std={la.std():.3f} "
         f"rho_pooled={rho:+.2f} rho_layers=[" + ", ".join(f"{r:+.2f}" for r in per_layer) + "] "
-        f"true_imp={imp_vec.mean():.4f}+-{imp_vec.std():.4f}"
+        f"true_imp={imp_vec.mean():.4f}+-{imp_vec.std():.4f} ({time.time() - t0:.0f}s)",
+        flush=True,
     )
     return rho, la.std().item()
 
@@ -241,7 +245,11 @@ def cfg_spear(**kw):
 
 
 if __name__ == "__main__":
-    torch.set_num_threads(os.cpu_count() or 8)
+    # Under SLURM the cgroup grants --cpus-per-task cores while os.cpu_count()
+    # reports the whole node (168 on CSF3's AMD nodes); spawning that many
+    # torch threads on 8 granted cores thrashes badly enough to blow a
+    # 40-minute wallclock. Trust the scheduler's number when present.
+    torch.set_num_threads(int(os.environ.get("SLURM_CPUS_PER_TASK", 0) or os.cpu_count() or 8))
     print("== main cells ==")
     run_cell("A dpap-like + dpap mechanics", cfg_dpap(), "dpap")
     run_cell("B spear-like + dpap mechanics", cfg_spear(), "dpap")
