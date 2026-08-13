@@ -348,6 +348,20 @@ def main():
     n_params = sum(1 for _ in m3.parameters())
     check("no parameter is orphaned", len(gate_ids) + len(main_ids) == n_params)
 
+    main_opt_a, gate_opt_a = build_gate_split_optimizers(m3, "adamw", 1e-3, 5e-5, "adam", gate_lr=2e-4)
+    check("adam mode returns a plain Adam for the gates", type(gate_opt_a) is torch.optim.Adam)
+    check("gate Adam uses gate_lr", close(gate_opt_a.param_groups[0]["lr"], 2e-4))
+    check("gate Adam has no weight decay", gate_opt_a.param_groups[0]["weight_decay"] == 0.0)
+    check("weights keep the requested optimizer", isinstance(main_opt_a, torch.optim.AdamW))
+    gate_ids_a = {id(p) for g in gate_opt_a.param_groups for p in g["params"]}
+    check("adam split holds exactly the log_alphas", gate_ids_a == la_ids)
+    err = None
+    try:
+        build_gate_split_optimizers(m3, "adam", 1e-3, 5e-5, "rmsprop")
+    except ValueError as e:
+        err = e
+    check("an unknown gate optimizer is rejected loudly", err is not None)
+
     la_before = m3.conv_layers[0].log_alpha.detach().clone()
     w_before = m3.conv_layers[0].conv.weight.detach().clone()
     stats = train_one_epoch(

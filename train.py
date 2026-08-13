@@ -281,7 +281,8 @@ def build_gate_split_optimizers(
     `gate_optimizer="inherit"` reproduces build_optimizer exactly: one
     optimizer, gates in their own weight_decay=0 group. `"sgd"` moves every
     `log_alpha` parameter out of the main optimizer and into a plain SGD
-    (momentum 0, weight decay 0) at `gate_lr` (None => `lr`).
+    (momentum 0, weight decay 0) at `gate_lr` (None => `lr`). `"adam"` is
+    the same split with a plain Adam (weight decay 0) instead.
 
     Why plain SGD, and why no momentum: Adam divides each update by that
     parameter's own running gradient magnitude, so while one loss term
@@ -294,18 +295,35 @@ def build_gate_split_optimizers(
     accumulated velocity carries a gate past the balance point the current
     gradient no longer supports.
 
+    Why split "adam" exists anyway: SGD's *net* displacement sees only the
+    per-gate mean gradient, and the per-gate mean differences turned out to
+    be tiny on both SPEAR platforms (std 0.016 / 0.054 after a full phase
+    of clean marching, 2026-08-13). What differs strongly per gate is the
+    gradient's *magnitude*: the per-layer |d task/d log_alpha| spans ~9x on
+    spear_repl_resnet18 while the KL push is identical everywhere. Adam's
+    per-parameter normalisation divides each gate's march by exactly that
+    magnitude, so heavily-trafficked gates fall behind and the spread the
+    ranking needs accumulates. dpap_repl's usable gate run (std 0.297) was
+    an Adam run; both non-differentiating SPEAR failures were split-SGD.
+    The earlier Adam failures on SPEAR stalled for a different reason --
+    under "inherit" the gates sit in the scheduled main optimizer, whose
+    cosine anneal froze them near init -- which the split avoids by
+    construction (see the scheduler note below).
+
     Note the scheduler consequence: run_training's LR scheduler is attached
-    to the main optimizer only, so under "sgd" the gate LR is constant for
-    the whole phase. That is deliberate -- a decaying gate LR would make
-    late-phase gate movement vanish for scheduling reasons that have
-    nothing to do with the loss landscape, muddying exactly the
+    to the main optimizer only, so under either split the gate LR is
+    constant for the whole phase. That is deliberate -- a decaying gate LR
+    would make late-phase gate movement vanish for scheduling reasons that
+    have nothing to do with the loss landscape, muddying exactly the
     "did the gates settle or were they frozen" reading the phase exists
     to produce.
     """
     if gate_optimizer == "inherit":
         return build_optimizer(model, name, lr, weight_decay), None
-    if gate_optimizer != "sgd":
-        raise ValueError(f"Unknown gate_optimizer '{gate_optimizer}'. Options: inherit, sgd")
+    if gate_optimizer not in ("sgd", "adam"):
+        raise ValueError(
+            f"Unknown gate_optimizer '{gate_optimizer}'. Options: inherit, sgd, adam"
+        )
 
     gate_params = [p for pname, p in model.named_parameters() if "log_alpha" in pname]
     other_params = [p for pname, p in model.named_parameters() if "log_alpha" not in pname]
@@ -314,11 +332,12 @@ def build_gate_split_optimizers(
         # A physically-pruned (non-Bayesian) model has no gates left; the
         # split silently degenerates to the main optimizer alone.
         return main, None
-    gates = torch.optim.SGD(
-        [{"params": gate_params, "weight_decay": 0.0}],
-        lr=(lr if gate_lr is None else gate_lr),
-        momentum=0.0,
-    )
+    gate_group = [{"params": gate_params, "weight_decay": 0.0}]
+    effective_lr = lr if gate_lr is None else gate_lr
+    if gate_optimizer == "adam":
+        gates = torch.optim.Adam(gate_group, lr=effective_lr)
+    else:
+        gates = torch.optim.SGD(gate_group, lr=effective_lr, momentum=0.0)
     return main, gates
 
 

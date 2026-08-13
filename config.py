@@ -248,16 +248,22 @@ class BayesianConfig:
 
     # -- Gate-phase optimizer split (see train.build_gate_split_optimizers) --
     # "inherit": log_alpha trains inside the same optimizer as the weights
-    #            (previous behaviour, and the default).
-    # "sgd":     log_alpha gets its own plain SGD (no momentum) at `gate_lr`,
-    #            while the weights keep the phase's configured optimizer.
-    # Motivation: under Adam the per-parameter update is ~lr * sign(grad)
-    # whenever one loss term dominates, so gates march at a constant rate
-    # per epoch regardless of how the task-vs-KL gradient balance changes --
-    # the equilibrium the mechanism relies on assumes steps proportional to
-    # gradient magnitude, which plain SGD restores. See HANDOFF.md
-    # ("Why beta_max went 0.4 to 0.01") for the measured march.
-    gate_optimizer: str = "inherit"  # "inherit" | "sgd"
+    #            (previous behaviour, and the default). Note the gates then
+    #            follow the phase's LR schedule, which anneals to ~0.
+    # "sgd":     log_alpha gets its own plain SGD (no momentum) at a
+    #            *constant* `gate_lr`, while the weights keep the phase's
+    #            configured optimizer. Gradient-proportional steps, so the
+    #            march slows as the task-vs-KL balance approaches.
+    # "adam":    the same split with a plain Adam. Adam normalises each
+    #            gate's step by that gate's own gradient magnitude, which is
+    #            the quantity that actually varies per gate (~9x across
+    #            layers on spear_repl_resnet18) while the KL push is
+    #            identical everywhere -- so it converts per-gate gradient
+    #            scale into ranking spread, where SGD's net displacement
+    #            sees only the (tiny) per-gate mean differences. See
+    #            train.build_gate_split_optimizers for the full rationale
+    #            and the 2026-08-13 evidence behind each mode.
+    gate_optimizer: str = "inherit"  # "inherit" | "sgd" | "adam"
     gate_lr: Optional[float] = None  # None => bayesian_train_lr
 
     # -- SynOps-budget loss term (dual-ascent Lagrangian; see train.run_training) --

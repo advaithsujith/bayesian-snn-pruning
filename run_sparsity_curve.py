@@ -402,6 +402,8 @@ def run_curve(args: argparse.Namespace) -> None:
         print("\nTraining Bayesian gates (once, for every target on the curve)...")
         if gate_optimizer_name != "inherit":
             print(f"  gate optimizer: {gate_optimizer_name} (gate_lr={gate_lr})")
+        if args.weight_optimizer is not None:
+            print(f"  weight optimizer override for this phase: {args.weight_optimizer}")
         if synops_loss_budget is not None:
             variant = " (UNIFORM-COST ABLATION)" if args.synops_uniform_costs else ""
             print(f"  SynOps budget term active: {synops_loss_budget:g} of dense SynOps{variant}")
@@ -415,7 +417,11 @@ def run_curve(args: argparse.Namespace) -> None:
                 if cfg.bayesian.bayesian_train_weight_decay is None
                 else cfg.bayesian.bayesian_train_weight_decay
             ),
-            optimizer_name=cfg.train.optimizer,
+            optimizer_name=(
+                args.weight_optimizer
+                if args.weight_optimizer is not None
+                else cfg.train.optimizer
+            ),
             scheduler_name=cfg.train.lr_scheduler,
             # BEHAVIOUR CHANGE, deliberate. build_scheduler used to accept
             # 'cosine_warmup' with warmup_epochs=0 and quietly hand back a
@@ -780,15 +786,27 @@ def main() -> None:
              "--synops-loss-budget; selection still uses measured costs.",
     )
     parser.add_argument(
-        "--gate-optimizer", choices=["inherit", "sgd"], default=None,
-        help="override BayesianConfig.gate_optimizer for this run: 'sgd' trains "
-             "log_alpha with plain SGD while the weights keep the configured "
-             "optimizer. See train.build_gate_split_optimizers for why.",
+        "--gate-optimizer", choices=["inherit", "sgd", "adam"], default=None,
+        help="override BayesianConfig.gate_optimizer for this run: 'sgd'/'adam' "
+             "train log_alpha in their own constant-LR optimizer while the "
+             "weights keep the configured optimizer. See "
+             "train.build_gate_split_optimizers for when each applies.",
     )
     parser.add_argument(
         "--gate-lr", type=float, default=None,
         help="learning rate for the split gate optimizer (only meaningful with "
-             "--gate-optimizer sgd). Overrides BayesianConfig.gate_lr.",
+             "--gate-optimizer sgd/adam). Overrides BayesianConfig.gate_lr.",
+    )
+    parser.add_argument(
+        "--weight-optimizer", choices=["adam", "adamw", "sgd"], default=None,
+        help="override the *weight* optimizer for the gate-training phase only "
+             "(default: the config's pretrain optimizer). The phase inherits "
+             "cfg.train.optimizer, which for the SPEAR platforms is SGD at the "
+             "gate-phase LR of 2e-4 -- near-frozen weights for a VGG16/ResNet18. "
+             "dpap_repl's usable gate run co-adapted its weights under AdamW at "
+             "the same LR, which keeps the network alive (and reorganising) as "
+             "the gate noise grows. Fine-tuning is unaffected: it keeps the "
+             "replicated recipe.",
     )
     args = parser.parse_args()
     if args.emit_keep_fractions and not args.targets:
