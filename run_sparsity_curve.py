@@ -289,6 +289,8 @@ def run_curve(args: argparse.Namespace) -> None:
         return
     if args.finetune_epochs is not None:
         cfg.finetune.epochs = args.finetune_epochs
+    if args.beta_max is not None:
+        cfg.bayesian.beta_max = args.beta_max
 
     set_seed(cfg.seed)
     device = get_device(cfg.device)
@@ -693,6 +695,14 @@ def main() -> None:
         help="print only the space-separated uniform keep_fractions for "
              "--targets, then exit. Feed straight into `run_bio_pruning.py "
              "--keep-fractions` for a matched-sparsity comparison. No GPU.",
+    )
+    parser.add_argument(
+        "--beta-max", type=float, default=None,
+        help="override the config's beta_max. Finding a usable gate setting is "
+             "a two-parameter search over (beta_max, gate_lr) -- beta_max sets "
+             "WHERE the equilibrium sits, gate_lr how fast the gates get there "
+             "and whether they overshoot it. Editing config.py between "
+             "submissions to search that is how runs get mislabelled.",
     )
     parser.add_argument(
         "--seed", type=int, default=None,
