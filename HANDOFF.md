@@ -27,6 +27,36 @@ Narrowed for time, and it is a better scope than the wide one.
 
 Note these are **SynOps-budget runs, not parameter-target curves.**
 
+### What SPEAR actually claims, i.e. the bar
+
+Their full CIFAR-10 / VGG16 table (Table 1 + Appendix B Table 7):
+
+| method | SynOps % | Params % | Acc % |
+|---|---|---|---|
+| NetworkSlimming | 87.3 | 40.3 | 91.22 |
+| NetworkSlimming | 87.3 | 14.3 | 91.16 |
+| SCA-based | 67.8 | 28.4 | 91.67 |
+| SCA-based | 63.0 | 9.3 | 90.26 |
+| **SPEAR** | 62.5 | 33.1 | **92.49** |
+| **SPEAR** | **52.5** | **14.4** | **91.77** |
+| **SPEAR** | 46.4 | 11.9 | 91.62 |
+
+They claim wins on **both axes at every operating point**: at essentially the
+same parameter count as NetworkSlimming (14.4 vs 14.3%) they use 52.5% SynOps
+against 87.3% and score higher; against SCA-based they are cheaper and more
+accurate twice over.
+
+**A fair criticism to raise in related work.** The accuracy and parameter
+figures in their SCA rows match SCA's *own published* numbers exactly (91.67%
+@ 28.39% connectivity, 90.26% @ 9.31%), but SCA never reports SynOps -- so the
+SynOps column must have been measured on SPEAR's own implementation. If so,
+the two columns of that row do not describe the same network: SCA trained 300
+epochs, SPEAR trains 210 with TET and SGD at 0.1. Not confirmed from the text,
+and the "SCA-based" label may mean they reimplemented the criterion. Worth
+raising, and it makes this project's approach look better by contrast:
+**comparing against their published row with no reimplementation on either
+side has no such ambiguity.**
+
 **Why this scope is stronger, not just cheaper:** SPEAR's numbers come from
 their paper, so the comparison contains **no reimplementations of anyone
 else's method**. The undertuning objection that killed the SCA comparison and
@@ -37,11 +67,26 @@ here (conv2 is residual-tied, stem fixed), so their 30.3% of parameters is
 probably unreachable. The **SynOps axis and accuracy remain comparable**; the
 parameter axis does not.
 
-**Prerequisite that is easy to forget:** `sbatch slurm_synops.sh spear_repl`
-and `spear_repl_resnet18`. "52.5% SynOps" is a fraction *of the unpruned
-model's measured SynOps*, so without `baseline_synops.json` on each platform
-you cannot place yourself on their axis at all. Both attempts so far failed on
-the stale-registry bug; that is fixed.
+### SynOps denominators: MEASURED 2026-08-13
+
+`outputs/<model>/baseline_synops.json`, both committed. Without these "52.5%
+SynOps" has no meaning, since it is a fraction *of the unpruned model's
+measured SynOps*. Two earlier attempts died on the stale-registry bug.
+
+| platform | unpruned SynOps/sample | dense MACs | event-driven fraction | **their target in absolute terms** |
+|---|---|---|---|---|
+| VGG16 | **136,362,269** | 1.25G | 10.9% | 52.5% = **71.6M** |
+| ResNet18 | **268,573,701** | 2.22G | 12.1% | 39.2% = **105.3M** |
+
+The event-driven fraction is worth noticing on its own: these networks perform
+only ~11-12% of their dense MACs as actual synaptic operations. That is the
+whole reason FLOPs is the wrong cost metric for an SNN, quantified on your own
+models, and it belongs in the write-up.
+
+Per-layer breakdowns are in the JSON. On VGG16 the input-event fraction falls
+from 1.00 at `conv_layers.0` to 0.049 at `conv_layers.9`, so deep layers fire
+rarely and are nearly free to keep -- exactly the effect a parameter-count
+budget cannot see and a SynOps budget can.
 
 **Related-work note.** The user named Chen et al. as the Lagrangian precedent.
 Include **Sorbaro et al. 2020 in the same paragraph** -- it is the more
@@ -148,12 +193,113 @@ Three attempts, all the *same* failure, and it is the opposite of every
 previous failure in this project. No collapse, no saturation, network healthy
 at ~99% val accuracy throughout -- and the gates never differentiate.
 
-| run | beta_max | ratio | log_alpha reached | std | usable |
-|---|---|---|---|---|---|
-| VGG16 (18500857) | 0.01 | 2.62e-2 | -3.0 -> -2.87 | 0.002 | no |
-| VGG16 (18506598) | **0.05** | **5.24e-3** | -3.0 -> -2.34 | **0.002** | no |
-| ResNet18 (18506392) | 0.01 | 1.92e-2 | -3.0 -> -2.87 | 0.002 | no |
-| `dpap_repl` (works) | 0.01 | 5.46e-3 | -- | **0.297** | yes |
+| run | optimizer | beta_max | gate_lr | log_alpha reached | std | network | usable |
+|---|---|---|---|---|---|---|---|
+| VGG16 (18500857) | Adam | 0.01 | 2e-4 | -3.0 -> -2.87 | 0.002 | fine | no |
+| VGG16 (18506598) | Adam | 0.05 | 2e-4 | -3.0 -> -2.34 | 0.002 | fine | no |
+| ResNet18 (18506392) | Adam | 0.01 | 2e-4 | -3.0 -> -2.87 | 0.002 | fine | no |
+| VGG16 (18556206) | **SGD** | 0.05 | **0.05** | -3.0 -> **+3.06** | 0.028 | **DEAD** | no |
+| `dpap_repl` (works) | Adam | 0.01 | 2e-4 | -- | **0.297** | fine | yes |
+
+### BOTH failure modes are now bracketed (2026-08-13)
+
+The SGD run behaved completely differently and is the more informative
+failure. It fixed the *movement* problem entirely -- the gates marched from
+-3.0 all the way through the pruning threshold to +3.06 -- but they marched
+**together**, and on the way the network died:
+
+```
+epoch  1  train_acc=0.872  log_alpha -3.0
+epoch 11  train_acc=0.783  log_alpha -1.4
+epoch 21  train_acc=0.194  log_alpha +0.9   <- collapsed
+epoch 31  train_acc=0.104  task_loss 2.56 (= ln 10, chance)
+epoch 71  train_acc=0.100  log_alpha +3.06
+```
+
+**Accuracy collapsed exactly as log_alpha crossed 0**, where every channel is
+multiplied by 1+N(0,1). After that the task loss is pinned at chance, its
+gradient is gone, and nothing opposes the KL, so the gates ran to the ceiling
+unopposed. This is precisely the runaway feedback loop documented for the
+dpap_repl beta=0.4 collapse -- "accuracy hit chance by epoch 15, which killed
+the task gradient, which removed the last thing opposing the KL."
+
+So: **Adam undershoots (gates stall), SGD at gate_lr=0.05 overshoots (network
+dies first).** The usable setting is between them. SGD is still the right
+mechanism -- it is the only thing that made the gates move at all. `gate_lr`
+0.05 came from an untested example command in this file and was never sanity
+checked against the observed march rate (~0.16/epoch); it needs to be roughly
+5x lower.
+
+`run_sparsity_curve.py --beta-max` was added so the (beta_max, gate_lr) search
+can happen from the command line. **beta_max sets WHERE the equilibrium sits;
+gate_lr sets how fast the gates get there and whether they overshoot it.**
+
+**Attempts cost ~32 minutes each**, so this is searchable. Abort rule while
+watching a run: if `train_acc` falls below ~0.5 it is the runaway mode, cancel
+rather than waiting for the full 75 epochs.
+
+### The Lagrangian may be what breaks the tie (untested hypothesis)
+
+Worth considering before more blind search. Look at what actually acts on
+each gate:
+
+- **The KL** pushes every gate by almost exactly the same amount -- it is a
+  function of `log_alpha` alone, so 4224 gates at the same `log_alpha` feel an
+  identical push. It carries **no per-gate information at all**.
+- **The task loss** does differ per gate, but on VGG16 it is ~200x weaker than
+  the KL. That is the signal being drowned.
+- **The SynOps Lagrangian** pushes each gate in proportion to *that unit's own
+  SynOps cost*, which varies ~36x across layers on dpap_repl -- far more than
+  the 12x variation in the task gradient.
+
+**The Lagrangian is the only term in the loss that varies strongly per gate**,
+so it may be exactly what separates gates the KL alone cannot. Risk attached:
+differentiating by *cost* rather than *importance* is what made cost-aware
+selection fail (68.32% vs 87.97%); the difference here is that in the loss the
+network can adapt during training rather than having cheapness imposed
+afterwards, which is the argument behind the headline result anyway.
+
+### Run BOTH arms, they are control and treatment
+
+Do not cancel the plain-gate run in favour of the Lagrangian one. The headline
+claim is a *paired* comparison -- identical everything except whether the loss
+carried the SynOps term -- so VGG16 needs both:
+
+| tag | role |
+|---|---|
+| `sgd2` (no `--synops-loss-budget`) | **control**: gates without the budget |
+| `lagr` (`--synops-loss-budget 0.525`) | **treatment**: gates trained under it |
+
+Four outcomes and what each means:
+
+| control | treatment | reading |
+|---|---|---|
+| differentiates | differentiates | ideal, the paired comparison exists |
+| **stalls** | **differentiates** | **the cost term is what makes the criterion identifiable -- a finding, not just a fix** |
+| differentiates | stalls | the budget is destabilising; back the budget off |
+| both stall | settings still wrong, or VGG16 is not workable |
+
+### Hyperparameter-search integrity, decided 2026-08-13
+
+The search is over `(beta_max, gate_lr)` and is judged by **`log_alpha std`
+and `ranking_is_usable`, which never look at accuracy**. That is "tuning until
+the mechanism functions", not "tuning until the score is good", and the
+distinction is worth stating explicitly in the write-up.
+
+**The line not to cross:** if several settings work, do **not** pick the one
+with the best *test* accuracy. Select on **`Fine Tune Best Val`** (the summary
+CSVs already carry it separately from `Accuracy After`), or simply take the
+first setting that passes `ranking_is_usable`. Report test accuracy once, for
+the chosen setting. `pruning_val_fraction=0.1` gives a genuine held-out split
+for exactly this. Caveat to state: those held-out images were seen during
+pretraining, so validation is clean with respect to the test set but is not a
+pure generalisation estimate.
+
+For context, SPEAR's method **is** a search -- DDPG reinforcement learning
+over pruning configurations, guided by a reward containing accuracy and a
+SynOps penalty. Whatever search is needed here to make the gates function is
+far less accuracy-driven than their method performs by design, and they report
+no seeds, no variance, and no unpruned baseline.
 
 **The ratio-matching hypothesis was WRONG and is now disproven.** beta was
 raised 5x specifically to move VGG16's gate-pressure ratio onto `dpap_repl`'s
