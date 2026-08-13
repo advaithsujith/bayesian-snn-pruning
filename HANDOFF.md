@@ -9,7 +9,200 @@ many hours of real HPC time to discover.
 
 ---
 
-# READ FIRST: state as of 2026-08-12
+# READ FIRST: state as of 2026-08-13
+
+## What you can and cannot claim. Read this before writing anything.
+
+**CLAIM THESE. All verified against committed CSVs.**
+
+1. **The compute budget belongs inside the criterion, during training.**
+   +2.30pp with 9.4% fewer SynOps at budget 0.5, +13.03pp with 12.5% fewer at
+   0.3. Paired: same criterion, same budgets, same selection rule, differing
+   only in whether the loss carried the Lagrangian. 5-50x the noise floor.
+   **This is the dissertation.**
+2. **Cost-aware *selection* fails, and why.** Cost-blind kept 610/2304 units
+   and reached 87.97%; cost-aware kept 1836/2304 and reached 68.32%. Cost and
+   posterior importance correlate across layers, so dividing one by the other
+   roughly inverts the ranking. This is the negative result that motivates (1).
+3. **The criterion is informative.** Beats random structured pruning by
+   +1.54 / +2.25 / +2.72 / +3.70 / +5.25pp, widening with sparsity.
+4. **The DPAP replication is faithful**: 94.35% against their 94.54%.
+
+**DO NOT CLAIM: that any structured criterion beats any other.** See below.
+
+## The noise floor is 0.2-0.5pp, measured, and it kills the crossover
+
+`sparsity_curve_compare` reran the *same* config on the *same* baseline,
+differing only by the cosine_warmup fix. Against the archived `beta0.01` run:
+
+| pruned % | beta0.01 | compare | delta |
+|---|---|---|---|
+| 33.35 | 93.38 | 93.63 | +0.25 |
+| 50.80 | 93.34 | 92.85 | **-0.49** |
+| 70.08 | 92.46 | 92.25 | -0.21 |
+| 89.98 | 89.39 | 89.06 | -0.33 |
+
+**Run-to-run variability is 0.2 to 0.5pp on this platform.** Not a statistical
+argument -- a measurement. It is also consistent with theory: the binomial
+standard error at 93% on a 10,000-image test set is 0.26pp.
+
+The consequence: the criteria differ by *less than this*, and the crossover
+**reverses** between the two runs.
+
+| | archived | rerun |
+|---|---|---|
+| 33.35%, Bayesian vs SCA | -0.23 (SCA ahead) | +0.02 (tied) |
+| 50.80%, Bayesian vs SCA | +0.26 (Bayesian ahead) | -0.23 (SCA ahead) |
+
+Resolving a 0.25pp difference at 2 sigma with a 0.3pp SD needs ~12 seeds per
+criterion per sparsity point. Not feasible. **Report the criteria as
+statistically indistinguishable at matched sparsity, and say so as a
+finding** -- it is more useful and more defensible than a quarter-point claim
+nobody can reproduce.
+
+## Four criteria at four sparsities (2026-08-13, `dpap_repl`)
+
+| criterion | 33.35% | 50.80% | 70.08% | 89.98% |
+|---|---|---|---|---|
+| Bayesian (rerun) | 93.63 | 92.85 | 92.25 | 89.06 |
+| SCA | 93.61 | 93.08 | 91.78 | 89.42 |
+| DPAP | 93.09 | 92.95 | **92.43** | **90.01** |
+| naive firing rate | 92.83 | 92.83 | 92.14 | 88.58 |
+| random control | 91.13 | 90.62 | 88.76 | 84.14 |
+
+All within ~0.6pp of each other; all 2-5pp above random. DPAP is nominally
+best at the two heaviest sparsities. This completes the "extend the bio side
+to 70% and 90%" run that Session 3 called the highest-value remaining work.
+Per-point files under `outputs/dpap_repl/bio/<criterion>/keep_*/summary.txt`.
+
+**Network Slimming is missing from this table** -- see the bug below.
+
+## Baselines: all three trained and saved
+
+| platform | ours | reference | note |
+|---|---|---|---|
+| `dpap_repl` 6Conv2FC T=8 | **94.35%** | DPAP published 94.54% | -0.19pp |
+| `spear_repl` VGG16 T=4 | **90.62%** | SCA's 91.14% | SPEAR publishes none |
+| `spear_repl_resnet18` T=4 | **93.05%** | SPEAR's *pruned* 92.78% | **above their pruned result** |
+
+**ResNet18 is the better SPEAR platform.** On VGG16 our dense baseline sits
+1.15pp *below* SPEAR's pruned row, so any comparison there is confounded by a
+baseline gap. On ResNet18 we start 0.27pp *above* it, so a result there is
+attributable to the pruning. Prefer ResNet18 for the head-to-head if only one
+works.
+
+Weights backed up at `~/snn_checkpoints/` on CSF3 home (snapshotted,
+replicated) -- not in git, and not on scratch.
+
+## BLOCKER: gate training has never worked on either SPEAR platform
+
+Three attempts, all the *same* failure, and it is the opposite of every
+previous failure in this project. No collapse, no saturation, network healthy
+at ~99% val accuracy throughout -- and the gates never differentiate.
+
+| run | beta_max | ratio | log_alpha reached | std | usable |
+|---|---|---|---|---|---|
+| VGG16 (18500857) | 0.01 | 2.62e-2 | -3.0 -> -2.87 | 0.002 | no |
+| VGG16 (18506598) | **0.05** | **5.24e-3** | -3.0 -> -2.34 | **0.002** | no |
+| ResNet18 (18506392) | 0.01 | 1.92e-2 | -3.0 -> -2.87 | 0.002 | no |
+| `dpap_repl` (works) | 0.01 | 5.46e-3 | -- | **0.297** | yes |
+
+**The ratio-matching hypothesis was WRONG and is now disproven.** beta was
+raised 5x specifically to move VGG16's gate-pressure ratio onto `dpap_repl`'s
+known-good 5.46e-3. It landed at 5.24e-3, essentially exactly on target, and
+the gates *still* did not differentiate. So the task-vs-KL gradient ratio is
+**not** the sufficient statistic for a usable ranking. Do not re-try that.
+
+What did change: the gates travelled 5x further (-2.87 -> -2.34), linearly
+with beta, and stayed uniform the whole way. `train_kl` went byte-identical
+for the last four epochs, so they reached equilibrium rather than running out
+of time.
+
+**Next hypothesis: Adam.** It normalises each update by that parameter's own
+gradient history, so a gate whose task gradient is 12x larger still takes the
+same `lr * sign(grad)` step -- exactly the magnitude information that should
+separate the gates gets normalised away. The per-layer task gradients *do*
+vary 12x (5.5e-4 at conv_layers.3 down to 4.5e-5 at conv_layers.12), so the
+ranking signal exists and is being discarded.
+
+`BayesianConfig.gate_optimizer="sgd"` was built for precisely this and has
+never been run on a GPU ("held in reserve since Adam at beta 0.01 worked").
+It did not work here. **This is the 30-minute test that decides whether the
+SPEAR comparison is possible at all:**
+
+```
+sbatch slurm_curve.sh --model spear_repl --tag sgd --targets 33.46 50.80 \
+    --gate-optimizer sgd --gate-lr 0.05 --finetune-epochs 30
+```
+
+Watch `log_alpha std` over the first 20 epochs. Past ~0.1 and it is working.
+Still 0.002 and Adam was not the cause -- stop and rethink rather than
+spending more hours.
+
+**If it cannot be made to work**, the dissertation stands on `dpap_repl`:
+claims 1-4 above are complete and verified there. The SPEAR head-to-head was
+always the ambitious extra, not the contribution.
+
+## Two bugs of mine that cost GPU. Both fixed, both now tested.
+
+1. **`run_bio_pruning` never imported `run_network_slimming_pruning`** while
+   its dispatch called it. The import was dropped when an edit pair was
+   interrupted; the call went in. Because network_slimming runs *last*, a
+   13-hour job completed all four sparsity points for the other three criteria
+   and then died on `NameError`. `import run_bio_pruning` does not catch this
+   (NameError fires at call time) and neither did the tests, which imported
+   the function straight from `activity_pruning`. `tests/test_spear.py` now
+   asserts every criterion in `ALL_CRITERIA` resolves inside the *runner's*
+   namespace; verified to fail without the fix. **Network Slimming still needs
+   its ~4.8h run on `dpap_repl`.**
+2. **`measure_baseline_synops.py` kept a private four-config registry**, so
+   `--model spear_repl` and `--model spear_repl_resnet18` failed argparse with
+   exit code 2. Both SynOps jobs died in two minutes and neither
+   `baseline_synops.json` was ever written. Now uses `config.ALL_EXPERIMENTS`.
+   **Both SynOps measurements still need running** (20 min each) -- without
+   them every SynOps percentage on those platforms has no denominator.
+
+## Tooling added this session
+
+- `slurm_compare.sh <model>` -- one platform end to end: gate diagnostic
+  (aborting on a bad ratio), Bayesian curve, derived keep_fractions, then the
+  other four criteria. Model argument is **required**; a lock file stops two
+  concurrent runs sharing an output directory. Note its default 4 targets x 4
+  criteria is ~16-19h on `dpap_repl`, not the 3-4h first estimated.
+- `--emit-keep-fractions` -- derives the bio side's keep_fractions from the
+  same geometry the Bayesian plan uses, instead of transcribing them by eye
+  (which is what once compared a 27.7%-pruned network against a 98.5% one).
+  Reproduces the recorded 0.8164 / 0.7012 exactly.
+- `--fail-below` / `--fail-above` on `--diagnose-only`. The usable region is a
+  **band**, not a floor: 1.4e-4 was too low (collapse), 5.46e-3 works, 2.62e-2
+  was too high (no differentiation). A floor alone passed that last case.
+- `--seed` on both runners, with seed-qualified output paths so a repeat
+  cannot overwrite the run it is meant to be compared against.
+- `--finetune-epochs` on both runners. The SPEAR configs' 210 is only needed
+  for the headline matched-SynOps number; 30 for internal comparison points.
+- Dispatch by `isinstance` rather than config-name string in five places.
+  `spear_repl_resnet18` reuses `SpikingResNet18` under a new name, and
+  `build_model` would have silently built a **VGG9-shaped** network from the
+  default `ArchConfig`, while `_register_bn_remask_hooks` would have skipped
+  the BatchNorm remask hooks entirely.
+- `SNNConfig.output_readout` moved off `ArchConfig`, because `LeNetSNN` and
+  `SpikingResNet18` never receive an `ArchConfig`.
+
+## Priority order from here
+
+1. **The SGD gate test** (~30 min). Highest information per GPU-hour; decides
+   whether the SPEAR arm exists.
+2. **Network Slimming on `dpap_repl`** (~4.8h). Completes the comparison table
+   and, since SPEAR publishes NetworkSlimming on the same setup, doubles as a
+   check on whether the SCA/DPAP reimplementations are trustworthy.
+3. **SynOps denominators** for both SPEAR platforms (20 min each).
+4. **Seeds.** Not to rescue the criterion ranking -- 12 seeds would be needed
+   for that -- but to put error bars on the SynOps result (which will look
+   very strong against a 0.3pp SD) and to license stating the null honestly.
+
+---
+
+# State as of 2026-08-12
 
 ## DATA RISK: RESOLVED. Nothing was ever lost.
 
@@ -261,7 +454,54 @@ All five now dispatch on `isinstance`, which is name-independent.
 reason: `LeNetSNN` and `SpikingResNet18` hard-code their structure and never
 receive an `ArchConfig`, so a setting that lives there cannot reach them.
 
-## NOVELTY NARROWED AGAIN (2026-08-12): Chen et al. already do the Lagrangian
+## NOVELTY, final position after a proper literature pass (2026-08-12)
+
+The claim has now narrowed **four times**. Anything of the form "first to make
+SNN pruning SynOps-aware" or "first budget-constrained SNN pruning" is
+**demonstrably false** and an examiner who knows this literature will catch it.
+
+**Sorbaro, Liu, Bortone & Sheik 2020**, "Optimizing the Energy Consumption of
+Spiking Neural Networks for Neuromorphic Applications", Frontiers in
+Neuroscience 10.3389/fnins.2020.00662. Full text read. They add a **SynOp loss
+term targeting a specified SynOps value S0**, made differentiable through a
+quantised ReLU with a surrogate gradient, normalised by alpha = S0^2. CIFAR-10
+All-ConvNet: 90.37% at 127M SynOps against 2179M unconstrained.
+
+So **"put SynOps in the training loss as a differentiable target" is prior art
+from 2020.** What they do *not* do: any pruning at all (weights merely drift
+toward zero, >90% null, which they describe as a side effect); an adaptive
+multiplier (fixed weight and target, set up front); direct SNN training (they
+train a quantised analog CNN and convert); anything Bayesian.
+
+### Where the claim actually stands
+
+Each prior work has two of the four ingredients. None has all four.
+
+| | SynOps cost | differentiable in training | structured pruning | Bayesian criterion |
+|---|---|---|---|---|
+| Sorbaro 2020 | yes | yes | **no pruning** | no |
+| Chen 2023 | **no** (weight-count) | yes | mostly unstructured | no |
+| SPEAR 2025 | yes | **no** (RL search) | yes | no |
+| **This project** | yes | yes | yes | yes |
+
+**Write it as an intersection claim, never as a first.** "The combination of a
+Bayesian posterior criterion with a differentiable, activity-dependent SynOps
+budget has not been reported" is defensible. "SynOps-aware SNN pruning is
+novel" is not.
+
+### The gap this exposes, and it is a fair examiner question
+
+Sorbaro et al. used a **fixed-weight SynOps penalty toward a target** and cut
+SynOps 17x with it. This project rejected fixed-weight on the basis of four
+failed `gamma_max` runs -- **but those used FLOPs, not SynOps.** Two causes are
+confounded in the justification for the Lagrangian: fixed-weight being the
+wrong lever, versus FLOPs being the wrong metric. Sorbaro is evidence for the
+second. **Fixed-gamma-on-SynOps has never been run here.** Expect to be asked
+"did you compare your Lagrangian against a simple weighted SynOps penalty?"
+and the honest answer today is no. One gate run at matched budget would settle
+it.
+
+## NOVELTY NARROWED (2026-08-12): Chen et al. already do the Lagrangian
 
 Found in a proper literature pass, full text read, not inferred from an
 abstract. **This is the closest prior work to the project and it was not in
@@ -666,8 +906,16 @@ for the current state is in **Session 3** at the end of the file, plus
 `docs/review_response_2026-08-03.md` and
 `docs/fresh_review_2026-08-03.md`.
 
-Reading order if short on time: this block, then Session 3, then Session 2's
-"THE BIG BUG" and "The pivot" sections. The rest is background.
+Reading order if short on time: the **2026-08-13 READ FIRST block at the top**
+(what you can claim, the noise floor, the gate blocker), then the 2026-08-12
+block, then Session 3, then Session 2's "THE BIG BUG" and "The pivot"
+sections. The rest is background.
+
+**Note for anyone reading the old blocks below**: the repeated warning "do not
+trust any number in this file without checking the CSV" has been discharged.
+Every headline figure was checked cell by cell against committed CSVs on
+2026-08-12 and matched. The files were never missing; `.gitignore` was hiding
+them.
 
 ## What the user is asking
 
