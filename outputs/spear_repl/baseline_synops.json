@@ -1,0 +1,84 @@
+{
+  "model": "spear_repl",
+  "checkpoint": "./outputs/spear_repl/trained_model.pt",
+  "batches_measured": 8,
+  "unpruned_synops_per_sample": 136362268.82421875,
+  "unpruned_dense_macs_per_sample": 1252806656.0,
+  "event_driven_fraction": 0.10884542173458787,
+  "budget_ceilings": {
+    "0.50": 68181134.41210938,
+    "0.30": 40908680.64726562
+  },
+  "per_layer": {
+    "conv_layers.0.conv": {
+      "synops": 7077888.0,
+      "dense_macs": 7077888.0,
+      "input_event_frac": 1.0
+    },
+    "conv_layers.1.conv": {
+      "synops": 27671670.5625,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.18326223269104958
+    },
+    "conv_layers.2.conv": {
+      "synops": 11276786.25,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.14936640858650208
+    },
+    "conv_layers.3.conv": {
+      "synops": 22641295.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.1499473750591278
+    },
+    "conv_layers.4.conv": {
+      "synops": 10539074.25,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.13959506154060364
+    },
+    "conv_layers.5.conv": {
+      "synops": 13624679.25,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.09023268520832062
+    },
+    "conv_layers.6.conv": {
+      "synops": 10889239.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.07211658358573914
+    },
+    "conv_layers.7.conv": {
+      "synops": 7496734.5,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.09929782152175903
+    },
+    "conv_layers.8.conv": {
+      "synops": 8001697.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.05299314856529236
+    },
+    "conv_layers.9.conv": {
+      "synops": 7429927.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.04920646548271179
+    },
+    "conv_layers.10.conv": {
+      "synops": 5230476.0,
+      "dense_macs": 37748736.0,
+      "input_event_frac": 0.13856029510498047
+    },
+    "conv_layers.11.conv": {
+      "synops": 2100582.0,
+      "dense_macs": 37748736.0,
+      "input_event_frac": 0.055646419525146484
+    },
+    "conv_layers.12.conv": {
+      "synops": 2380963.5,
+      "dense_macs": 37748736.0,
+      "input_event_frac": 0.06307399272918701
+    },
+    "fc_out": {
+      "synops": 1254.51171875,
+      "dense_macs": 20480.0,
+      "input_event_frac": 0.061255455017089844
+    }
+  }
+}

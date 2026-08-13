@@ -1,0 +1,35 @@
+Thu Aug 13 01:15:51 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:41:00.0 Off |                    0 |
+| N/A   29C    P0             59W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+torch 2.3.1+cu121 cuda True
+Device: cuda
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+
+=== spear_repl ===
+  checkpoint            : ./outputs/spear_repl/trained_model.pt
+  unpruned SynOps/sample:       136.36 M
+  dense MACs/sample     :      1252.81 M
+  event-driven fraction :       0.1088
+  budget 0.5 ceiling    :        68.18 M
+  budget 0.3 ceiling    :        40.91 M
+  written to            : ./outputs/spear_repl/baseline_synops.json
+Done. Result written to outputs/spear_repl/baseline_synops.json

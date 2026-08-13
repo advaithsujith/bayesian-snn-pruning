@@ -1,0 +1,119 @@
+{
+  "model": "spear_repl_resnet18",
+  "checkpoint": "./outputs/spear_repl_resnet18/trained_model.pt",
+  "batches_measured": 8,
+  "unpruned_synops_per_sample": 268573701.09765625,
+  "unpruned_dense_macs_per_sample": 2221690880.0,
+  "event_driven_fraction": 0.12088707007594875,
+  "budget_ceilings": {
+    "0.50": 134286850.54882812,
+    "0.30": 80572110.32929687
+  },
+  "per_layer": {
+    "stem_conv.conv": {
+      "synops": 7077888.0,
+      "dense_macs": 7077888.0,
+      "input_event_frac": 1.0
+    },
+    "stage1.0.conv1.conv": {
+      "synops": 27106960.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.179522305727005
+    },
+    "stage1.0.conv2.conv": {
+      "synops": 18161476.3125,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.12027870491147041
+    },
+    "stage1.1.conv1.conv": {
+      "synops": 30782820.375,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.20386656373739243
+    },
+    "stage1.1.conv2.conv": {
+      "synops": 15703164.5625,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.10399794951081276
+    },
+    "stage2.0.downsample.0": {
+      "synops": 1927865.59375,
+      "dense_macs": 8388608.0,
+      "input_event_frac": 0.22981948778033257
+    },
+    "stage2.0.conv1.conv": {
+      "synops": 17350790.34375,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.22981948778033257
+    },
+    "stage2.0.conv2.conv": {
+      "synops": 17260699.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.11431309580802917
+    },
+    "stage2.1.conv1.conv": {
+      "synops": 25352857.125,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.16790533810853958
+    },
+    "stage2.1.conv2.conv": {
+      "synops": 12031699.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.07968279719352722
+    },
+    "stage3.0.downsample.0": {
+      "synops": 1550621.625,
+      "dense_macs": 8388608.0,
+      "input_event_frac": 0.18484850227832794
+    },
+    "stage3.0.conv1.conv": {
+      "synops": 13955594.625,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.18484850227832794
+    },
+    "stage3.0.conv2.conv": {
+      "synops": 14176347.75,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.09388624131679535
+    },
+    "stage3.1.conv1.conv": {
+      "synops": 15362518.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.10174193978309631
+    },
+    "stage3.1.conv2.conv": {
+      "synops": 8391255.75,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.05557309091091156
+    },
+    "stage4.0.downsample.0": {
+      "synops": 872414.25,
+      "dense_macs": 8388608.0,
+      "input_event_frac": 0.10399988293647766
+    },
+    "stage4.0.conv1.conv": {
+      "synops": 7851728.25,
+      "dense_macs": 75497472.0,
+      "input_event_frac": 0.10399988293647766
+    },
+    "stage4.0.conv2.conv": {
+      "synops": 9362749.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.06200703978538513
+    },
+    "stage4.1.conv1.conv": {
+      "synops": 13657522.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.09045019745826721
+    },
+    "stage4.1.conv2.conv": {
+      "synops": 10631290.5,
+      "dense_macs": 150994944.0,
+      "input_event_frac": 0.07040825486183167
+    },
+    "fc_out": {
+      "synops": 5436.03515625,
+      "dense_macs": 20480.0,
+      "input_event_frac": 0.26543140411376953
+    }
+  }
+}

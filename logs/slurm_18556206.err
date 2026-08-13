@@ -1,0 +1,13 @@
+/net/scratch/w36160as/bayesian-snn-pruning/venv/lib64/python3.9/site-packages/torch/optim/lr_scheduler.py:156: UserWarning: The epoch parameter in `scheduler.step()` was not necessary and is being deprecated where possible. Please use `scheduler.step()` to step the scheduler. During the deprecation, if epoch is different from None, the closed form is used instead of the new chainable form, where available. Please open an issue if you are unable to replicate your use case: https://github.com/pytorch/pytorch/issues/new/choose.
+  warnings.warn(EPOCH_DEPRECATION_WARNING, UserWarning)
+
+Stopping before the fine-tunes: log_alpha std is 0.028 across 4224 gates, so they never differentiated from each other and the ranking is close to arbitrary.
+
+The curve would still come out clean and monotone, because the layer
+widths are an input rather than something the gates decide. It would
+just be measuring random structured pruning, which is a legitimate
+control but is not evidence about the criterion.
+
+Lower beta_max so the gates settle at an equilibrium instead of
+marching into the clamp, or pass --force to build the curve anyway
+and keep it explicitly as a random-pruning baseline.
