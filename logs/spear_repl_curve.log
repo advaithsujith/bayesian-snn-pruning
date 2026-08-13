@@ -2026,3 +2026,51 @@
 14:25:15 | INFO | [finetune] epoch 29/30 train_task_loss=0.7084 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7656 val_loss=0.7592 val_acc=0.7521 time=16.6s
 14:25:32 | INFO | [finetune] epoch 30/30 train_task_loss=0.7058 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7664 val_loss=0.7533 val_acc=0.7598 time=16.6s
 14:25:36 | INFO | [synops0.525_importance] test accuracy 0.7591, synops/sample 52,696,712
+15:10:17 | INFO | Reusing trained gates from ./outputs/spear_repl/sparsity_curve_lagrw/bayesian_model.pt
+15:10:18 | INFO | Gate ranking after training: NOT USABLE -- log_alpha std is 0.048 across 4224 gates, so they never differentiated from each other and the ranking is close to arbitrary
+15:10:18 | INFO |   conv_layers.0: median_log_alpha=2.08 std=0.04 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.1: median_log_alpha=2.00 std=0.03 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.2: median_log_alpha=2.04 std=0.02 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.3: median_log_alpha=2.01 std=0.02 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.4: median_log_alpha=2.06 std=0.02 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.5: median_log_alpha=2.07 std=0.02 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.6: median_log_alpha=2.08 std=0.02 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.7: median_log_alpha=2.13 std=0.01 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.8: median_log_alpha=2.14 std=0.01 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.9: median_log_alpha=2.15 std=0.01 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.10: median_log_alpha=2.15 std=0.01 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.11: median_log_alpha=2.16 std=0.01 frac_saturated=0.000 structurally_prunable=True
+15:10:18 | INFO |   conv_layers.12: median_log_alpha=2.14 std=0.04 frac_saturated=0.000 structurally_prunable=True
+15:10:20 | INFO | [synops0.525_importance] synops_budget(budget=0.525 of measured SynOps, rank_by=importance, achieved=0.5249, kept 1299/4224 units, min_keep_fraction=0.2)
+15:10:20 | WARNING | [synops0.525_importance] RANKING NOT USABLE: log_alpha std is 0.048 across 4224 gates, so they never differentiated from each other and the ranking is close to arbitrary.
+15:10:38 | INFO | [finetune] epoch 1/30 train_task_loss=2.5907 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.1015 val_loss=2.3894 val_acc=0.0920 time=18.3s
+15:10:55 | INFO | [finetune] epoch 2/30 train_task_loss=1.8637 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.2508 val_loss=1.5748 val_acc=0.3602 time=17.1s
+15:11:12 | INFO | [finetune] epoch 3/30 train_task_loss=1.1482 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.5659 val_loss=0.7242 val_acc=0.7564 time=17.1s
+15:11:29 | INFO | [finetune] epoch 4/30 train_task_loss=0.6147 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8028 val_loss=0.5512 val_acc=0.8205 time=17.1s
+15:11:47 | INFO | [finetune] epoch 5/30 train_task_loss=0.5144 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8359 val_loss=0.5366 val_acc=0.8293 time=17.2s
+15:12:04 | INFO | [finetune] epoch 6/30 train_task_loss=0.4617 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8539 val_loss=0.4711 val_acc=0.8465 time=17.2s
+15:12:21 | INFO | [finetune] epoch 7/30 train_task_loss=0.4514 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8573 val_loss=0.4642 val_acc=0.8496 time=17.1s
+15:12:38 | INFO | [finetune] epoch 8/30 train_task_loss=0.4425 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8626 val_loss=0.4374 val_acc=0.8572 time=17.3s
+15:12:55 | INFO | [finetune] epoch 9/30 train_task_loss=0.4606 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8553 val_loss=0.5183 val_acc=0.8297 time=17.0s
+15:13:12 | INFO | [finetune] epoch 10/30 train_task_loss=0.4563 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8554 val_loss=0.6312 val_acc=0.8119 time=17.0s
+15:13:29 | INFO | [finetune] epoch 11/30 train_task_loss=0.4729 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8489 val_loss=0.5017 val_acc=0.8428 time=17.1s
+15:13:46 | INFO | [finetune] epoch 12/30 train_task_loss=0.4377 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8613 val_loss=0.4511 val_acc=0.8590 time=17.0s
+15:14:03 | INFO | [finetune] epoch 13/30 train_task_loss=0.4135 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8697 val_loss=0.4328 val_acc=0.8594 time=17.0s
+15:14:20 | INFO | [finetune] epoch 14/30 train_task_loss=0.3912 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8749 val_loss=0.4618 val_acc=0.8592 time=17.1s
+15:14:37 | INFO | [finetune] epoch 15/30 train_task_loss=0.3683 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8802 val_loss=0.4300 val_acc=0.8576 time=17.0s
+15:14:55 | INFO | [finetune] epoch 16/30 train_task_loss=0.3455 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8889 val_loss=0.3667 val_acc=0.8820 time=17.1s
+15:15:12 | INFO | [finetune] epoch 17/30 train_task_loss=0.3200 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8960 val_loss=0.3633 val_acc=0.8861 time=17.1s
+15:15:29 | INFO | [finetune] epoch 18/30 train_task_loss=0.3018 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9018 val_loss=0.3610 val_acc=0.8869 time=17.1s
+15:15:46 | INFO | [finetune] epoch 19/30 train_task_loss=0.2736 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9099 val_loss=0.4036 val_acc=0.8703 time=17.1s
+15:16:03 | INFO | [finetune] epoch 20/30 train_task_loss=0.2514 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9174 val_loss=0.3452 val_acc=0.8902 time=17.1s
+15:16:20 | INFO | [finetune] epoch 21/30 train_task_loss=0.2372 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9218 val_loss=0.3409 val_acc=0.8918 time=17.1s
+15:16:37 | INFO | [finetune] epoch 22/30 train_task_loss=0.2153 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9281 val_loss=0.3017 val_acc=0.8992 time=17.1s
+15:16:54 | INFO | [finetune] epoch 23/30 train_task_loss=0.1933 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9363 val_loss=0.3058 val_acc=0.8941 time=17.1s
+15:17:11 | INFO | [finetune] epoch 24/30 train_task_loss=0.1741 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9405 val_loss=0.2722 val_acc=0.9145 time=17.0s
+15:17:28 | INFO | [finetune] epoch 25/30 train_task_loss=0.1610 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9472 val_loss=0.2940 val_acc=0.9066 time=17.2s
+15:17:45 | INFO | [finetune] epoch 26/30 train_task_loss=0.1463 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9519 val_loss=0.2761 val_acc=0.9168 time=17.0s
+15:18:03 | INFO | [finetune] epoch 27/30 train_task_loss=0.1421 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9515 val_loss=0.2686 val_acc=0.9135 time=17.1s
+15:18:20 | INFO | [finetune] epoch 28/30 train_task_loss=0.1350 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9541 val_loss=0.2726 val_acc=0.9145 time=17.1s
+15:18:37 | INFO | [finetune] epoch 29/30 train_task_loss=0.1270 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9570 val_loss=0.2633 val_acc=0.9180 time=17.1s
+15:18:54 | INFO | [finetune] epoch 30/30 train_task_loss=0.1296 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9565 val_loss=0.2563 val_acc=0.9166 time=17.2s
+15:19:03 | INFO | [synops0.525_importance] test accuracy 0.8937, synops/sample 51,887,407
