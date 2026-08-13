@@ -1,0 +1,22 @@
+====================================================
+Job started: Thu 13 Aug 13:53:08 BST 2026
+Node: node863.csf3.man.alces.network
+====================================================
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+spear_repl_resnet18 tag=lagrw: base val loss 0.0133 on 1024 images (baseline weights ablated)
+  stage1.0.conv1             n= 64 rho=+0.25 imp=-0.0011+-0.0095 log_alpha std(layer)=0.040
+  stage1.1.conv1             n= 64 rho=-0.09 imp=-0.0046+-0.0075 log_alpha std(layer)=0.035
+  stage2.0.conv1             n= 64 rho=-0.05 imp=-0.0059+-0.0051 log_alpha std(layer)=0.021
+  stage2.1.conv1             n= 64 rho=+0.04 imp=-0.0048+-0.0044 log_alpha std(layer)=0.032
+  stage3.0.conv1             n= 64 rho=-0.12 imp=-0.0038+-0.0039 log_alpha std(layer)=0.024
+  stage3.1.conv1             n= 64 rho=-0.18 imp=-0.0001+-0.0024 log_alpha std(layer)=0.034
+  stage4.0.conv1             n= 64 rho=-0.21 imp=-0.0001+-0.0004 log_alpha std(layer)=0.009
+  stage4.1.conv1             n= 64 rho=-0.18 imp=0.0000+-0.0002 log_alpha std(layer)=0.005
+
+POOLED rho over 512 sampled channels: -0.164
+per-channel data written to ./outputs/spear_repl_resnet18/fullscale_rho_lagrw.csv
+====================================================
+Job finished: Thu 13 Aug 13:57:52 BST 2026
+====================================================

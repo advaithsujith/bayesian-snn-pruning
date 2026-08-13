@@ -1,0 +1,107 @@
+====================================================
+Job started: Thu 13 Aug 14:17:18 BST 2026
+Node: node851.csf3.man.alces.network
+====================================================
+Thu Aug 13 14:17:20 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.71.05              Driver Version: 595.71.05      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:81:00.0 Off |                    0 |
+| N/A   30C    P0             61W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+CUDA available: True
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+
+Reusing trained gates: ./outputs/spear_repl_resnet18/sparsity_curve_lagrw/bayesian_model.pt
+14:17:40 | INFO | Reusing trained gates from ./outputs/spear_repl_resnet18/sparsity_curve_lagrw/bayesian_model.pt
+
+Gate ranking: NOT USABLE (log_alpha std is 0.081 across 1920 gates, so they never differentiated from each other and the ranking is close to arbitrary)
+14:17:43 | INFO | Gate ranking after training: NOT USABLE -- log_alpha std is 0.081 across 1920 gates, so they never differentiated from each other and the ranking is close to arbitrary
+14:17:43 | INFO |   stem_conv: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage1.0.conv1: median_log_alpha=2.02 std=0.04 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage1.0.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage1.1.conv1: median_log_alpha=2.00 std=0.04 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage1.1.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage2.0.conv1: median_log_alpha=2.03 std=0.02 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage2.0.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage2.1.conv1: median_log_alpha=1.92 std=0.03 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage2.1.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage3.0.conv1: median_log_alpha=2.00 std=0.02 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage3.0.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage3.1.conv1: median_log_alpha=1.95 std=0.03 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage3.1.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage4.0.conv1: median_log_alpha=2.11 std=0.01 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage4.0.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+14:17:43 | INFO |   stage4.1.conv1: median_log_alpha=2.14 std=0.01 frac_saturated=0.000 structurally_prunable=True
+14:17:43 | INFO |   stage4.1.conv2: median_log_alpha=-3.00 std=0.00 frac_saturated=0.000 structurally_prunable=False
+
+Measuring per-unit SynOps costs on the gate-trained model...
+
+--- budget point 1/1 (importance): 0.392 of dense SynOps ---
+14:17:45 | INFO | [synops0.392_importance] synops_budget(budget=0.392 of measured SynOps, rank_by=importance, achieved=0.3905, kept 546/1920 units)
+14:17:45 | WARNING | [synops0.392_importance] RANKING NOT USABLE: log_alpha std is 0.081 across 1920 gates, so they never differentiated from each other and the ranking is close to arbitrary.
+14:18:17 | INFO | [finetune] epoch 1/30 train_task_loss=1.3563 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.5528 val_loss=1.2422 val_acc=0.5613 time=32.1s
+14:18:44 | INFO | [finetune] epoch 2/30 train_task_loss=0.4844 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8415 val_loss=0.3637 val_acc=0.8857 time=26.6s
+14:19:11 | INFO | [finetune] epoch 3/30 train_task_loss=0.2930 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9011 val_loss=0.3067 val_acc=0.8998 time=26.8s
+14:19:38 | INFO | [finetune] epoch 4/30 train_task_loss=0.2338 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9224 val_loss=0.2474 val_acc=0.9182 time=27.1s
+14:20:05 | INFO | [finetune] epoch 5/30 train_task_loss=0.2157 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9256 val_loss=0.2636 val_acc=0.9104 time=27.1s
+14:20:32 | INFO | [finetune] epoch 6/30 train_task_loss=0.2122 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9276 val_loss=0.2644 val_acc=0.9117 time=27.1s
+14:20:59 | INFO | [finetune] epoch 7/30 train_task_loss=0.2082 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9282 val_loss=0.2606 val_acc=0.9145 time=27.1s
+14:21:26 | INFO | [finetune] epoch 8/30 train_task_loss=0.2209 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9256 val_loss=0.2853 val_acc=0.9008 time=27.1s
+14:21:53 | INFO | [finetune] epoch 9/30 train_task_loss=0.2292 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9216 val_loss=0.3083 val_acc=0.8955 time=27.1s
+14:22:20 | INFO | [finetune] epoch 10/30 train_task_loss=0.2377 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9185 val_loss=0.3177 val_acc=0.8988 time=27.1s
+14:22:47 | INFO | [finetune] epoch 11/30 train_task_loss=0.2536 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9141 val_loss=0.3678 val_acc=0.8779 time=27.0s
+14:23:14 | INFO | [finetune] epoch 12/30 train_task_loss=0.2376 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9185 val_loss=0.3770 val_acc=0.8695 time=27.1s
+14:23:42 | INFO | [finetune] epoch 13/30 train_task_loss=0.2260 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9232 val_loss=0.3456 val_acc=0.8822 time=27.0s
+14:24:08 | INFO | [finetune] epoch 14/30 train_task_loss=0.2204 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9252 val_loss=0.2887 val_acc=0.9020 time=26.7s
+14:24:35 | INFO | [finetune] epoch 15/30 train_task_loss=0.2067 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9286 val_loss=0.3354 val_acc=0.8938 time=26.8s
+14:25:02 | INFO | [finetune] epoch 16/30 train_task_loss=0.1852 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9370 val_loss=0.2955 val_acc=0.9064 time=26.7s
+14:25:28 | INFO | [finetune] epoch 17/30 train_task_loss=0.1662 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9411 val_loss=0.3070 val_acc=0.8992 time=26.7s
+14:25:55 | INFO | [finetune] epoch 18/30 train_task_loss=0.1482 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9476 val_loss=0.2675 val_acc=0.9168 time=26.8s
+14:26:22 | INFO | [finetune] epoch 19/30 train_task_loss=0.1184 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9583 val_loss=0.2239 val_acc=0.9240 time=26.6s
+14:26:49 | INFO | [finetune] epoch 20/30 train_task_loss=0.1098 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9623 val_loss=0.2228 val_acc=0.9289 time=26.9s
+14:27:15 | INFO | [finetune] epoch 21/30 train_task_loss=0.0904 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9679 val_loss=0.2130 val_acc=0.9361 time=26.6s
+14:27:42 | INFO | [finetune] epoch 22/30 train_task_loss=0.0781 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9724 val_loss=0.2077 val_acc=0.9361 time=26.8s
+14:28:09 | INFO | [finetune] epoch 23/30 train_task_loss=0.0661 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9767 val_loss=0.1968 val_acc=0.9385 time=27.0s
+14:28:36 | INFO | [finetune] epoch 24/30 train_task_loss=0.0554 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9811 val_loss=0.1925 val_acc=0.9430 time=27.1s
+14:29:03 | INFO | [finetune] epoch 25/30 train_task_loss=0.0475 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9836 val_loss=0.1914 val_acc=0.9420 time=26.7s
+14:29:30 | INFO | [finetune] epoch 26/30 train_task_loss=0.0425 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9849 val_loss=0.1813 val_acc=0.9457 time=26.7s
+14:29:57 | INFO | [finetune] epoch 27/30 train_task_loss=0.0380 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9872 val_loss=0.1947 val_acc=0.9453 time=26.8s
+14:30:24 | INFO | [finetune] epoch 28/30 train_task_loss=0.0339 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9886 val_loss=0.1732 val_acc=0.9512 time=26.8s
+14:30:51 | INFO | [finetune] epoch 29/30 train_task_loss=0.0337 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9892 val_loss=0.1851 val_acc=0.9469 time=26.8s
+14:31:17 | INFO | [finetune] epoch 30/30 train_task_loss=0.0327 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.9891 val_loss=0.1879 val_acc=0.9484 time=26.9s
+14:31:24 | INFO | [synops0.392_importance] test accuracy 0.9164, synops/sample 102,872,615
+
+============================================================
+SPARSITY CURVE FINISHED
+============================================================
+           point          selection   pruned %   accuracy         synops   usable
+    synops 0.392         importance      81.21     0.9164    102,872,615       NO
+
+The gates did not produce a usable ranking, so the curve above is
+what random structured pruning of this architecture looks like. That
+is a legitimate control and worth keeping under that name, but it is
+not evidence about the pruning criterion. Fix gate training first.
+
+Wrote ./outputs/spear_repl_resnet18/sparsity_curve_lagrw_ft/summary.csv
+====================================================
+Job finished: Thu 13 Aug 14:31:25 BST 2026
+====================================================

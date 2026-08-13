@@ -1,0 +1,27 @@
+====================================================
+Job started: Thu 13 Aug 13:53:23 BST 2026
+Node: node862.csf3.man.alces.network
+====================================================
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+spear_repl tag=lagrw: base val loss 0.0519 on 1024 images (baseline weights ablated)
+  conv_layers.0              n= 64 rho=+0.56 imp=0.0332+-0.0590 log_alpha std(layer)=0.044
+  conv_layers.1              n= 64 rho=+0.34 imp=0.0308+-0.0295 log_alpha std(layer)=0.034
+  conv_layers.2              n= 64 rho=+0.14 imp=0.0154+-0.0156 log_alpha std(layer)=0.022
+  conv_layers.3              n= 64 rho=+0.00 imp=0.0162+-0.0154 log_alpha std(layer)=0.019
+  conv_layers.4              n= 64 rho=+0.08 imp=0.0072+-0.0105 log_alpha std(layer)=0.015
+  conv_layers.5              n= 64 rho=-0.01 imp=0.0068+-0.0073 log_alpha std(layer)=0.016
+  conv_layers.6              n= 64 rho=+0.21 imp=0.0042+-0.0047 log_alpha std(layer)=0.016
+  conv_layers.7              n= 64 rho=+0.04 imp=0.0015+-0.0025 log_alpha std(layer)=0.011
+  conv_layers.8              n= 64 rho=+0.25 imp=0.0009+-0.0015 log_alpha std(layer)=0.009
+  conv_layers.9              n= 64 rho=+0.11 imp=0.0007+-0.0014 log_alpha std(layer)=0.006
+  conv_layers.10             n= 64 rho=-0.18 imp=0.0003+-0.0007 log_alpha std(layer)=0.005
+  conv_layers.11             n= 64 rho=-0.45 imp=0.0002+-0.0007 log_alpha std(layer)=0.008
+  conv_layers.12             n= 64 rho=-0.16 imp=-0.0001+-0.0009 log_alpha std(layer)=0.038
+
+POOLED rho over 832 sampled channels: +0.556
+per-channel data written to ./outputs/spear_repl/fullscale_rho_lagrw.csv
+====================================================
+Job finished: Thu 13 Aug 13:55:31 BST 2026
+====================================================
