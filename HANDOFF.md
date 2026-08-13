@@ -11,6 +11,54 @@ many hours of real HPC time to discover.
 
 # READ FIRST: state as of 2026-08-13
 
+## SCOPE DECISION (user, 2026-08-13). The comparison is SPEAR only.
+
+Narrowed for time, and it is a better scope than the wide one.
+
+**Run:** the Lagrangian SynOps-budget method on **VGG16 and ResNet18**.
+**Compare against:** SPEAR's **published rows**. No reimplementation of SPEAR.
+**Related work only:** Chen et al. 2023 and Sorbaro et al. 2020.
+**Future work:** the bio criteria, Network Slimming, the other platforms.
+
+| platform | SynOps % | Params % | Acc % | run as |
+|---|---|---|---|---|
+| VGG16 | 52.5 | 14.4 | **91.77** | `--synops-budgets 0.525 --synops-loss-budget 0.525` |
+| ResNet18 | 39.2 | 30.3 | **92.78** | `--synops-budgets 0.392 --synops-loss-budget 0.392` |
+
+Note these are **SynOps-budget runs, not parameter-target curves.**
+
+**Why this scope is stronger, not just cheaper:** SPEAR's numbers come from
+their paper, so the comparison contains **no reimplementations of anyone
+else's method**. The undertuning objection that killed the SCA comparison and
+motivated the abandoned HPO search cannot be raised at all.
+
+**Caveat to state for ResNet18:** only each BasicBlock's `conv1` is prunable
+here (conv2 is residual-tied, stem fixed), so their 30.3% of parameters is
+probably unreachable. The **SynOps axis and accuracy remain comparable**; the
+parameter axis does not.
+
+**Prerequisite that is easy to forget:** `sbatch slurm_synops.sh spear_repl`
+and `spear_repl_resnet18`. "52.5% SynOps" is a fraction *of the unpruned
+model's measured SynOps*, so without `baseline_synops.json` on each platform
+you cannot place yourself on their axis at all. Both attempts so far failed on
+the stale-registry bug; that is fixed.
+
+**Related-work note.** The user named Chen et al. as the Lagrangian precedent.
+Include **Sorbaro et al. 2020 in the same paragraph** -- it is the more
+dangerous omission, being the one that puts a differentiable SynOps target
+directly in a training loss. Chen has this project's *mechanism* with a
+spike-blind cost; Sorbaro has its *cost* with a fixed weight rather than a
+dual variable. Between them they bracket the formulation.
+
+**Consequences for work already queued:** Network Slimming is no longer
+needed for the comparison (it was the harness check, which this scope makes
+unnecessary since nothing is reimplemented). The bio criteria are not needed
+on the SPEAR platforms. Both stay useful as motivation from the `dpap_repl`
+data that already exists.
+
+**Everything here is blocked on gate training working on at least one SPEAR
+platform, which it currently does not.** See the blocker section below.
+
 ## What you can and cannot claim. Read this before writing anything.
 
 **CLAIM THESE. All verified against committed CSVs.**
