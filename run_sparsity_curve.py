@@ -456,6 +456,23 @@ def run_curve(args: argparse.Namespace) -> None:
         )
         torch.save(model.state_dict(), gate_path)
 
+    if args.scramble_gates:
+        # Within-layer permutation only: each layer keeps its log_alpha
+        # *distribution* (so the cross-layer budget allocation is nearly
+        # unchanged) while the within-layer ordering is destroyed. At a
+        # matched budget the gap between this arm and the unscrambled one is
+        # therefore attributable to the learned ordering specifically, with
+        # no risk of the degenerate allocations a fully random ranking can
+        # produce. Never written back to disk: the checkpoint keeps the
+        # trained gates.
+        gen = torch.Generator().manual_seed(20260813 + (args.seed or 0))
+        with torch.no_grad():
+            for layer in collect_prunable_bayesian_layers(model):
+                perm = torch.randperm(layer.log_alpha.numel(), generator=gen)
+                layer.log_alpha.copy_(layer.log_alpha.detach()[perm])
+        print("\nScrambled log_alpha within every prunable layer (ordering control arm).")
+        logger.info("Gates scrambled within layers: this run is the random-ordering control")
+
     write_csv(csv_rows, os.path.join(out_dir, "gate_training_log.csv"))
 
     # Judge the gates before spending a fine-tune on every target. The curve
@@ -733,6 +750,16 @@ def main() -> None:
         "--force", action="store_true",
         help="build the curve even if the gates produced no usable ranking. Only "
              "meaningful for deliberately generating a random-pruning control.",
+    )
+    parser.add_argument(
+        "--scramble-gates", action="store_true",
+        help="permute each prunable layer's trained log_alpha within the layer "
+             "(seeded) after loading/training the gates, before any plan is "
+             "built. The between-layer allocation is preserved and the "
+             "within-layer order is destroyed, so at a matched budget this arm "
+             "measures exactly what the learned ordering contributes. Usually "
+             "combined with --gates-from and --force. The scrambled gates are "
+             "never written back to the gate checkpoint.",
     )
     parser.add_argument(
         "--synops-budgets", type=float, nargs="+", default=[],
