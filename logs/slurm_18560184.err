@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_sparsity_curve.py", line 818, in <module>
+    main()
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_sparsity_curve.py", line 814, in main
+    run_curve(args)
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_sparsity_curve.py", line 409, in run_curve
+    run_training(
+  File "/net/scratch/w36160as/bayesian-snn-pruning/train.py", line 476, in run_training
+    synops_refresh_fn(model)
+  File "/net/scratch/w36160as/bayesian-snn-pruning/run_sparsity_curve.py", line 374, in synops_refresh_fn
+    measure_synops_unit_costs(
+  File "/net/scratch/w36160as/bayesian-snn-pruning/venv/lib64/python3.9/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+  File "/net/scratch/w36160as/bayesian-snn-pruning/metrics.py", line 429, in measure_synops_unit_costs
+    chain = _synops_chain(model, model_name)
+  File "/net/scratch/w36160as/bayesian-snn-pruning/metrics.py", line 365, in _synops_chain
+    raise ValueError(
+ValueError: per-unit SynOps costs are not defined for 'spear_repl_resnet18' (SpikingResNet18); supported: LeNetSNN, VGG9SNN, and any VGGStyleSNN. ResNet18's residual additions make per-channel downstream cost non-attributable.
