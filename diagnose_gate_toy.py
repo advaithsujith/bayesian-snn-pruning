@@ -29,8 +29,8 @@ import torch
 import torch.nn as nn
 
 from config import ArchConfig, SNNConfig, BayesianConfig
-from models import VGGStyleSNN
-from bayesian_layers import collect_prunable_bayesian_layers, set_bayesian_mode
+from models import SpikingBasicBlock, VGGStyleSNN, read_output, _make_leaky
+from bayesian_layers import BayesianConv2d, collect_prunable_bayesian_layers, set_bayesian_mode
 from losses import bayesian_snn_loss, get_task_loss, linear_warmup_schedule
 from train import build_gate_split_optimizers
 
@@ -85,6 +85,58 @@ def build(snn_cfg):
     torch.manual_seed(7)
     m = VGGStyleSNN(arch, snn_cfg, BayesianConfig(), num_classes=N_CLASSES)
     return m
+
+
+class TinyResSNN(nn.Module):
+    """A minimal residual spiking net wired exactly like SpikingResNet18:
+    non-prunable stem, real SpikingBasicBlocks (conv1 gated and prunable,
+    conv2 residual-tied and non-prunable), global pool, fc_out. Exists to
+    measure whether the residual bypass compresses the *ground-truth*
+    importance spread of conv1 channels -- the direct test of the
+    interchangeability hypothesis, independent of any gate machinery."""
+
+    def __init__(self, snn_cfg, bayesian_cfg, width=8, n_blocks=2, num_classes=N_CLASSES):
+        super().__init__()
+        self.num_steps = snn_cfg.num_steps
+        self.output_readout = snn_cfg.output_readout
+        gate_kwargs = dict(
+            log_alpha_init=bayesian_cfg.log_alpha_init,
+            log_alpha_clamp_min=bayesian_cfg.log_alpha_clamp_min,
+            log_alpha_clamp_max=bayesian_cfg.log_alpha_clamp_max,
+        )
+        self.stem_conv = BayesianConv2d(3, width, kernel_size=3, padding=1, **gate_kwargs)
+        self.stem_conv.structurally_prunable = False
+        self.stem_conv.defer_gate = True
+        self.stem_bn = nn.BatchNorm2d(width)
+        self.stem_lif = _make_leaky(snn_cfg)
+        self.blocks = nn.ModuleList(
+            [SpikingBasicBlock(width, width, 1, snn_cfg, bayesian_cfg) for _ in range(n_blocks)]
+        )
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc_out = nn.Linear(width, num_classes)
+        self.lif_out = _make_leaky(snn_cfg, output=True)
+
+    def forward(self, x):
+        mems = [b.init_state() for b in self.blocks]
+        stem_mem = self.stem_lif.init_leaky()
+        mem_out = self.lif_out.init_leaky()
+        rec = []
+        for _ in range(self.num_steps):
+            cur = self.stem_conv.apply_gate(self.stem_bn(self.stem_conv(x)))
+            spk, stem_mem = self.stem_lif(cur, stem_mem)
+            for i, b in enumerate(self.blocks):
+                m1, m2 = mems[i]
+                spk, m1, m2 = b(spk, m1, m2)
+                mems[i] = (m1, m2)
+            cur_out = self.fc_out(self.global_pool(spk).flatten(1))
+            out_t, mem_out = read_output(self, cur_out, mem_out)
+            rec.append(out_t)
+        return torch.stack(rec, dim=0)
+
+
+def build_res(snn_cfg):
+    torch.manual_seed(7)
+    return TinyResSNN(snn_cfg, BayesianConfig())
 
 
 def pretrain(model, tr, va, loss_name, epochs=30, lr=1e-3, bs=32):
@@ -149,10 +201,10 @@ def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05,
     return la
 
 
-def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce"):
+def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build):
     print(f"[running] {name} ...", flush=True)
     tr, va = make_data()
-    m = build(snn_cfg)
+    m = builder(snn_cfg)
     acc = pretrain(m, tr, va, loss_name)
     imps = ablation_importance(m, va, loss_name)
     m2 = copy.deepcopy(m)
@@ -162,15 +214,16 @@ def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce"):
     # negative log_alpha = kept/important; correlate importance with -log_alpha
     rho = spearman(imp_vec, -la)
     per_layer = []
-    o = 0
     for l0, l2 in zip(collect_prunable_bayesian_layers(m), layers):
-        n = l2.log_alpha.numel()
         per_layer.append(spearman(imps[l0], -l2.log_alpha.detach()))
-        o += n
     med = la.median().item()
+    # The ground-truth spread itself: if ablating any channel costs about the
+    # same (std << mean), the channels are interchangeable and NO criterion
+    # could rank them -- that is a property of the network, not the gates.
     print(
         f"{name:34s} acc={acc:.3f} gate_median={med:+.2f} std={la.std():.3f} "
-        f"rho_pooled={rho:+.2f} rho_layers=[" + ", ".join(f"{r:+.2f}" for r in per_layer) + "]"
+        f"rho_pooled={rho:+.2f} rho_layers=[" + ", ".join(f"{r:+.2f}" for r in per_layer) + "] "
+        f"true_imp={imp_vec.mean():.4f}+-{imp_vec.std():.4f}"
     )
     return rho, la.std().item()
 
@@ -199,3 +252,6 @@ if __name__ == "__main__":
     run_cell("F spear but thr=0.5", cfg_spear(threshold=0.5), "dpap")
     run_cell("G spear but subtract reset", cfg_spear(reset_mechanism="subtract"), "dpap")
     run_cell("H spear but spikes readout", cfg_spear(output_readout="spikes"), "dpap")
+    print("== residual cells: does the bypass erase the ground truth? ==")
+    run_cell("I residual, spear-like + dpap mech", cfg_spear(), "dpap", builder=build_res)
+    run_cell("J residual, dpap-like + dpap mech", cfg_dpap(), "dpap", builder=build_res)
