@@ -80,11 +80,21 @@ def val_loss(model, x, y, loss_name):
         return float(get_task_loss(loss_name)(out, y))
 
 
-def build(snn_cfg):
+def build(snn_cfg, seed=0):
     arch = ArchConfig(conv_spec=[8, "M", 8], fc_hidden=[], norm_type="batch", input_size=8)
-    torch.manual_seed(7)
-    m = VGGStyleSNN(arch, snn_cfg, BayesianConfig(), num_classes=N_CLASSES)
-    return m
+    torch.manual_seed(7 + seed)
+    return VGGStyleSNN(arch, snn_cfg, BayesianConfig(), num_classes=N_CLASSES)
+
+
+def build_deep(snn_cfg, seed=0):
+    """Six gated conv layers instead of two: the depth probe. The real VGG16
+    failure might live in noise compounding across many gated layers, which
+    the 2-layer toy cannot express."""
+    arch = ArchConfig(
+        conv_spec=[8, 8, "M", 8, 8, "M", 8, 8], fc_hidden=[], norm_type="batch", input_size=8
+    )
+    torch.manual_seed(7 + seed)
+    return VGGStyleSNN(arch, snn_cfg, BayesianConfig(), num_classes=N_CLASSES)
 
 
 class TinyResSNN(nn.Module):
@@ -134,8 +144,8 @@ class TinyResSNN(nn.Module):
         return torch.stack(rec, dim=0)
 
 
-def build_res(snn_cfg):
-    torch.manual_seed(7)
+def build_res(snn_cfg, seed=0):
+    torch.manual_seed(7 + seed)
     return TinyResSNN(snn_cfg, BayesianConfig())
 
 
@@ -175,7 +185,8 @@ def spearman(a, b):
     return float((ra * rb).sum() / (ra.norm() * rb.norm() + 1e-12))
 
 
-def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05, warm=10):
+def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05, warm=10, seed=0):
+    torch.manual_seed(4242 + seed)
     set_bayesian_mode(model, True)
     if mechanics == "dpap":  # adam gates (constant lr), adamw weights
         main, gates = build_gate_split_optimizers(model, "adamw", 5e-4, 5e-5, "adam", gate_lr=4e-3)
@@ -186,7 +197,7 @@ def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05,
     for ep in range(epochs):
         beta = linear_warmup_schedule(ep, warm, beta_max)
         model.train()
-        for xb, yb in batches(*tr, bs, seed=1000 + ep):
+        for xb, yb in batches(*tr, bs, seed=1000 + ep + 10000 * seed):
             main.zero_grad(set_to_none=True)
             gates.zero_grad(set_to_none=True)
             out = model(xb)
@@ -201,17 +212,23 @@ def gate_phase(model, tr, loss_name, mechanics, epochs=60, bs=32, beta_max=0.05,
     return la
 
 
-def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build):
+def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build, pretrain_loss=None, seed=0):
+    """`pretrain_loss` (default: same as `loss_name`) lets a cell pretrain
+    under a different objective than the gate phase, mirroring the real
+    pipeline, where the SPEAR baselines are TET-trained but the gates run
+    under cross-entropy. TET's stated goal is flatter minima, and flatness
+    is low curvature to perturbation -- the very quantity the gates rank
+    channels by -- so the pretrain loss is itself a suspect."""
     import time
 
     t0 = time.time()
-    print(f"[running] {name} ...", flush=True)
-    tr, va = make_data()
-    m = builder(snn_cfg)
-    acc = pretrain(m, tr, va, loss_name)
+    print(f"[running] {name} (s{seed}) ...", flush=True)
+    tr, va = make_data(seed=1 + 997 * seed)
+    m = builder(snn_cfg, seed=seed)
+    acc = pretrain(m, tr, va, pretrain_loss or loss_name)
     imps = ablation_importance(m, va, loss_name)
     m2 = copy.deepcopy(m)
-    la = gate_phase(m2, tr, loss_name, mechanics)
+    la = gate_phase(m2, tr, loss_name, mechanics, seed=seed)
     layers = collect_prunable_bayesian_layers(m2)
     imp_vec = torch.cat([imps[l0] for l0 in collect_prunable_bayesian_layers(m)])
     # negative log_alpha = kept/important; correlate importance with -log_alpha
@@ -224,7 +241,7 @@ def run_cell(name, snn_cfg, mechanics, loss_name="spike_rate_ce", builder=build)
     # same (std << mean), the channels are interchangeable and NO criterion
     # could rank them -- that is a property of the network, not the gates.
     print(
-        f"{name:34s} acc={acc:.3f} gate_median={med:+.2f} std={la.std():.3f} "
+        f"{name:30s} s{seed} acc={acc:.3f} gate_median={med:+.2f} std={la.std():.3f} "
         f"rho_pooled={rho:+.2f} rho_layers=[" + ", ".join(f"{r:+.2f}" for r in per_layer) + "] "
         f"true_imp={imp_vec.mean():.4f}+-{imp_vec.std():.4f} ({time.time() - t0:.0f}s)",
         flush=True,
@@ -244,22 +261,43 @@ def cfg_spear(**kw):
     return SNNConfig(**d)
 
 
+CELLS = [
+    ("A dpap-like plain", dict(snn_cfg=cfg_dpap(), mechanics="dpap")),
+    ("B spear-like plain", dict(snn_cfg=cfg_spear(), mechanics="dpap")),
+    ("C spear-like plain, sgd mech", dict(snn_cfg=cfg_spear(), mechanics="lagr")),
+    ("D dpap-like plain, sgd mech", dict(snn_cfg=cfg_dpap(), mechanics="lagr")),
+    ("E spear but T=8", dict(snn_cfg=cfg_spear(num_steps=8), mechanics="dpap")),
+    ("F spear but thr=0.5", dict(snn_cfg=cfg_spear(threshold=0.5), mechanics="dpap")),
+    ("G spear but subtract reset", dict(snn_cfg=cfg_spear(reset_mechanism="subtract"), mechanics="dpap")),
+    ("H spear but spikes readout", dict(snn_cfg=cfg_spear(output_readout="spikes"), mechanics="dpap")),
+    ("I residual spear-like", dict(snn_cfg=cfg_spear(), mechanics="dpap", builder=build_res)),
+    ("J residual dpap-like", dict(snn_cfg=cfg_dpap(), mechanics="dpap", builder=build_res)),
+    # The two full-scale suspects the first toy pass could not see: TET
+    # pretraining (flat minima -> uniformly low curvature -> nothing for the
+    # gates to rank) and depth (noise compounding across six gated layers).
+    ("K spear + TET pretrain", dict(snn_cfg=cfg_spear(), mechanics="dpap", pretrain_loss="tet")),
+    ("L spear deep (6 conv)", dict(snn_cfg=cfg_spear(), mechanics="dpap", builder=build_deep)),
+    ("M spear deep + TET pretrain", dict(snn_cfg=cfg_spear(), mechanics="dpap", builder=build_deep, pretrain_loss="tet")),
+]
+
 if __name__ == "__main__":
     # Under SLURM the cgroup grants --cpus-per-task cores while os.cpu_count()
     # reports the whole node (168 on CSF3's AMD nodes); spawning that many
     # torch threads on 8 granted cores thrashes badly enough to blow a
     # 40-minute wallclock. Trust the scheduler's number when present.
     torch.set_num_threads(int(os.environ.get("SLURM_CPUS_PER_TASK", 0) or os.cpu_count() or 8))
-    print("== main cells ==")
-    run_cell("A dpap-like + dpap mechanics", cfg_dpap(), "dpap")
-    run_cell("B spear-like + dpap mechanics", cfg_spear(), "dpap")
-    run_cell("C spear-like + lagr mechanics", cfg_spear(), "lagr")
-    run_cell("D dpap-like + lagr mechanics", cfg_dpap(), "lagr")
-    print("== single-ingredient flips of spear-like, dpap mechanics ==")
-    run_cell("E spear but T=8", cfg_spear(num_steps=8), "dpap")
-    run_cell("F spear but thr=0.5", cfg_spear(threshold=0.5), "dpap")
-    run_cell("G spear but subtract reset", cfg_spear(reset_mechanism="subtract"), "dpap")
-    run_cell("H spear but spikes readout", cfg_spear(output_readout="spikes"), "dpap")
-    print("== residual cells: does the bypass erase the ground truth? ==")
-    run_cell("I residual, spear-like + dpap mech", cfg_spear(), "dpap", builder=build_res)
-    run_cell("J residual, dpap-like + dpap mech", cfg_dpap(), "dpap", builder=build_res)
+    seeds = (0, 1, 2)
+    results = {name: [] for name, _ in CELLS}
+    for seed in seeds:
+        print(f"== seed {seed} ==", flush=True)
+        for name, kw in CELLS:
+            rho, std = run_cell(name, seed=seed, **kw)
+            results[name].append((rho, std))
+    print("\n== summary over seeds (mean +- sd) ==")
+    for name, _ in CELLS:
+        rhos = torch.tensor([r for r, _ in results[name]])
+        stds = torch.tensor([s for _, s in results[name]])
+        print(
+            f"{name:30s} rho={rhos.mean():+.2f}+-{rhos.std():.2f} "
+            f"gate_std={stds.mean():.3f}+-{stds.std():.3f}"
+        )
