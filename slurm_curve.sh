@@ -4,7 +4,7 @@
 #SBATCH -G 1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --time=96:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/slurm_%j.out
 #SBATCH --error=logs/slurm_%j.err
 
@@ -25,19 +25,67 @@
 # Requires outputs/dpap_repl/trained_model.pt (the 94.35% replicated
 # baseline). See slurm.sh for the CSF3 partition/GPU-request notes.
 #
-# Any arguments given to sbatch are passed straight through to
+# Arguments are required, and are passed straight through to
 # run_sparsity_curve.py, so each experimental arm is one submission line:
 #
 #   sbatch slurm_curve.sh --model dpap_repl --tag sgd \
 #       --gate-optimizer sgd --gate-lr 0.05 --targets 20 33.46 50.80 70 90
 #
-# With no arguments it runs the default beta0.01 Adam curve below.
+# The wallclock above is a request, not a reservation, and SLURM will not
+# backfill a job into a gap shorter than what it asks for. This previously
+# requested 96h for runs that finish in one to six, which is how a 32-minute
+# gate test ended up with a start time 14 hours after submission. Override it
+# per arm rather than raising the default: `sbatch --time=01:00:00` for a gate
+# test, the default for a full five-point curve.
 #
 # Before submitting: python tests/test_ranked_pruning.py &&
 #   python tests/test_vggstyle.py && python tests/test_synops.py
 # ---------------------------------------------------------------------------
 
 set -euo pipefail
+
+# Checked before the venv build and the pip install, so a mis-submission
+# releases the GPU allocation in a second rather than after two minutes of
+# environment setup.
+#
+# A bare `sbatch slurm_curve.sh` used to run a default arm: dpap_repl at
+# --tag beta0.01, over the five standard targets. That default is gone, and
+# deliberately so.
+#
+# run_sparsity_curve.py writes into sparsity_curve_<tag> without clearing it,
+# so the tag is the only thing separating one run's evidence from another's.
+# beta0.01 is the archived run behind the +1.54 to +5.25pp margin over the
+# random control, and its bayesian_model.pt is gitignored like every other
+# weight file -- so the no-argument path pointed at the one directory in this
+# repo holding an irreplaceable artifact. Submitted bare by accident on
+# 2026-08-13; caught 8 minutes in, before gate training finished and reached
+# the torch.save. Nothing was lost, and nothing about the setup made that
+# outcome likely rather than lucky.
+#
+# Requiring an explicit --tag costs one line per submission and removes the
+# failure mode. The gate-pressure diagnostic that used to run as a pre-flight
+# here is worth keeping, but as its own deliberate submission, since it reads
+# a ratio a human then has to act on:
+#
+#   sbatch --time=00:20:00 slurm_curve.sh --model spear_repl_resnet18 \
+#       --diagnose-only --fail-below 1e-3 --fail-above 2e-2
+if [ "$#" -eq 0 ]; then
+    echo "ERROR: no arguments given." >&2
+    echo >&2
+    echo "This script has no default arm. Every run needs at least --model" >&2
+    echo "and --tag, because the tag is what stops one arm overwriting" >&2
+    echo "another's results. Examples:" >&2
+    echo >&2
+    echo "  sbatch --time=01:00:00 slurm_curve.sh --model spear_repl_resnet18 \\" >&2
+    echo "      --tag sgd2 --gate-optimizer sgd --gate-lr 0.01 --beta-max 0.05 \\" >&2
+    echo "      --targets 33.46 50.80 --finetune-epochs 30" >&2
+    echo >&2
+    echo "  sbatch slurm_curve.sh --model dpap_repl --tag beta0.01_seed1 \\" >&2
+    echo "      --seed 1 --targets 20 33.46 50.80 70 90" >&2
+    echo >&2
+    echo "See HANDOFF.md for which arms are outstanding." >&2
+    exit 2
+fi
 
 echo "===================================================="
 echo "Job started: $(date)"
@@ -58,32 +106,9 @@ python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
 
 mkdir -p checkpoints outputs plots logs
 
-# Tagged so this does not overwrite the previous run. The 2026-08-03 run at
-# beta_max=0.4 finished with 89% of gates pinned at the clamp, so its curve
-# measures random structured pruning rather than the criterion; keep it as
-# outputs/dpap_repl/sparsity_curve_RANDOM_CONTROL, it is the bar this run
-# has to beat (84.14% at 90% pruned, 90.62% at 50.80%).
-#
-# Stops before the five fine-tunes if the gates did not differentiate, so a
-# bad gate phase costs ~1.5h rather than ~4h.
-if [ "$#" -gt 0 ]; then
-    python run_sparsity_curve.py "$@"
-else
-    # Pre-flight: can the task loss push back against the KL at all? One
-    # batch, under a minute. If the weakest layer's ratio is ~1e-3 or below,
-    # the KL is unopposed there, gates will saturate, and every point on the
-    # curve below would be ties broken by index order. Cheaper to find out
-    # here. Only run for the default invocation -- a passthrough arm may
-    # target a different model, and under set -e a wrong-model diagnosis
-    # would kill the job.
-    python run_sparsity_curve.py --model dpap_repl --diagnose-only
-
-    python run_sparsity_curve.py \
-        --model dpap_repl \
-        --mode uniform \
-        --tag beta0.01 \
-        --targets 20 33.46 50.80 70 90
-fi
+# Note run_sparsity_curve.py stops before the fine-tunes if the gates did not
+# differentiate, so a bad gate phase still costs ~1.5h rather than ~4h.
+python run_sparsity_curve.py "$@"
 
 echo "===================================================="
 echo "Job finished: $(date)"
