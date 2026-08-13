@@ -1,0 +1,347 @@
+====================================================
+Job started: Thu 13 Aug 19:10:17 BST 2026
+Node: node864.csf3.man.alces.network
+====================================================
+Thu Aug 13 19:10:26 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.04             Driver Version: 580.159.04     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:01:00.0 Off |                    0 |
+| N/A   30C    P0             62W /  400W |       0MiB /  81920MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+CUDA available: True
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+
+Loading pretrained baseline: ./outputs/dpap_repl/trained_model.pt
+
+Training Bayesian gates (once, for every target on the curve)...
+19:12:31 | INFO | [bayesian_train] epoch 1/75 train_task_loss=0.1272 train_kl=4874.32 beta=0.00000 train_cost=4982018173.16 gamma=0.000000 train_acc=0.9674 val_loss=0.0035 val_acc=1.0000 time=86.9s
+19:12:35 | INFO |     log_alpha: min=-3.00 median=-3.00 max=-3.00 std=0.00 frac_prunable=0.000 frac_saturated=0.000
+19:12:38 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=1.071e-03 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=2.129e-03 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=9.411e-04 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=1.058e-03 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=6.052e-04 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=3.127e-04 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:12:38 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=4.217e-05 beta*|d KL/d log_alpha|=0.000e+00 ratio=inf
+19:13:48 | INFO | [bayesian_train] epoch 2/75 train_task_loss=0.1267 train_kl=4852.40 beta=0.00100 train_cost=4981858648.75 gamma=0.000000 train_acc=0.9657 val_loss=0.0033 val_acc=1.0000 time=70.6s
+19:13:48 | INFO |     log_alpha: min=-3.00 median=-2.97 max=-2.94 std=0.01 frac_prunable=0.000 frac_saturated=0.000
+19:14:59 | INFO | [bayesian_train] epoch 3/75 train_task_loss=0.1326 train_kl=4782.08 beta=0.00200 train_cost=4981247655.25 gamma=0.000000 train_acc=0.9622 val_loss=0.0036 val_acc=0.9998 time=70.8s
+19:14:59 | INFO |     log_alpha: min=-2.98 median=-2.89 max=-2.85 std=0.03 frac_prunable=0.000 frac_saturated=0.000
+19:16:10 | INFO | [bayesian_train] epoch 4/75 train_task_loss=0.1426 train_kl=4656.41 beta=0.00300 train_cost=4979998672.21 gamma=0.000000 train_acc=0.9577 val_loss=0.0044 val_acc=0.9996 time=70.4s
+19:16:10 | INFO |     log_alpha: min=-2.95 median=-2.77 max=-2.71 std=0.04 frac_prunable=0.000 frac_saturated=0.000
+19:17:20 | INFO | [bayesian_train] epoch 5/75 train_task_loss=0.1592 train_kl=4479.89 beta=0.00400 train_cost=4977994439.11 gamma=0.000000 train_acc=0.9507 val_loss=0.0056 val_acc=0.9992 time=70.5s
+19:17:20 | INFO |     log_alpha: min=-2.90 median=-2.61 max=-2.55 std=0.06 frac_prunable=0.000 frac_saturated=0.000
+19:18:30 | INFO | [bayesian_train] epoch 6/75 train_task_loss=0.1729 train_kl=4251.05 beta=0.00500 train_cost=4974983175.40 gamma=0.000000 train_acc=0.9448 val_loss=0.0095 val_acc=0.9982 time=70.4s
+19:18:30 | INFO |     log_alpha: min=-2.82 median=-2.41 max=-2.34 std=0.07 frac_prunable=0.000 frac_saturated=0.000
+19:18:30 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=1.259e-03 beta*|d KL/d log_alpha|=2.877e-03 ratio=0.438
+19:18:30 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=2.132e-03 beta*|d KL/d log_alpha|=2.845e-03 ratio=0.750
+19:18:30 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=1.153e-03 beta*|d KL/d log_alpha|=2.880e-03 ratio=0.400
+19:18:30 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=1.158e-03 beta*|d KL/d log_alpha|=2.877e-03 ratio=0.402
+19:18:30 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=7.574e-04 beta*|d KL/d log_alpha|=2.900e-03 ratio=0.261
+19:18:30 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=3.355e-04 beta*|d KL/d log_alpha|=2.922e-03 ratio=0.115
+19:18:30 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=1.208e-04 beta*|d KL/d log_alpha|=2.934e-03 ratio=0.041
+19:19:41 | INFO | [bayesian_train] epoch 7/75 train_task_loss=0.1822 train_kl=3987.31 beta=0.00600 train_cost=4970907189.48 gamma=0.000000 train_acc=0.9426 val_loss=0.0107 val_acc=0.9972 time=70.9s
+19:19:41 | INFO |     log_alpha: min=-2.72 median=-2.21 max=-2.14 std=0.08 frac_prunable=0.000 frac_saturated=0.000
+19:20:51 | INFO | [bayesian_train] epoch 8/75 train_task_loss=0.1919 train_kl=3717.34 beta=0.00700 train_cost=4965970942.29 gamma=0.000000 train_acc=0.9390 val_loss=0.0105 val_acc=0.9978 time=70.0s
+19:20:51 | INFO |     log_alpha: min=-2.60 median=-2.01 max=-1.94 std=0.09 frac_prunable=0.000 frac_saturated=0.000
+19:22:02 | INFO | [bayesian_train] epoch 9/75 train_task_loss=0.1952 train_kl=3448.06 beta=0.00800 train_cost=4960155209.96 gamma=0.000000 train_acc=0.9378 val_loss=0.0137 val_acc=0.9964 time=70.8s
+19:22:02 | INFO |     log_alpha: min=-2.49 median=-1.82 max=-1.74 std=0.09 frac_prunable=0.000 frac_saturated=0.000
+19:23:13 | INFO | [bayesian_train] epoch 10/75 train_task_loss=0.2066 train_kl=3175.28 beta=0.00900 train_cost=4953185971.77 gamma=0.000000 train_acc=0.9327 val_loss=0.0155 val_acc=0.9964 time=70.6s
+19:23:13 | INFO |     log_alpha: min=-2.36 median=-1.63 max=-1.55 std=0.10 frac_prunable=0.000 frac_saturated=0.000
+19:24:23 | INFO | [bayesian_train] epoch 11/75 train_task_loss=0.2182 train_kl=2905.36 beta=0.01000 train_cost=4944984117.48 gamma=0.000000 train_acc=0.9294 val_loss=0.0168 val_acc=0.9968 time=70.4s
+19:24:23 | INFO |     log_alpha: min=-2.22 median=-1.45 max=-1.37 std=0.10 frac_prunable=0.000 frac_saturated=0.000
+19:24:23 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=1.949e-03 beta*|d KL/d log_alpha|=6.366e-03 ratio=0.306
+19:24:23 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=2.385e-03 beta*|d KL/d log_alpha|=6.339e-03 ratio=0.376
+19:24:23 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=1.548e-03 beta*|d KL/d log_alpha|=6.373e-03 ratio=0.243
+19:24:23 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=1.574e-03 beta*|d KL/d log_alpha|=6.377e-03 ratio=0.247
+19:24:23 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=1.345e-03 beta*|d KL/d log_alpha|=6.370e-03 ratio=0.211
+19:24:23 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=5.279e-04 beta*|d KL/d log_alpha|=6.350e-03 ratio=0.083
+19:24:23 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=6.834e-04 beta*|d KL/d log_alpha|=6.342e-03 ratio=0.108
+19:25:34 | INFO | [bayesian_train] epoch 12/75 train_task_loss=0.2308 train_kl=2654.15 beta=0.01000 train_cost=4935889325.51 gamma=0.000000 train_acc=0.9255 val_loss=0.0233 val_acc=0.9952 time=70.5s
+19:25:34 | INFO |     log_alpha: min=-2.10 median=-1.28 max=-1.20 std=0.10 frac_prunable=0.000 frac_saturated=0.000
+19:26:44 | INFO | [bayesian_train] epoch 13/75 train_task_loss=0.2430 train_kl=2421.28 beta=0.01000 train_cost=4925841246.44 gamma=0.000000 train_acc=0.9238 val_loss=0.0287 val_acc=0.9922 time=70.4s
+19:26:44 | INFO |     log_alpha: min=-1.98 median=-1.12 max=-1.04 std=0.11 frac_prunable=0.000 frac_saturated=0.000
+19:27:55 | INFO | [bayesian_train] epoch 14/75 train_task_loss=0.2630 train_kl=2204.00 beta=0.01000 train_cost=4914650588.73 gamma=0.000000 train_acc=0.9157 val_loss=0.0460 val_acc=0.9866 time=70.5s
+19:27:55 | INFO |     log_alpha: min=-1.87 median=-0.97 max=-0.88 std=0.11 frac_prunable=0.000 frac_saturated=0.000
+19:29:05 | INFO | [bayesian_train] epoch 15/75 train_task_loss=0.2817 train_kl=2004.44 beta=0.01000 train_cost=4902359422.86 gamma=0.000000 train_acc=0.9115 val_loss=0.0741 val_acc=0.9758 time=70.4s
+19:29:05 | INFO |     log_alpha: min=-1.77 median=-0.83 max=-0.73 std=0.12 frac_prunable=0.000 frac_saturated=0.000
+19:30:15 | INFO | [bayesian_train] epoch 16/75 train_task_loss=0.3100 train_kl=1820.57 beta=0.01000 train_cost=4888795203.13 gamma=0.000000 train_acc=0.9026 val_loss=0.0955 val_acc=0.9748 time=70.5s
+19:30:15 | INFO |     log_alpha: min=-1.67 median=-0.69 max=-0.57 std=0.12 frac_prunable=0.000 frac_saturated=0.000
+19:30:16 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.178e-03 beta*|d KL/d log_alpha|=5.569e-03 ratio=0.571
+19:30:16 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=3.526e-03 beta*|d KL/d log_alpha|=5.828e-03 ratio=0.605
+19:30:16 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=2.967e-03 beta*|d KL/d log_alpha|=5.529e-03 ratio=0.537
+19:30:16 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=3.129e-03 beta*|d KL/d log_alpha|=5.535e-03 ratio=0.565
+19:30:16 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=3.541e-03 beta*|d KL/d log_alpha|=5.387e-03 ratio=0.657
+19:30:16 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=1.600e-03 beta*|d KL/d log_alpha|=5.146e-03 ratio=0.311
+19:30:16 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=1.653e-03 beta*|d KL/d log_alpha|=5.168e-03 ratio=0.320
+19:31:26 | INFO | [bayesian_train] epoch 17/75 train_task_loss=0.3297 train_kl=1653.45 beta=0.01000 train_cost=4874038410.24 gamma=0.000000 train_acc=0.8958 val_loss=0.1212 val_acc=0.9396 time=70.4s
+19:31:26 | INFO |     log_alpha: min=-1.58 median=-0.56 max=-0.42 std=0.13 frac_prunable=0.000 frac_saturated=0.000
+19:32:36 | INFO | [bayesian_train] epoch 18/75 train_task_loss=0.3614 train_kl=1506.16 beta=0.01000 train_cost=4858512591.64 gamma=0.000000 train_acc=0.8873 val_loss=0.1679 val_acc=0.9356 time=70.4s
+19:32:36 | INFO |     log_alpha: min=-1.48 median=-0.44 max=-0.28 std=0.14 frac_prunable=0.000 frac_saturated=0.000
+19:33:46 | INFO | [bayesian_train] epoch 19/75 train_task_loss=0.3909 train_kl=1373.84 beta=0.01000 train_cost=4841975541.19 gamma=0.000000 train_acc=0.8796 val_loss=0.1977 val_acc=0.9134 time=70.1s
+19:33:46 | INFO |     log_alpha: min=-1.38 median=-0.32 max=-0.13 std=0.14 frac_prunable=0.000 frac_saturated=0.000
+19:34:57 | INFO | [bayesian_train] epoch 20/75 train_task_loss=0.4251 train_kl=1257.59 beta=0.01000 train_cost=4824857357.65 gamma=0.000000 train_acc=0.8684 val_loss=0.2303 val_acc=0.8924 time=70.4s
+19:34:57 | INFO |     log_alpha: min=-1.28 median=-0.21 max=0.01 std=0.15 frac_prunable=0.000 frac_saturated=0.000
+19:36:07 | INFO | [bayesian_train] epoch 21/75 train_task_loss=0.4644 train_kl=1154.87 beta=0.01000 train_cost=4807116193.56 gamma=0.000000 train_acc=0.8576 val_loss=0.2718 val_acc=0.8646 time=70.3s
+19:36:07 | INFO |     log_alpha: min=-1.20 median=-0.11 max=0.15 std=0.16 frac_prunable=0.000 frac_saturated=0.000
+19:36:07 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=4.207e-03 beta*|d KL/d log_alpha|=4.132e-03 ratio=1.018
+19:36:07 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=5.077e-03 beta*|d KL/d log_alpha|=4.692e-03 ratio=1.082
+19:36:07 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=5.403e-03 beta*|d KL/d log_alpha|=4.180e-03 ratio=1.293
+19:36:07 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=6.711e-03 beta*|d KL/d log_alpha|=4.203e-03 ratio=1.597
+19:36:07 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=5.772e-03 beta*|d KL/d log_alpha|=3.998e-03 ratio=1.444
+19:36:07 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=3.806e-03 beta*|d KL/d log_alpha|=3.584e-03 ratio=1.062
+19:36:07 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.726e-03 beta*|d KL/d log_alpha|=3.582e-03 ratio=0.761
+19:37:18 | INFO | [bayesian_train] epoch 22/75 train_task_loss=0.5062 train_kl=1066.46 beta=0.01000 train_cost=4789383281.21 gamma=0.000000 train_acc=0.8431 val_loss=0.3571 val_acc=0.8266 time=70.5s
+19:37:18 | INFO |     log_alpha: min=-1.12 median=-0.01 max=0.29 std=0.17 frac_prunable=0.000 frac_saturated=0.000
+19:38:28 | INFO | [bayesian_train] epoch 23/75 train_task_loss=0.5442 train_kl=989.85 beta=0.01000 train_cost=4771706609.78 gamma=0.000000 train_acc=0.8345 val_loss=0.4291 val_acc=0.7544 time=70.2s
+19:38:28 | INFO |     log_alpha: min=-1.03 median=0.08 max=0.42 std=0.18 frac_prunable=0.000 frac_saturated=0.000
+19:39:39 | INFO | [bayesian_train] epoch 24/75 train_task_loss=0.5883 train_kl=923.32 beta=0.01000 train_cost=4754219490.42 gamma=0.000000 train_acc=0.8189 val_loss=0.4801 val_acc=0.7104 time=70.6s
+19:39:39 | INFO |     log_alpha: min=-0.95 median=0.16 max=0.55 std=0.19 frac_prunable=0.000 frac_saturated=0.000
+19:40:49 | INFO | [bayesian_train] epoch 25/75 train_task_loss=0.6199 train_kl=865.10 beta=0.01000 train_cost=4736932714.95 gamma=0.000000 train_acc=0.8099 val_loss=0.5012 val_acc=0.7270 time=70.1s
+19:40:49 | INFO |     log_alpha: min=-0.87 median=0.23 max=0.68 std=0.19 frac_prunable=0.000 frac_saturated=0.000
+19:41:59 | INFO | [bayesian_train] epoch 26/75 train_task_loss=0.6597 train_kl=813.95 beta=0.01000 train_cost=4719891570.92 gamma=0.000000 train_acc=0.7954 val_loss=0.5871 val_acc=0.6668 time=70.2s
+19:41:59 | INFO |     log_alpha: min=-0.80 median=0.30 max=0.79 std=0.20 frac_prunable=0.000 frac_saturated=0.000
+19:41:59 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.286e-03 beta*|d KL/d log_alpha|=3.078e-03 ratio=1.068
+19:41:59 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.942e-03 beta*|d KL/d log_alpha|=3.796e-03 ratio=1.302
+19:41:59 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=4.898e-03 beta*|d KL/d log_alpha|=3.242e-03 ratio=1.511
+19:41:59 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.319e-03 beta*|d KL/d log_alpha|=3.312e-03 ratio=1.606
+19:41:59 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.335e-03 beta*|d KL/d log_alpha|=3.032e-03 ratio=1.430
+19:41:59 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.126e-03 beta*|d KL/d log_alpha|=2.691e-03 ratio=1.533
+19:41:59 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.862e-03 beta*|d KL/d log_alpha|=2.565e-03 ratio=1.116
+19:43:09 | INFO | [bayesian_train] epoch 27/75 train_task_loss=0.6907 train_kl=768.42 beta=0.01000 train_cost=4702960898.28 gamma=0.000000 train_acc=0.7848 val_loss=0.6338 val_acc=0.6508 time=70.3s
+19:43:09 | INFO |     log_alpha: min=-0.73 median=0.36 max=0.91 std=0.21 frac_prunable=0.000 frac_saturated=0.000
+19:44:20 | INFO | [bayesian_train] epoch 28/75 train_task_loss=0.7239 train_kl=728.27 beta=0.01000 train_cost=4686401694.15 gamma=0.000000 train_acc=0.7718 val_loss=0.7108 val_acc=0.5988 time=70.7s
+19:44:20 | INFO |     log_alpha: min=-0.68 median=0.42 max=1.02 std=0.21 frac_prunable=0.000 frac_saturated=0.000
+19:45:30 | INFO | [bayesian_train] epoch 29/75 train_task_loss=0.7600 train_kl=692.76 beta=0.01000 train_cost=4670301367.18 gamma=0.000000 train_acc=0.7641 val_loss=0.7730 val_acc=0.5246 time=70.4s
+19:45:30 | INFO |     log_alpha: min=-0.63 median=0.48 max=1.13 std=0.22 frac_prunable=0.000 frac_saturated=0.000
+19:46:41 | INFO | [bayesian_train] epoch 30/75 train_task_loss=0.7797 train_kl=661.26 beta=0.01000 train_cost=4654625543.96 gamma=0.000000 train_acc=0.7548 val_loss=0.7962 val_acc=0.5216 time=70.7s
+19:46:41 | INFO |     log_alpha: min=-0.58 median=0.53 max=1.22 std=0.22 frac_prunable=0.000 frac_saturated=0.000
+19:47:51 | INFO | [bayesian_train] epoch 31/75 train_task_loss=0.8029 train_kl=632.39 beta=0.01000 train_cost=4638988669.16 gamma=0.000000 train_acc=0.7473 val_loss=0.8582 val_acc=0.4916 time=70.3s
+19:47:51 | INFO |     log_alpha: min=-0.54 median=0.58 max=1.32 std=0.23 frac_prunable=0.000 frac_saturated=0.000
+19:47:51 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.859e-03 beta*|d KL/d log_alpha|=2.433e-03 ratio=1.586
+19:47:51 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=5.403e-03 beta*|d KL/d log_alpha|=3.182e-03 ratio=1.698
+19:47:51 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=5.086e-03 beta*|d KL/d log_alpha|=2.638e-03 ratio=1.928
+19:47:51 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.126e-03 beta*|d KL/d log_alpha|=2.749e-03 ratio=1.865
+19:47:51 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.797e-03 beta*|d KL/d log_alpha|=2.430e-03 ratio=1.974
+19:47:51 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.658e-03 beta*|d KL/d log_alpha|=2.201e-03 ratio=2.116
+19:47:51 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=3.034e-03 beta*|d KL/d log_alpha|=2.002e-03 ratio=1.516
+19:49:02 | INFO | [bayesian_train] epoch 32/75 train_task_loss=0.8343 train_kl=606.60 beta=0.01000 train_cost=4623853246.01 gamma=0.000000 train_acc=0.7374 val_loss=0.9236 val_acc=0.4750 time=70.4s
+19:49:02 | INFO |     log_alpha: min=-0.50 median=0.62 max=1.41 std=0.23 frac_prunable=0.000 frac_saturated=0.000
+19:50:12 | INFO | [bayesian_train] epoch 33/75 train_task_loss=0.8560 train_kl=583.22 beta=0.01000 train_cost=4609053290.95 gamma=0.000000 train_acc=0.7292 val_loss=0.9297 val_acc=0.4428 time=70.6s
+19:50:12 | INFO |     log_alpha: min=-0.46 median=0.66 max=1.49 std=0.24 frac_prunable=0.000 frac_saturated=0.000
+19:51:23 | INFO | [bayesian_train] epoch 34/75 train_task_loss=0.8787 train_kl=561.91 beta=0.01000 train_cost=4594554310.54 gamma=0.000000 train_acc=0.7219 val_loss=0.9731 val_acc=0.4350 time=70.8s
+19:51:23 | INFO |     log_alpha: min=-0.43 median=0.70 max=1.57 std=0.24 frac_prunable=0.000 frac_saturated=0.000
+19:52:34 | INFO | [bayesian_train] epoch 35/75 train_task_loss=0.8910 train_kl=542.81 beta=0.01000 train_cost=4580703842.99 gamma=0.000000 train_acc=0.7159 val_loss=1.0075 val_acc=0.3998 time=70.7s
+19:52:34 | INFO |     log_alpha: min=-0.39 median=0.74 max=1.65 std=0.24 frac_prunable=0.000 frac_saturated=0.000
+19:53:45 | INFO | [bayesian_train] epoch 36/75 train_task_loss=0.9159 train_kl=525.50 beta=0.01000 train_cost=4567392287.29 gamma=0.000000 train_acc=0.7079 val_loss=1.0288 val_acc=0.4038 time=70.7s
+19:53:45 | INFO |     log_alpha: min=-0.36 median=0.77 max=1.71 std=0.25 frac_prunable=0.000 frac_saturated=0.000
+19:53:45 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=4.356e-03 beta*|d KL/d log_alpha|=2.043e-03 ratio=2.132
+19:53:45 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=5.554e-03 beta*|d KL/d log_alpha|=2.768e-03 ratio=2.007
+19:53:45 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=4.783e-03 beta*|d KL/d log_alpha|=2.245e-03 ratio=2.131
+19:53:45 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=6.030e-03 beta*|d KL/d log_alpha|=2.380e-03 ratio=2.533
+19:53:45 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.744e-03 beta*|d KL/d log_alpha|=2.052e-03 ratio=2.312
+19:53:45 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.818e-03 beta*|d KL/d log_alpha|=1.903e-03 ratio=2.532
+19:53:45 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=3.046e-03 beta*|d KL/d log_alpha|=1.671e-03 ratio=1.823
+19:54:55 | INFO | [bayesian_train] epoch 37/75 train_task_loss=0.9316 train_kl=509.44 beta=0.01000 train_cost=4554270135.18 gamma=0.000000 train_acc=0.7014 val_loss=1.0676 val_acc=0.3636 time=70.0s
+19:54:55 | INFO |     log_alpha: min=-0.34 median=0.80 max=1.77 std=0.25 frac_prunable=0.000 frac_saturated=0.000
+19:56:05 | INFO | [bayesian_train] epoch 38/75 train_task_loss=0.9417 train_kl=494.74 beta=0.01000 train_cost=4541547248.64 gamma=0.000000 train_acc=0.6992 val_loss=1.0746 val_acc=0.3634 time=70.4s
+19:56:05 | INFO |     log_alpha: min=-0.31 median=0.83 max=1.82 std=0.25 frac_prunable=0.000 frac_saturated=0.000
+19:57:16 | INFO | [bayesian_train] epoch 39/75 train_task_loss=0.9713 train_kl=481.41 beta=0.01000 train_cost=4529444610.84 gamma=0.000000 train_acc=0.6877 val_loss=1.0752 val_acc=0.3672 time=70.5s
+19:57:16 | INFO |     log_alpha: min=-0.29 median=0.86 max=1.86 std=0.26 frac_prunable=0.000 frac_saturated=0.000
+19:58:26 | INFO | [bayesian_train] epoch 40/75 train_task_loss=0.9732 train_kl=469.35 beta=0.01000 train_cost=4517990528.57 gamma=0.000000 train_acc=0.6866 val_loss=1.0973 val_acc=0.3692 time=70.4s
+19:58:26 | INFO |     log_alpha: min=-0.27 median=0.89 max=1.91 std=0.26 frac_prunable=0.000 frac_saturated=0.000
+19:59:36 | INFO | [bayesian_train] epoch 41/75 train_task_loss=0.9871 train_kl=458.12 beta=0.01000 train_cost=4506867237.55 gamma=0.000000 train_acc=0.6817 val_loss=1.1350 val_acc=0.3356 time=70.4s
+19:59:36 | INFO |     log_alpha: min=-0.25 median=0.91 max=1.97 std=0.26 frac_prunable=0.000 frac_saturated=0.000
+19:59:36 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=4.208e-03 beta*|d KL/d log_alpha|=1.794e-03 ratio=2.346
+19:59:36 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=5.345e-03 beta*|d KL/d log_alpha|=2.485e-03 ratio=2.151
+19:59:36 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=4.694e-03 beta*|d KL/d log_alpha|=1.985e-03 ratio=2.365
+19:59:36 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.548e-03 beta*|d KL/d log_alpha|=2.135e-03 ratio=2.599
+19:59:36 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.488e-03 beta*|d KL/d log_alpha|=1.806e-03 ratio=2.485
+19:59:36 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.885e-03 beta*|d KL/d log_alpha|=1.708e-03 ratio=2.860
+19:59:36 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=3.144e-03 beta*|d KL/d log_alpha|=1.461e-03 ratio=2.152
+20:00:47 | INFO | [bayesian_train] epoch 42/75 train_task_loss=1.0017 train_kl=447.85 beta=0.01000 train_cost=4496265024.28 gamma=0.000000 train_acc=0.6767 val_loss=1.1390 val_acc=0.3412 time=70.4s
+20:00:47 | INFO |     log_alpha: min=-0.23 median=0.94 max=2.03 std=0.26 frac_prunable=0.000 frac_saturated=0.000
+20:01:57 | INFO | [bayesian_train] epoch 43/75 train_task_loss=0.9968 train_kl=438.28 beta=0.01000 train_cost=4485985326.08 gamma=0.000000 train_acc=0.6772 val_loss=1.1341 val_acc=0.3460 time=70.4s
+20:01:57 | INFO |     log_alpha: min=-0.21 median=0.96 max=2.09 std=0.27 frac_prunable=0.000 frac_saturated=0.000
+20:03:10 | INFO | [bayesian_train] epoch 44/75 train_task_loss=1.0111 train_kl=429.47 beta=0.01000 train_cost=4476153819.59 gamma=0.000000 train_acc=0.6732 val_loss=1.1610 val_acc=0.3316 time=72.4s
+20:03:10 | INFO |     log_alpha: min=-0.20 median=0.98 max=2.15 std=0.27 frac_prunable=0.000 frac_saturated=0.000
+20:04:20 | INFO | [bayesian_train] epoch 45/75 train_task_loss=1.0099 train_kl=421.35 beta=0.01000 train_cost=4466753586.06 gamma=0.000000 train_acc=0.6713 val_loss=1.1667 val_acc=0.3496 time=70.1s
+20:04:20 | INFO |     log_alpha: min=-0.19 median=1.00 max=2.20 std=0.27 frac_prunable=0.000 frac_saturated=0.000
+20:05:30 | INFO | [bayesian_train] epoch 46/75 train_task_loss=1.0294 train_kl=414.00 beta=0.01000 train_cost=4457991838.15 gamma=0.000000 train_acc=0.6653 val_loss=1.1699 val_acc=0.3406 time=70.3s
+20:05:30 | INFO |     log_alpha: min=-0.17 median=1.02 max=2.25 std=0.27 frac_prunable=0.000 frac_saturated=0.000
+20:05:30 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=2.188e-03 beta*|d KL/d log_alpha|=1.632e-03 ratio=1.341
+20:05:30 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.334e-03 beta*|d KL/d log_alpha|=2.292e-03 ratio=1.891
+20:05:30 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=3.091e-03 beta*|d KL/d log_alpha|=1.809e-03 ratio=1.709
+20:05:30 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=4.512e-03 beta*|d KL/d log_alpha|=1.967e-03 ratio=2.293
+20:05:30 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=3.546e-03 beta*|d KL/d log_alpha|=1.641e-03 ratio=2.161
+20:05:30 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=3.826e-03 beta*|d KL/d log_alpha|=1.576e-03 ratio=2.428
+20:05:30 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.538e-03 beta*|d KL/d log_alpha|=1.320e-03 ratio=1.923
+20:06:40 | INFO | [bayesian_train] epoch 47/75 train_task_loss=1.0334 train_kl=407.08 beta=0.01000 train_cost=4449455888.50 gamma=0.000000 train_acc=0.6624 val_loss=1.1782 val_acc=0.3466 time=70.2s
+20:06:40 | INFO |     log_alpha: min=-0.16 median=1.04 max=2.29 std=0.27 frac_prunable=0.000 frac_saturated=0.000
+20:07:51 | INFO | [bayesian_train] epoch 48/75 train_task_loss=1.0453 train_kl=400.71 beta=0.01000 train_cost=4441344103.54 gamma=0.000000 train_acc=0.6603 val_loss=1.1813 val_acc=0.3426 time=70.3s
+20:07:51 | INFO |     log_alpha: min=-0.16 median=1.05 max=2.34 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:09:01 | INFO | [bayesian_train] epoch 49/75 train_task_loss=1.0519 train_kl=394.92 beta=0.01000 train_cost=4433844936.82 gamma=0.000000 train_acc=0.6560 val_loss=1.1977 val_acc=0.3294 time=70.1s
+20:09:01 | INFO |     log_alpha: min=-0.14 median=1.07 max=2.37 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:10:11 | INFO | [bayesian_train] epoch 50/75 train_task_loss=1.0532 train_kl=389.55 beta=0.01000 train_cost=4426726559.29 gamma=0.000000 train_acc=0.6552 val_loss=1.2092 val_acc=0.3162 time=70.4s
+20:10:11 | INFO |     log_alpha: min=-0.14 median=1.08 max=2.41 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:11:21 | INFO | [bayesian_train] epoch 51/75 train_task_loss=1.0508 train_kl=384.61 beta=0.01000 train_cost=4419987250.06 gamma=0.000000 train_acc=0.6553 val_loss=1.2071 val_acc=0.3364 time=70.1s
+20:11:21 | INFO |     log_alpha: min=-0.13 median=1.09 max=2.45 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:11:21 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.366e-03 beta*|d KL/d log_alpha|=1.527e-03 ratio=2.205
+20:11:21 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.347e-03 beta*|d KL/d log_alpha|=2.161e-03 ratio=2.011
+20:11:21 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=3.523e-03 beta*|d KL/d log_alpha|=1.690e-03 ratio=2.084
+20:11:21 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.047e-03 beta*|d KL/d log_alpha|=1.853e-03 ratio=2.724
+20:11:21 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.426e-03 beta*|d KL/d log_alpha|=1.531e-03 ratio=2.891
+20:11:21 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.953e-03 beta*|d KL/d log_alpha|=1.487e-03 ratio=3.331
+20:11:21 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.704e-03 beta*|d KL/d log_alpha|=1.225e-03 ratio=2.208
+20:12:32 | INFO | [bayesian_train] epoch 52/75 train_task_loss=1.0614 train_kl=380.11 beta=0.01000 train_cost=4413742746.17 gamma=0.000000 train_acc=0.6506 val_loss=1.2142 val_acc=0.3276 time=70.4s
+20:12:32 | INFO |     log_alpha: min=-0.12 median=1.11 max=2.48 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:13:42 | INFO | [bayesian_train] epoch 53/75 train_task_loss=1.0748 train_kl=375.90 beta=0.01000 train_cost=4407774507.24 gamma=0.000000 train_acc=0.6476 val_loss=1.2138 val_acc=0.3210 time=70.3s
+20:13:42 | INFO |     log_alpha: min=-0.11 median=1.12 max=2.51 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:14:52 | INFO | [bayesian_train] epoch 54/75 train_task_loss=1.0678 train_kl=372.05 beta=0.01000 train_cost=4402208920.46 gamma=0.000000 train_acc=0.6496 val_loss=1.2235 val_acc=0.3144 time=70.2s
+20:14:52 | INFO |     log_alpha: min=-0.10 median=1.13 max=2.54 std=0.28 frac_prunable=0.000 frac_saturated=0.000
+20:16:05 | INFO | [bayesian_train] epoch 55/75 train_task_loss=1.0759 train_kl=368.53 beta=0.01000 train_cost=4397046124.09 gamma=0.000000 train_acc=0.6461 val_loss=1.2369 val_acc=0.3270 time=72.2s
+20:16:05 | INFO |     log_alpha: min=-0.09 median=1.14 max=2.57 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:17:15 | INFO | [bayesian_train] epoch 56/75 train_task_loss=1.0834 train_kl=365.29 beta=0.01000 train_cost=4392231951.93 gamma=0.000000 train_acc=0.6439 val_loss=1.2285 val_acc=0.3300 time=70.5s
+20:17:15 | INFO |     log_alpha: min=-0.09 median=1.15 max=2.59 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:17:16 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=5.128e-03 beta*|d KL/d log_alpha|=1.457e-03 ratio=3.521
+20:17:16 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=7.790e-03 beta*|d KL/d log_alpha|=2.074e-03 ratio=3.756
+20:17:16 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=5.362e-03 beta*|d KL/d log_alpha|=1.612e-03 ratio=3.326
+20:17:16 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=7.484e-03 beta*|d KL/d log_alpha|=1.778e-03 ratio=4.210
+20:17:16 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=6.192e-03 beta*|d KL/d log_alpha|=1.459e-03 ratio=4.245
+20:17:16 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=5.888e-03 beta*|d KL/d log_alpha|=1.427e-03 ratio=4.127
+20:17:16 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.696e-03 beta*|d KL/d log_alpha|=1.161e-03 ratio=2.321
+20:18:26 | INFO | [bayesian_train] epoch 57/75 train_task_loss=1.0754 train_kl=362.30 beta=0.01000 train_cost=4387719377.92 gamma=0.000000 train_acc=0.6479 val_loss=1.2379 val_acc=0.3410 time=70.3s
+20:18:26 | INFO |     log_alpha: min=-0.08 median=1.16 max=2.61 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:19:36 | INFO | [bayesian_train] epoch 58/75 train_task_loss=1.0830 train_kl=359.60 beta=0.01000 train_cost=4383582541.94 gamma=0.000000 train_acc=0.6436 val_loss=1.2383 val_acc=0.3208 time=70.2s
+20:19:36 | INFO |     log_alpha: min=-0.07 median=1.16 max=2.63 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:20:46 | INFO | [bayesian_train] epoch 59/75 train_task_loss=1.0859 train_kl=357.14 beta=0.01000 train_cost=4379748414.01 gamma=0.000000 train_acc=0.6411 val_loss=1.2392 val_acc=0.3302 time=70.2s
+20:20:46 | INFO |     log_alpha: min=-0.07 median=1.17 max=2.65 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:21:57 | INFO | [bayesian_train] epoch 60/75 train_task_loss=1.0853 train_kl=354.87 beta=0.01000 train_cost=4376194828.52 gamma=0.000000 train_acc=0.6444 val_loss=1.2377 val_acc=0.3132 time=70.2s
+20:21:57 | INFO |     log_alpha: min=-0.06 median=1.18 max=2.66 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:23:07 | INFO | [bayesian_train] epoch 61/75 train_task_loss=1.0913 train_kl=352.79 beta=0.01000 train_cost=4372891077.40 gamma=0.000000 train_acc=0.6411 val_loss=1.2358 val_acc=0.3196 time=70.2s
+20:23:07 | INFO |     log_alpha: min=-0.06 median=1.18 max=2.67 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:23:07 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.849e-03 beta*|d KL/d log_alpha|=1.412e-03 ratio=2.726
+20:23:07 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.798e-03 beta*|d KL/d log_alpha|=2.017e-03 ratio=2.379
+20:23:07 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=3.732e-03 beta*|d KL/d log_alpha|=1.562e-03 ratio=2.389
+20:23:07 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.222e-03 beta*|d KL/d log_alpha|=1.728e-03 ratio=3.021
+20:23:07 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.854e-03 beta*|d KL/d log_alpha|=1.412e-03 ratio=3.438
+20:23:07 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=5.104e-03 beta*|d KL/d log_alpha|=1.388e-03 ratio=3.678
+20:23:07 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.684e-03 beta*|d KL/d log_alpha|=1.121e-03 ratio=2.395
+20:24:17 | INFO | [bayesian_train] epoch 62/75 train_task_loss=1.0998 train_kl=350.92 beta=0.01000 train_cost=4369886911.72 gamma=0.000000 train_acc=0.6377 val_loss=1.2399 val_acc=0.3136 time=70.2s
+20:24:17 | INFO |     log_alpha: min=-0.05 median=1.19 max=2.69 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:25:27 | INFO | [bayesian_train] epoch 63/75 train_task_loss=1.0945 train_kl=349.23 beta=0.01000 train_cost=4367150569.81 gamma=0.000000 train_acc=0.6394 val_loss=1.2442 val_acc=0.3192 time=70.2s
+20:25:27 | INFO |     log_alpha: min=-0.05 median=1.19 max=2.70 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:26:37 | INFO | [bayesian_train] epoch 64/75 train_task_loss=1.0914 train_kl=347.70 beta=0.01000 train_cost=4364650613.76 gamma=0.000000 train_acc=0.6408 val_loss=1.2412 val_acc=0.3166 time=69.9s
+20:26:37 | INFO |     log_alpha: min=-0.05 median=1.20 max=2.71 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:27:47 | INFO | [bayesian_train] epoch 65/75 train_task_loss=1.0940 train_kl=346.30 beta=0.01000 train_cost=4362349095.25 gamma=0.000000 train_acc=0.6417 val_loss=1.2456 val_acc=0.3204 time=70.0s
+20:27:47 | INFO |     log_alpha: min=-0.04 median=1.20 max=2.72 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:28:57 | INFO | [bayesian_train] epoch 66/75 train_task_loss=1.0918 train_kl=345.05 beta=0.01000 train_cost=4360297462.90 gamma=0.000000 train_acc=0.6395 val_loss=1.2455 val_acc=0.3164 time=70.1s
+20:28:57 | INFO |     log_alpha: min=-0.04 median=1.20 max=2.73 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:28:57 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=3.290e-03 beta*|d KL/d log_alpha|=1.385e-03 ratio=2.376
+20:28:57 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.893e-03 beta*|d KL/d log_alpha|=1.981e-03 ratio=2.469
+20:28:57 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=3.694e-03 beta*|d KL/d log_alpha|=1.530e-03 ratio=2.414
+20:28:57 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=5.522e-03 beta*|d KL/d log_alpha|=1.698e-03 ratio=3.252
+20:28:57 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=4.338e-03 beta*|d KL/d log_alpha|=1.383e-03 ratio=3.136
+20:28:57 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=4.693e-03 beta*|d KL/d log_alpha|=1.364e-03 ratio=3.441
+20:28:57 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.855e-03 beta*|d KL/d log_alpha|=1.095e-03 ratio=2.606
+20:30:08 | INFO | [bayesian_train] epoch 67/75 train_task_loss=1.0962 train_kl=343.94 beta=0.01000 train_cost=4358447331.56 gamma=0.000000 train_acc=0.6372 val_loss=1.2476 val_acc=0.3144 time=70.5s
+20:30:08 | INFO |     log_alpha: min=-0.04 median=1.21 max=2.74 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:31:18 | INFO | [bayesian_train] epoch 68/75 train_task_loss=1.0875 train_kl=342.91 beta=0.01000 train_cost=4356730898.20 gamma=0.000000 train_acc=0.6405 val_loss=1.2559 val_acc=0.3092 time=70.0s
+20:31:18 | INFO |     log_alpha: min=-0.04 median=1.21 max=2.75 std=0.29 frac_prunable=0.000 frac_saturated=0.000
+20:32:28 | INFO | [bayesian_train] epoch 69/75 train_task_loss=1.0976 train_kl=341.98 beta=0.01000 train_cost=4355174290.77 gamma=0.000000 train_acc=0.6385 val_loss=1.2480 val_acc=0.3274 time=70.2s
+20:32:28 | INFO |     log_alpha: min=-0.03 median=1.21 max=2.76 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:33:38 | INFO | [bayesian_train] epoch 70/75 train_task_loss=1.1080 train_kl=341.14 beta=0.01000 train_cost=4353755309.51 gamma=0.000000 train_acc=0.6359 val_loss=1.2454 val_acc=0.3278 time=70.3s
+20:33:38 | INFO |     log_alpha: min=-0.03 median=1.21 max=2.76 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:34:49 | INFO | [bayesian_train] epoch 71/75 train_task_loss=1.0905 train_kl=340.37 beta=0.01000 train_cost=4352445150.44 gamma=0.000000 train_acc=0.6411 val_loss=1.2510 val_acc=0.3304 time=70.3s
+20:34:49 | INFO |     log_alpha: min=-0.03 median=1.22 max=2.77 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:34:49 | INFO |     gate pressure conv_layers.0: |d task/d log_alpha|=2.529e-03 beta*|d KL/d log_alpha|=1.368e-03 ratio=1.849
+20:34:49 | INFO |     gate pressure conv_layers.1: |d task/d log_alpha|=4.021e-03 beta*|d KL/d log_alpha|=1.960e-03 ratio=2.052
+20:34:49 | INFO |     gate pressure conv_layers.2: |d task/d log_alpha|=3.092e-03 beta*|d KL/d log_alpha|=1.511e-03 ratio=2.046
+20:34:49 | INFO |     gate pressure conv_layers.3: |d task/d log_alpha|=4.230e-03 beta*|d KL/d log_alpha|=1.679e-03 ratio=2.519
+20:34:49 | INFO |     gate pressure conv_layers.4: |d task/d log_alpha|=3.665e-03 beta*|d KL/d log_alpha|=1.366e-03 ratio=2.683
+20:34:49 | INFO |     gate pressure conv_layers.5: |d task/d log_alpha|=3.898e-03 beta*|d KL/d log_alpha|=1.349e-03 ratio=2.890
+20:34:49 | INFO |     gate pressure fc_layers.0: |d task/d log_alpha|=2.108e-03 beta*|d KL/d log_alpha|=1.080e-03 ratio=1.953
+20:35:59 | INFO | [bayesian_train] epoch 72/75 train_task_loss=1.1023 train_kl=339.64 beta=0.01000 train_cost=4351220832.14 gamma=0.000000 train_acc=0.6393 val_loss=1.2536 val_acc=0.3246 time=70.1s
+20:35:59 | INFO |     log_alpha: min=-0.03 median=1.22 max=2.77 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:37:09 | INFO | [bayesian_train] epoch 73/75 train_task_loss=1.1033 train_kl=338.98 beta=0.01000 train_cost=4350087843.84 gamma=0.000000 train_acc=0.6335 val_loss=1.2523 val_acc=0.3200 time=70.0s
+20:37:09 | INFO |     log_alpha: min=-0.03 median=1.22 max=2.78 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:38:19 | INFO | [bayesian_train] epoch 74/75 train_task_loss=1.0997 train_kl=338.35 beta=0.01000 train_cost=4349010764.80 gamma=0.000000 train_acc=0.6359 val_loss=1.2567 val_acc=0.3224 time=70.4s
+20:38:19 | INFO |     log_alpha: min=-0.03 median=1.22 max=2.78 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+20:39:29 | INFO | [bayesian_train] epoch 75/75 train_task_loss=1.0943 train_kl=337.74 beta=0.01000 train_cost=4347964707.84 gamma=0.000000 train_acc=0.6404 val_loss=1.2584 val_acc=0.3222 time=70.3s
+20:39:29 | INFO |     log_alpha: min=-0.03 median=1.22 max=2.79 std=0.30 frac_prunable=0.000 frac_saturated=0.000
+
+Gate ranking: USABLE (log_alpha std 0.297, 0.0% saturated)
+20:39:31 | INFO | Gate ranking after training: USABLE -- log_alpha std 0.297, 0.0% saturated
+20:39:31 | INFO |   conv_layers.0: median_log_alpha=1.32 std=0.31 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   conv_layers.1: median_log_alpha=0.84 std=0.19 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   conv_layers.2: median_log_alpha=1.15 std=0.19 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   conv_layers.3: median_log_alpha=1.01 std=0.14 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   conv_layers.4: median_log_alpha=1.23 std=0.13 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   conv_layers.5: median_log_alpha=1.24 std=0.09 frac_saturated=0.000 structurally_prunable=True
+20:39:31 | INFO |   fc_layers.0: median_log_alpha=1.53 std=0.37 frac_saturated=0.000 structurally_prunable=True
+
+Measuring per-unit SynOps costs on the gate-trained model...
+
+--- budget point 1/1 (importance): 0.5 of dense SynOps ---
+20:39:32 | INFO | [synops0.5_importance] synops_budget(budget=0.5 of measured SynOps, rank_by=importance, achieved=0.4994, kept 644/2304 units)
+20:40:23 | INFO | [finetune] epoch 1/30 train_task_loss=1.1492 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.6198 val_loss=0.6718 val_acc=0.7558 time=50.9s
+20:41:13 | INFO | [finetune] epoch 2/30 train_task_loss=0.8324 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7043 val_loss=0.5399 val_acc=0.8128 time=49.6s
+20:42:03 | INFO | [finetune] epoch 3/30 train_task_loss=0.7211 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7563 val_loss=0.4697 val_acc=0.8504 time=49.7s
+20:42:52 | INFO | [finetune] epoch 4/30 train_task_loss=0.6604 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7772 val_loss=0.4131 val_acc=0.8658 time=49.5s
+20:43:41 | INFO | [finetune] epoch 5/30 train_task_loss=0.6270 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.7897 val_loss=0.3967 val_acc=0.8676 time=49.2s
+20:44:31 | INFO | [finetune] epoch 6/30 train_task_loss=0.5941 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8013 val_loss=0.3963 val_acc=0.8728 time=49.2s
+20:45:21 | INFO | [finetune] epoch 7/30 train_task_loss=0.5671 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8104 val_loss=0.3622 val_acc=0.8854 time=49.9s
+20:46:10 | INFO | [finetune] epoch 8/30 train_task_loss=0.5505 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8151 val_loss=0.3447 val_acc=0.8828 time=49.4s
+20:46:59 | INFO | [finetune] epoch 9/30 train_task_loss=0.5371 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8199 val_loss=0.3394 val_acc=0.8932 time=49.3s
+20:47:49 | INFO | [finetune] epoch 10/30 train_task_loss=0.5235 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8238 val_loss=0.3499 val_acc=0.8852 time=49.4s
+20:48:38 | INFO | [finetune] epoch 11/30 train_task_loss=0.5025 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8316 val_loss=0.3154 val_acc=0.8994 time=49.6s
+20:49:28 | INFO | [finetune] epoch 12/30 train_task_loss=0.5002 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8321 val_loss=0.3150 val_acc=0.8954 time=49.4s
+20:50:17 | INFO | [finetune] epoch 13/30 train_task_loss=0.4831 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8384 val_loss=0.3077 val_acc=0.9020 time=49.0s
+20:51:06 | INFO | [finetune] epoch 14/30 train_task_loss=0.4810 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8401 val_loss=0.2992 val_acc=0.9054 time=49.3s
+20:51:56 | INFO | [finetune] epoch 15/30 train_task_loss=0.4724 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8413 val_loss=0.2892 val_acc=0.9038 time=49.7s
+20:52:45 | INFO | [finetune] epoch 16/30 train_task_loss=0.4574 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8468 val_loss=0.2956 val_acc=0.9072 time=49.4s
+20:53:35 | INFO | [finetune] epoch 17/30 train_task_loss=0.4580 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8479 val_loss=0.2933 val_acc=0.9066 time=49.7s
+20:54:25 | INFO | [finetune] epoch 18/30 train_task_loss=0.4522 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8494 val_loss=0.2862 val_acc=0.9088 time=49.5s
+20:55:14 | INFO | [finetune] epoch 19/30 train_task_loss=0.4416 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8519 val_loss=0.2819 val_acc=0.9086 time=49.3s
+20:56:04 | INFO | [finetune] epoch 20/30 train_task_loss=0.4275 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8556 val_loss=0.2952 val_acc=0.9060 time=49.7s
+20:56:53 | INFO | [finetune] epoch 21/30 train_task_loss=0.4277 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8577 val_loss=0.2724 val_acc=0.9126 time=49.5s
+20:57:43 | INFO | [finetune] epoch 22/30 train_task_loss=0.4260 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8571 val_loss=0.2795 val_acc=0.9092 time=49.6s
+20:58:32 | INFO | [finetune] epoch 23/30 train_task_loss=0.4228 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8584 val_loss=0.2856 val_acc=0.9090 time=49.2s
+20:59:22 | INFO | [finetune] epoch 24/30 train_task_loss=0.4173 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8606 val_loss=0.2777 val_acc=0.9124 time=49.7s
+21:00:11 | INFO | [finetune] epoch 25/30 train_task_loss=0.4124 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8640 val_loss=0.2771 val_acc=0.9106 time=49.3s
+21:01:00 | INFO | [finetune] epoch 26/30 train_task_loss=0.4106 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8617 val_loss=0.2714 val_acc=0.9098 time=49.0s
+21:01:51 | INFO | [finetune] epoch 27/30 train_task_loss=0.4070 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8653 val_loss=0.2710 val_acc=0.9120 time=50.7s
+21:02:40 | INFO | [finetune] epoch 28/30 train_task_loss=0.4081 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8618 val_loss=0.2706 val_acc=0.9136 time=49.2s
+21:03:29 | INFO | [finetune] epoch 29/30 train_task_loss=0.4122 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8626 val_loss=0.2679 val_acc=0.9168 time=49.1s
+21:04:19 | INFO | [finetune] epoch 30/30 train_task_loss=0.4082 train_kl=0.00 beta=0.00000 train_cost=0.00 gamma=0.000000 train_acc=0.8639 val_loss=0.2619 val_acc=0.9162 time=49.6s
+21:04:28 | INFO | [synops0.5_importance] test accuracy 0.8923, synops/sample 237,302,708
+
+============================================================
+SPARSITY CURVE FINISHED
+============================================================
+           point          selection   pruned %   accuracy         synops   usable
+      synops 0.5         importance      96.91     0.8923    237,302,708      yes
+
+Wrote ./outputs/dpap_repl/sparsity_curve_synops_s2/summary.csv
+====================================================
+Job finished: Thu 13 Aug 21:04:43 BST 2026
+====================================================

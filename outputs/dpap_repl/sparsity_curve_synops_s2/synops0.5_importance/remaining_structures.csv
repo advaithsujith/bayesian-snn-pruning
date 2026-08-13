@@ -1,0 +1,8 @@
+layer,total,remaining,pruned,structurally_prunable,median_log_alpha
+conv_layers.0,128,37,91,True,1.3173282146453857
+conv_layers.1,128,127,1,True,0.836011528968811
+conv_layers.2,256,107,149,True,1.1496984958648682
+conv_layers.3,256,202,54,True,1.01211416721344
+conv_layers.4,512,75,437,True,1.2342686653137207
+conv_layers.5,512,35,477,True,1.2410436868667603
+fc_layers.0,512,61,451,True,1.527471661567688
