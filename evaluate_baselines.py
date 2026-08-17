@@ -115,6 +115,27 @@ def evaluate_one(model_name: str, device: torch.device) -> dict:
     return record
 
 
+def resolve_device(choice: str) -> torch.device:
+    """Pick a device, falling back to CPU if CUDA is present but unusable.
+
+    On a CSF3 login node `torch.cuda.is_available()` returns True while the
+    device itself is busy or not allocatable, so the first `.to(device)` dies
+    with "CUDA-capable device(s) is/are busy or unavailable". Availability is
+    therefore not enough: the allocation has to be attempted. This eval is a
+    few minutes on CPU, so silently falling back is better than failing.
+    """
+    if choice == "cpu" or not torch.cuda.is_available():
+        return torch.device("cpu")
+    try:
+        torch.zeros(1).to("cuda")
+        return torch.device("cuda")
+    except RuntimeError as exc:
+        if choice == "cuda":
+            raise
+        print(f"CUDA present but unusable ({str(exc).splitlines()[0]}); falling back to CPU.")
+        return torch.device("cpu")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", default="dpap_repl", choices=sorted(CONFIGS))
@@ -122,9 +143,13 @@ def main() -> None:
         "--all", action="store_true",
         help="evaluate every model that has a saved checkpoint, skipping those that do not",
     )
+    parser.add_argument(
+        "--device", default="auto", choices=("auto", "cpu", "cuda"),
+        help="auto (default) uses CUDA if it is actually usable, else CPU",
+    )
     args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = resolve_device(args.device)
     print(f"device: {device}")
 
     names = sorted(CONFIGS) if args.all else [args.model]
