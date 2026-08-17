@@ -69,7 +69,28 @@ def evaluate_one(model_name: str, device: torch.device) -> dict:
         model_name, cfg.snn, cfg.bayesian, num_classes=cfg.num_classes, arch_cfg=cfg.arch
     ).to(device)
     set_bayesian_mode(model, False)
-    model.load_state_dict(torch.load(checkpoint, map_location=device))
+
+    # Checkpoints saved before BayesianConv2d gained its `unit_cost` buffer have
+    # no entry for it, and a strict load raises. That buffer holds *measured*
+    # per-unit SynOps costs, is written by metrics.measure_synops and is not a
+    # learned parameter, so its absence cannot affect an accuracy evaluation.
+    # Tolerate exactly that and nothing else: any other missing or unexpected
+    # key means the checkpoint does not match the architecture, which must still
+    # be a hard error rather than a silently half-loaded model.
+    incompatible = model.load_state_dict(
+        torch.load(checkpoint, map_location=device), strict=False
+    )
+    stale_cost_buffers = [k for k in incompatible.missing_keys if k.endswith(".unit_cost")]
+    genuinely_missing = [k for k in incompatible.missing_keys if not k.endswith(".unit_cost")]
+    if genuinely_missing or incompatible.unexpected_keys:
+        raise RuntimeError(
+            f"Checkpoint '{checkpoint}' does not match the model definition.\n"
+            f"  missing:    {genuinely_missing}\n"
+            f"  unexpected: {list(incompatible.unexpected_keys)}"
+        )
+    if stale_cost_buffers:
+        print(f"  note: checkpoint predates the unit_cost buffers "
+              f"({len(stale_cost_buffers)} absent); accuracy is unaffected.")
 
     _, _, test_loader = get_cifar10_loaders(cfg.data, cfg.train.batch_size, cfg.seed)
 
@@ -168,7 +189,10 @@ def main() -> None:
     for name in names:
         try:
             records.append(evaluate_one(name, device))
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, RuntimeError) as exc:
+            # Under --all one unusable checkpoint must not cost the whole job the
+            # models after it: an old resnet18 checkpoint aborted a run before it
+            # reached either of the two platforms the write-up actually needs.
             if not args.all:
                 raise
             print(f"\n=== {name} ===\n  skipped: {exc}")
