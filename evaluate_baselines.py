@@ -149,6 +149,17 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # Choosing CPU is not enough on a login node. get_cifar10_loaders builds its
+    # DataLoaders with pin_memory=True, and the pin-memory thread targets CUDA
+    # device 0 whenever torch.cuda.is_available() is True, regardless of where
+    # the model lives. On a node where the GPU exists but is not allocatable
+    # that thread dies with "CUDA-capable device(s) is/are busy or unavailable"
+    # after the model has already been placed on CPU. Hiding the device makes
+    # is_available() False, which is the flag DataLoader actually consults.
+    # Must be set before the first CUDA call, hence before resolve_device.
+    if args.device == "cpu":
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
     device = resolve_device(args.device)
     print(f"device: {device}")
 
